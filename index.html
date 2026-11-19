@@ -20,14 +20,15 @@ button,label.btn{touch-action:manipulation;font:inherit;color:var(--w);backgroun
 button:disabled{opacity:.35}
 .wrap{max-width:560px;margin:0 auto;padding:calc(8px + env(safe-area-inset-top)) calc(10px + env(safe-area-inset-right)) calc(40px + env(safe-area-inset-bottom)) calc(10px + env(safe-area-inset-left))}
 header{display:flex;justify-content:space-between;align-items:center;padding:2px 2px 8px;gap:8px}
-.brand{display:flex;gap:8px;align-items:baseline}
+.brand{display:flex;gap:6px;align-items:center}
+.hic{height:34px;width:40px;padding:0;background:var(--slate);color:var(--air)}
 .forge{font-weight:800;letter-spacing:.18em;font-size:14px;color:var(--air)}
-.name{font-size:11px;letter-spacing:.14em;opacity:.7}
 .hr{display:flex;gap:6px;align-items:center}
 #patInd{font-size:11px;background:var(--purple);padding:6px 8px;border-radius:8px}
 .ur{font-size:15px;padding:5px 9px;background:var(--slate)}
 #bExp{font-size:11px;padding:6px 10px;background:var(--fire);color:var(--ink);font-weight:700}
-#stage{position:relative;height:36vh;min-height:200px;background:#000;border-radius:14px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.zbadge{position:absolute;right:8px;top:8px;z-index:3;font-size:11px;padding:5px 8px;background:rgba(49,48,67,.8);color:var(--air);border-radius:8px}
+#stage{touch-action:pan-y;position:relative;height:36vh;min-height:200px;background:#000;border-radius:14px;overflow:hidden;display:flex;align-items:center;justify-content:center}
 #cv{display:block;max-width:100%;max-height:100%;width:auto;height:auto}
 .overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:16px;text-align:center;background:linear-gradient(160deg,var(--ink),var(--purple))}
 .hidden{display:none!important}
@@ -126,6 +127,10 @@ select{font:inherit;font-size:12px;background:var(--slate);color:var(--w);border
 .help p{margin:4px 0}
 .modal{position:fixed;inset:0;background:rgba(20,20,30,.85);display:flex;align-items:center;justify-content:center;z-index:20;padding:16px}
 .mbox{background:var(--ink);border:1px solid var(--purple);border-radius:16px;padding:14px;width:100%;max-width:420px;text-align:center}
+#saveWin{z-index:15}
+.sw{text-align:left;max-height:90vh;overflow-y:auto}
+.swT{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;letter-spacing:.12em;color:var(--air)}
+.sw .help{margin-top:8px}
 #mTxt{font-size:12px;margin-bottom:8px;line-height:1.5}
 #mVid{width:100%;max-height:50vh;border-radius:10px;background:#000}
 #vHold{position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none;overflow:hidden}
@@ -148,7 +153,7 @@ select{font:inherit;font-size:12px;background:var(--slate);color:var(--w);border
 .tab.cur{box-shadow:0 0 0 2px var(--air)}
 .addv{flex:0 0 auto;font-size:11px;padding:8px 10px;background:var(--purple)}
 .addv.rec{background:var(--fire);color:var(--ink)}
-.edVid{margin-top:8px;height:30vh;min-height:170px;background:#000;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative}
+.edVid{touch-action:pan-y;margin-top:8px;height:30vh;min-height:170px;background:#000;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative}
 .edVid video{width:100%;height:100%;object-fit:contain;display:block}
 #edEmpty{font-size:12px;opacity:.7;padding:20px;text-align:center;line-height:1.6}
 #wave{display:block;width:100%;height:84px;margin-top:6px;border-radius:10px;touch-action:none;background:#262535}
@@ -176,7 +181,7 @@ select{font:inherit;font-size:12px;background:var(--slate);color:var(--w);border
 <body>
 <div class="wrap">
   <header>
-    <div class="brand"><span class="forge">VBM-16</span><span class="name">BEATSMITH</span></div>
+    <div class="brand"><span class="forge">VBM-16</span><button class="hic" id="bDisk" aria-label="Save and open"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h13l3 3v13H4z"/><path d="M8 4v5h7V4"/><rect x="7.5" y="13" width="9" height="7" rx="1"/></svg></button><label class="btn hic" aria-label="Add video"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="13" height="12" rx="2"/><path d="M15.5 10.2l5-3v9.6l-5-3"/><path d="M9 9.5v5M6.5 12h5"/></svg><input type="file" accept="video/*" class="fIn" hidden></label></div>
     <div class="hr"><button class="ur" id="bUndo">↶</button><button class="ur" id="bRedo">↷</button><button id="bExp">EXPORT</button><div id="patInd">P1</div></div>
   </header>
 
@@ -246,19 +251,6 @@ select{font:inherit;font-size:12px;background:var(--slate);color:var(--w);border
   </section>
 
 
-  <section class="panel" id="secSess">
-    <h3>SESSION</h3>
-    <div class="row"><input id="sessName" class="txt" value="My session" maxlength="40" aria-label="Session name"></div>
-    <div class="row"><button id="bSaveSess" class="hl">SAVE SESSION</button><label class="btn">OPEN<input type="file" id="fOpen" accept=".zip,.json,application/zip,application/json" hidden></label></div>
-    <div class="row"><button id="bSaveSamp">SAVE SAMPLES</button><label class="btn">LOAD SAMPLES<input type="file" id="fSamp" accept="audio/*,.wav,.mp3,.m4a,.aif,.aiff,.zip" multiple hidden></label></div>
-    <div class="row"><button id="bNewSess">NEW SESSION</button></div>
-    <div class="help">
-      <p><b>Session:</b> one .zip with every pad's sound and video, all patterns, pad settings, BPM and swing.</p>
-      <p><b>Samples:</b> a .zip of the 16 pad sounds as WAV files for any DAW.</p>
-      <p><b>Load samples:</b> pick WAV or MP3 files (or a .zip of them). They fill pads starting from the selected pad.</p>
-      <p>Your work also autosaves in this browser and comes back when you reopen the page. The full original videos are not saved, so add a video again if you want to re-slice or slip pads from it.</p>
-    </div>
-  </section>
 
   <section class="panel" id="secGroove">
     <h3>GROOVE</h3>
@@ -279,7 +271,8 @@ select{font:inherit;font-size:12px;background:var(--slate);color:var(--w);border
     <h3>HOW IT WORKS</h3>
     <p><a id="tutLink" href="https://claude.ai/artifact/KqWeYPqnK9pxDATQS2VJQC" style="color:var(--air)">Open the step by step tutorial</a></p>
     <p><b>Transport:</b> ▶ play and stop. Red dot arms live recording. - BPM + sets the tempo. The metronome clicks every beat while playing (it never ends up in an export). The pizza opens the slicer. The keyboard turns on KEYS. The eye switches between one big video and four (one per track).</p>
-    <p><b>Adding video:</b> tap the pizza, then ● or + VIDEO. Pick what is in it: drums, bass, guitar, keys, vox, samples, FX or chaos. AUTO CHOP fills the selected bank with 16 chops right away. JUST UPLOAD opens the slicer so you chop it yourself.</p>
+    <p><b>Top bar:</b> the floppy disk opens the save window (save or open a session, save or load samples, new session). The camera adds a video. Pinch either video player to zoom in, drag to look around, double tap or tap RESET to zoom back out (exports are not affected).</p>
+    <p><b>Adding video:</b> tap the camera at the top (or the pizza, then ● or + VIDEO). Pick what is in it: drums, bass, guitar, keys, vox, samples, FX or chaos. AUTO CHOP fills the selected bank with 16 chops right away. JUST UPLOAD opens the slicer so you chop it yourself.</p>
     <p><b>Slicer:</b> each video is a tab. Drag either edge of the selection on the waveform (edges can pass each other). Hold inside the selection to slide it. Drag outside it to scroll, pinch to zoom, tap to preview a spot. The big ▶ plays the slice, LOOP repeats it. The [ and ] buttons nudge each edge, ½ and ×2 halve or double it, and the note buttons snap it to the beat. VIDEO SLIP moves the picture up to 1 second without moving the sound. Tap a pad under SEND TO PAD to drop the slice there, the next pad lights up so you can chop fast.</p>
     <p><b>Banks:</b> the 8 mini blocks above the pads hold 128 chops (8 banks of 16). Tap one to put it on the pads. Hold one until it lifts, then drag to reorder. Patterns follow the sounds.</p>
     <p><b>Pads and tracks:</b> pads play on the selected track (A to D). Each track plays one sound at a time. M mutes a track.</p>
@@ -288,7 +281,7 @@ select{font:inherit;font-size:12px;background:var(--slate);color:var(--w);border
     <p><b>Pad edit:</b> pitch, level and reverse. ONE SHOT plays the whole slice, GATE stops when you let go (one step in the sequencer), LOOP repeats while held (in the sequencer it loops until the next hit on that track). FADE and DECAY shape the sound. FREEZE holds one frame. VIDEO SLIP fixes a pad's timing as long as its video is still loaded. EDIT SLICE reopens the pad in the slicer.</p>
     <p><b>KEYS:</b> the 16 pads become 16 notes of the selected pad.</p>
     <p><b>Patterns:</b> 16 patterns. While playing, a new pattern starts when the current one ends. Turn on CHAIN and tap patterns to build a song. COPY TO NEXT copies the pattern and its length.</p>
-    <p><b>Session:</b> SAVE SESSION keeps every pad (sound and video), patterns and settings in one .zip. SAVE SAMPLES gives you WAV files for your DAW. LOAD SAMPLES puts your own audio on pads. Work also autosaves in this browser. Full original videos are not saved, so add a video again to re-slice from it.</p>
+    <p><b>Session (floppy disk):</b> SAVE SESSION keeps every pad (sound and video), patterns and settings in one .zip. SAVE SAMPLES gives you WAV files for your DAW. LOAD SAMPLES puts your own audio on pads. Work also autosaves in this browser. Full original videos are not saved, so add a video again to re-slice from it.</p>
     <p><b>Export:</b> records a clean loop of the pattern, a set number of bars or the whole chain, in 9:16, 1:1, 16:9 or the shape of your first video.</p>
     <p><b>Undo:</b> ↶ undoes your last change, ↷ brings it back. Tap any panel title to minimize it.</p>
   </section>
@@ -341,6 +334,22 @@ select{font:inherit;font-size:12px;background:var(--slate);color:var(--w);border
     <div id="mTxt"></div>
     <video id="mVid" class="hidden" playsinline loop muted></video>
     <div class="row"><button id="mSave" class="hidden">SAVE VIDEO</button><button id="mClose">CLOSE</button></div>
+  </div>
+</div>
+<div id="saveWin" class="modal hidden">
+  <div class="mbox sw">
+    <div class="swT"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h13l3 3v13H4z"/><path d="M8 4v5h7V4"/><rect x="7.5" y="13" width="9" height="7" rx="1"/></svg><span>SESSION</span></div>
+    <div class="row"><input id="sessName" class="txt" value="My session" maxlength="40" aria-label="Session name"></div>
+    <div class="row"><button id="bSaveSess" class="hl">SAVE SESSION</button><label class="btn">OPEN<input type="file" id="fOpen" accept=".zip,.json,application/zip,application/json" hidden></label></div>
+    <div class="row"><button id="bSaveSamp">SAVE SAMPLES</button><label class="btn">LOAD SAMPLES<input type="file" id="fSamp" accept="audio/*,.wav,.mp3,.m4a,.aif,.aiff,.zip" multiple hidden></label></div>
+    <div class="row"><button id="bNewSess">NEW SESSION</button></div>
+    <div class="help">
+      <p><b>Session:</b> one .zip with every pad's sound and video, all patterns, pad settings, BPM and swing.</p>
+      <p><b>Samples:</b> a .zip of every pad sound as WAV files for any DAW.</p>
+      <p><b>Load samples:</b> pick WAV or MP3 files (or a .zip of them). They fill pads starting from the selected pad.</p>
+      <p>Your work also autosaves in this browser and comes back when you reopen the page. The full original videos are not saved, so add a video again if you want to re-slice or slip pads from it.</p>
+    </div>
+      <div class="row"><button id="swClose">CLOSE</button></div>
   </div>
 </div>
 <div id="typePick" class="modal hidden">
@@ -728,7 +737,8 @@ function listenAudio(url,secs,onProg){
 }
 function selectSource(i){
   stopSel();
-  const old=cur();if(old&&old.video.parentNode!==$('vHold'))$('vHold').appendChild(old.video);
+  const old=cur();if(old){old.video.style.transform='';if(old.video.parentNode!==$('vHold'))$('vHold').appendChild(old.video);}
+  if(typeof resetEdZoom==='function')resetEdZoom();
   curSrc=i;const src=cur();
   $('edEmpty').classList.toggle('hidden',!!src);
   if(src){$('edVid').appendChild(src.video);src.video.muted=true;previewSeek(src.sel.s);}
@@ -1088,6 +1098,41 @@ function loop(){
   }
 }
 requestAnimationFrame(loop);
+
+/* ---------- pinch to zoom on the video players (view only, exports are not affected) ---------- */
+function makeZoomable(box,getTarget){
+  const st={z:1,x:0,y:0},pts=new Map();let g=null,lastTap=0;
+  const badge=document.createElement('button');badge.className='zbadge hidden';box.appendChild(badge);
+  const apply=()=>{
+    const w=box.clientWidth,h=box.clientHeight,mx=(st.z-1)*w/2,my=(st.z-1)*h/2;
+    st.x=Math.max(-mx,Math.min(mx,st.x));st.y=Math.max(-my,Math.min(my,st.y));
+    const t=getTarget();if(t){t.style.transformOrigin='50% 50%';t.style.transform=st.z>1?'translate('+st.x+'px,'+st.y+'px) scale('+st.z+')':'';}
+    box.style.touchAction=st.z>1?'none':'pan-y';
+    badge.classList.toggle('hidden',st.z<=1.01);badge.textContent=st.z.toFixed(1)+'× · RESET';
+  };
+  const reset=()=>{st.z=1;st.x=0;st.y=0;apply();};
+  badge.onclick=e=>{e.stopPropagation();reset();};
+  box.addEventListener('pointerdown',e=>{
+    if(e.target.closest('button,label'))return;
+    pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pts.size===2){const [a,b]=[...pts.values()];g={d0:Math.hypot(a.x-b.x,a.y-b.y)||1,z0:st.z,cx:(a.x+b.x)/2,cy:(a.y+b.y)/2,x0:st.x,y0:st.y};}
+    else if(pts.size===1){
+      const n=performance.now();if(n-lastTap<300&&st.z>1){reset();lastTap=0;pts.clear();return;}lastTap=n;
+      g={pan:true,px:e.clientX,py:e.clientY,x0:st.x,y0:st.y};
+    }
+  });
+  box.addEventListener('pointermove',e=>{
+    if(!pts.has(e.pointerId)||!g)return;pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pts.size>=2&&g.d0){const [a,b]=[...pts.values()],d=Math.hypot(a.x-b.x,a.y-b.y);
+      st.z=Math.max(1,Math.min(6,g.z0*d/g.d0));st.x=g.x0+((a.x+b.x)/2-g.cx);st.y=g.y0+((a.y+b.y)/2-g.cy);apply();}
+    else if(g.pan&&st.z>1){st.x=g.x0+(e.clientX-g.px);st.y=g.y0+(e.clientY-g.py);apply();}
+  });
+  const up=e=>{pts.delete(e.pointerId);if(pts.size===0)g=null;else if(pts.size===1){const [p]=[...pts.values()];g={pan:true,px:p.x,py:p.y,x0:st.x,y0:st.y};}};
+  box.addEventListener('pointerup',up);box.addEventListener('pointercancel',up);
+  return reset;
+}
+const resetStageZoom=makeZoomable($('stage'),()=>cv);
+const resetEdZoom=makeZoomable($('edVid'),()=>$('edVid').querySelector('video'));
 
 /* ---------- main UI ---------- */
 const stepEls=[],padEls=[],fxEls={},patEls=[],trkEls=[];
@@ -1503,7 +1548,7 @@ async function loadSampleList(list){
   toast(n?('Loaded '+n+' sample'+(n>1?'s':'')+' from pad '+padLabel(selPad)+'.'):'Could not read those audio files.',2600);
 }
 function newSession(){
-  if(playing)stop();pushUndo();
+  $('saveWin').classList.add('hidden');if(playing)stop();pushUndo();
   pads=Array(NP).fill(null);vq=[[],[],[],[]];lastHit=[null,null,null,null];bank=0;selPad=0;
   Object.assign(S,{patterns:mkPats(),patLen:Array(16).fill(1),chain:[],...padDefaults()});
   curPat=editPat=0;viewPage=0;save();renderAll();renderMini();padsChanged();$('sessName').value='My session';
@@ -1530,9 +1575,12 @@ async function restoreAutosave(){
     if(!hasPads()){pads=np;if(d.name)$('sessName').value=d.name;$('empty').classList.add('hidden');renderAll();renderMini();toast('Your last session is back.');}
   }catch(e){}finally{restoring=false;}
 }
+$('bDisk').onclick=()=>$('saveWin').classList.remove('hidden');
+$('swClose').onclick=()=>$('saveWin').classList.add('hidden');
+$('saveWin').addEventListener('click',e=>{if(e.target.id==='saveWin')$('saveWin').classList.add('hidden');});
 $('bSaveSess').onclick=saveSession;$('bSaveSamp').onclick=saveSamples;$('bNewSess').onclick=newSession;
-$('fOpen').onchange=e=>{const f=e.target.files[0];e.target.value='';openFile(f);};
-$('fSamp').onchange=async e=>{const fs=[...e.target.files];e.target.value='';
+$('fOpen').onchange=e=>{const f=e.target.files[0];e.target.value='';$('saveWin').classList.add('hidden');openFile(f);};
+$('fSamp').onchange=async e=>{const fs=[...e.target.files];e.target.value='';$('saveWin').classList.add('hidden');
   const zip=fs.find(f=>/\.zip$/i.test(f.name));if(zip){openFile(zip);return;}
   fs.sort((a,b)=>a.name.localeCompare(b.name));await loadSampleList(fs.map(f=>({name:f.name,blob:f})));};
 $('sessName').addEventListener('pointerdown',e=>e.stopPropagation());
