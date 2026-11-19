@@ -2428,8 +2428,9 @@ $('#fileAny').onchange=e=>{ const f=e.target.files[0]; if(f){ ac(); loadFile(f);
 const fileDesc=f=>'"'+(f.name||'file')+'", '+(f.type||'unknown type')+', '+(f.size/1048576).toFixed(1)+' MB';
 ['dragover','drop'].forEach(ev=>document.addEventListener(ev,e=>{ e.preventDefault(); if(ev==='drop'&&e.dataTransfer.files[0]){ ac(); loadFile(e.dataTransfer.files[0]); } }));
 
-async function loadFile(f){
+async function loadFile(f,restoring){
   stop(); clearResult();
+  if(!restoring){ S.pendingRestore=null; try{ localStorage.removeItem('ll_session'); }catch(_){} saveVideo(f); }
   if(S.url) URL.revokeObjectURL(S.url);
   S.url=URL.createObjectURL(f); S.fileName=f.name.replace(/\.[^.]+$/,''); S.file=f;
   S.buf=null; S.mono=null; S.mip=[]; S.bpm=null; S.step='import';
@@ -2457,6 +2458,8 @@ async function finishLoad(buf,how){
   impMsg('Audio read ('+how+', '+(buf.sampleRate/1000)+' kHz, '+buf.numberOfChannels+' ch).');
   $('#capB').classList.add('hide');
   const fps=await detectFps(v); S.fps=fps||30; S.frames=Math.floor(S.dur*S.fps+1e-6);
+  if(S.pendingRestore&&applySession(S.pendingRestore)){ S.pendingRestore=null; return; }
+  S.pendingRestore=null;
   suggest(true);
   goStep('find');
   toast(`${S.bpm?S.bpm+' bpm · ':''}${fmtFps(S.fps)} fps · 4 bar loop suggested`);
@@ -3249,7 +3252,7 @@ function renderText(){
   $('#exInfo').textContent=`${N} frames · ${(N/fps).toFixed(2)} s file`+(reps>1?` · ${reps} passes`:'')+(S.gap?` · ${S.gap} ms offset`:'');
 }
 function render(){
-  renderText();
+  renderText(); queueSession();
   const has=!!S.buf;
   $$('.step').forEach(b=>{ const i=STEPS.findIndex(s=>s[0]===b.dataset.k), cur=STEPS.findIndex(s=>s[0]===S.step); b.classList.toggle('on',b.dataset.k===S.step); b.classList.toggle('done',i<cur); });
   $$('.panel').forEach(p=>p.classList.toggle('hide',p.dataset.step!==S.step));
@@ -3776,6 +3779,40 @@ $('#saveB').onclick=async()=>{
   try{ await DL.save({filename:S.outName,data:S.outBlob}); toast('Saved'); }
   catch(e){ const c=e&&e.code; toast(c==='declined'?'Save cancelled':c==='rate_limited'?'One moment, then try again':'Could not save here'+(c?' ('+c+')':''),3000); }
 };
+
+/* ---------- auto-resume: keep the last video and loop on the phone ---------- */
+const IDB={db:null,
+  open(){ if(this.db) return Promise.resolve(this.db); return new Promise((res,rej)=>{ const r=indexedDB.open('looplock',1);
+    r.onupgradeneeded=()=>r.result.createObjectStore('kv'); r.onsuccess=()=>{ this.db=r.result; res(this.db); }; r.onerror=()=>rej(r.error); }); },
+  async put(k,v){ const db=await this.open(); return new Promise((res,rej)=>{ const t=db.transaction('kv','readwrite'); t.objectStore('kv').put(v,k); t.oncomplete=res; t.onerror=()=>rej(t.error); t.onabort=()=>rej(t.error); }); },
+  async get(k){ const db=await this.open(); return new Promise((res,rej)=>{ const q=db.transaction('kv').objectStore('kv').get(k); q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); }); }
+};
+async function saveVideo(f){ try{ await IDB.put('video',{blob:f,name:f.name,type:f.type,size:f.size}); }catch(e){} }
+let sessT=null;
+function queueSession(){ if(!S.buf||S.pendingRestore||!S.file) return; clearTimeout(sessT); sessT=setTimeout(saveSession,400); }
+function saveSession(){ if(!S.buf||!S.file) return;
+  const o={name:S.file.name,size:S.file.size,sr:S.sr,s0:S.s0,n:S.n,div:S.div,locked:S.locked,view:S.view,res:S.res,met:S.met,fade:S.fade,step:S.step,fps:S.fps,bpm:S.bpm,grid0:S.grid0};
+  try{ localStorage.setItem('ll_session',JSON.stringify(o)); }catch(_){} }
+function applySession(o){
+  try{
+    const k=o.sr&&o.sr!==S.sr?S.sr/o.sr:1, T=total();
+    const s0=Math.round(o.s0*k), n=Math.round(o.n*k);
+    if(!(n>0)||s0<0||s0+n>T) return false;
+    S.s0=s0; S.n=n; S.div=o.div||4; S.locked=!!o.locked; S.res=o.res||S.res; S.met=o.met||'off';
+    if(o.fade!=null) S.fade=o.fade; if(o.fps){ S.fps=o.fps; S.frames=Math.floor(S.dur*S.fps+1e-6); }
+    if(o.bpm!=null) S.bpm=o.bpm; if(o.grid0!=null) S.grid0=o.grid0*k;
+    goStep(o.step&&o.step!=='import'?o.step:'find');
+    if(Array.isArray(o.view)&&o.view[1]>o.view[0]){ S.view=o.view.slice(); render(); }
+    toast('Back where you left off',2200); return true;
+  }catch(e){ return false; }
+}
+(async()=>{ try{
+  const o=JSON.parse(localStorage.getItem('ll_session')||'null'); if(!o) return;
+  const v=await IDB.get('video'); if(!v||!v.blob||v.name!==o.name) return;
+  if(S.file) return;
+  S.pendingRestore=o; impMsg('Picking up where you left off…');
+  ac(); await loadFile(new File([v.blob],v.name,{type:v.type||'video/mp4'}),true);
+}catch(e){ S.pendingRestore=null; } })();
 
 buildSteps(); render(); requestAnimationFrame(tick);
 </script>
