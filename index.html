@@ -52,6 +52,7 @@ header{display:flex;justify-content:space-between;align-items:center;padding:2px
 .transport .bpm{flex:1.7}
 #bRec{color:var(--fire)}#bRec.on{color:var(--ink)}
 #bMet.on{background:var(--water)!important}
+#bView.focus{background:var(--purple)}
 #bView .vb{position:absolute;right:4px;bottom:3px;font-size:8px;font-weight:700;opacity:.8}
 #tracks .track{display:flex;flex:1;border-radius:10px;overflow:hidden}
 #tracks .tsel{flex:1;border-radius:0;font-weight:700;font-size:13px;border-bottom:3px solid transparent}
@@ -269,7 +270,7 @@ select{font:inherit;font-size:12px;background:var(--slate);color:var(--w);border
   <section class="panel help" id="secHelp">
     <h3>HOW IT WORKS</h3>
     <p><a id="tutLink" href="https://claude.ai/artifact/KqWeYPqnK9pxDATQS2VJQC" style="color:var(--air)">Open the step by step tutorial</a></p>
-    <p><b>Transport:</b> ▶ play and stop. Red dot arms live recording. - BPM + sets the tempo. The metronome clicks every beat while playing (it never ends up in an export). The pizza opens the slicer. The keyboard turns on KEYS. The eye switches the video between MIX (every sound that is playing gets its own piece of the screen, from any bank), 1 (only the latest hit) and 4 (one quarter per track).</p>
+    <p><b>Transport:</b> ▶ play and stop. Red dot arms live recording. - BPM + sets the tempo. The metronome clicks every beat while playing (it never ends up in an export). The pizza opens the slicer. The keyboard turns on KEYS. The eye switches the video between MIX (every sound that is playing gets its own piece of the screen, from any bank), FOCUS (bigger, rounder eye: the video follows the track you have selected, A to D), 1 (only the latest hit) and 4 (one quarter per track).</p>
     <p><b>Top bar:</b> the floppy disk opens the save window (save or open a session, save or load samples, new session). The camera adds a video. Pinch either video player to zoom in, drag to look around, double tap or tap RESET to zoom back out (exports are not affected).</p>
     <p><b>Adding video:</b> tap the camera at the top (or the pizza, then ● or + VIDEO). Pick what is in it: drums, bass, guitar, keys, vox, samples, FX or chaos. AUTO CHOP fills the next empty bank with 16 chops and never overwrites a bank. JUST UPLOAD opens the slicer so you chop it yourself.</p>
     <p><b>Slicer:</b> each video is a tab. Drag either edge of the selection on the waveform (edges can pass each other). Hold inside the selection to slide it. Drag outside it to scroll, pinch to zoom, tap to preview a spot. The big ▶ plays the slice, LOOP repeats it. The [ and ] buttons nudge each edge, ½ and ×2 halve or double it, and the note buttons snap it to the beat. VIDEO SLIP moves the picture up to 1 second without moving the sound. Tap a pad under SEND TO PAD to drop the slice there, the next pad lights up so you can chop fast.</p>
@@ -427,7 +428,7 @@ let playing=false,step=0,nextTime=0,timer=null,recArm=false,exporting=false;
 const fx={},latched={},lastTap={};FXL.forEach(([k])=>{fx[k]=false;latched[k]=false;lastTap[k]=0;});
 let vq=[[],[],[],[]],voices=[[],[],[],[]],lastHit=[null,null,null,null],uiQ=[],sched=[];
 /* video view: 'mix' gives every sounding pad screen space, 1 shows the latest hit, 4 gives each track a quarter */
-let view=[1,4,'mix'].includes(UI.view)?UI.view:'mix';
+let view=[1,4,'mix','focus'].includes(UI.view)?UI.view:'mix';
 let sources=[],curSrc=-1,srcSeq=0,edOpen=false,target=0,edBusy=false,loopMode=true,nudgeIdx=1,waveDirty=true;
 const NUDGE=[[0.001,'1 ms'],[0.01,'10 ms'],[1/30,'1 frame']];
 
@@ -511,6 +512,7 @@ function setFx(k,on){
 
 const ICON_PLAY='<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M7 4.5l13 7.5-13 7.5z" fill="currentColor"/></svg>';
 const ICON_STOP='<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1.5" fill="currentColor"/></svg>';
+const ICON_EYE_FOCUS='<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 12S5.5 3.8 12 3.8 22.5 12 22.5 12 18.5 20.2 12 20.2 1.5 12 1.5 12z"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="2.3" fill="currentColor"/></svg>';
 const ICON_EYE='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.8-6.5 10-6.5S22 12 22 12s-3.8 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
 /* metronome: straight to the speakers, never into exports */
 function click(t,accent){
@@ -1121,6 +1123,10 @@ function loop(){
     g2.fillStyle=COL.ink;
     if(n===4){g2.fillRect(W/2-1,0,2,H);g2.fillRect(0,H/2-1,W,2);}
     else for(let k=1;k<n;k++){if(H>=W)g2.fillRect(0,k*H/n-1,W,2);else g2.fillRect(k*W/n-1,0,2,H);}
+  }else if(view==='focus'){
+    /* follows the selected track; falls back to the latest hit until that track plays */
+    const v=act[selTrack]||latest;
+    if(v)drawVoice(v,0,0,W,H,now);else if(pads[selPad])drawVoice({pad:selPad,start:-99,rate:1,rev:false},0,0,W,H,now);
   }else{
     const one=view==='mix'&&sounding.length===1?sounding[0]:latest;
     if(one)drawVoice(one,0,0,W,H,now);
@@ -1175,7 +1181,7 @@ function buildUI(){
   for(let t=0;t<4;t++){
     const w=document.createElement('div');w.className='track';
     const b=document.createElement('button');b.className='tsel';b.textContent=TL[t];b.style.borderBottomColor=TCOL[t];
-    b.onpointerdown=e=>{e.preventDefault();selTrack=t;selStep=-1;renderTracks();renderSteps();};
+    b.onpointerdown=e=>{e.preventDefault();selTrack=t;selStep=-1;renderTracks();renderSteps();if(view==='focus')renderTransport();};
     const m=document.createElement('button');m.className='tmute';m.textContent='M';
     m.onpointerdown=e=>{e.preventDefault();muted[t]=!muted[t];renderTracks();};
     w.append(b,m);$('tracks').append(w);trkEls.push({b,m});
@@ -1354,7 +1360,7 @@ function renderChain(){
 function renderTransport(){
   $('bPlay').innerHTML=playing?ICON_STOP:ICON_PLAY;$('bPlay').classList.toggle('on',playing);$('bMet').classList.toggle('on',!!UI.metro);
   $('bRec').classList.toggle('on',recArm);$('bKeys').classList.toggle('on',keys);
-  $('bView').innerHTML=ICON_EYE+'<span class="vb">'+(view==='mix'?'MIX':view)+'</span>';$('bpmV').textContent=S.bpm;$('gBpm').value=S.bpm;$('oBpm').textContent=S.bpm;
+  $('bView').innerHTML=(view==='focus'?ICON_EYE_FOCUS:ICON_EYE)+'<span class="vb">'+(view==='mix'?'MIX':view==='focus'?TL[selTrack]:view)+'</span>';$('bView').classList.toggle('focus',view==='focus');$('bpmV').textContent=S.bpm;$('gBpm').value=S.bpm;$('oBpm').textContent=S.bpm;
   $('gSw').value=Math.round(S.swing*100);$('oSw').textContent=Math.round(S.swing*100)+'%';$('eFmt').value=S.format;
 }
 function renderPadPanel(){
@@ -1383,7 +1389,8 @@ $('snAll').onclick=()=>{nudgeAll=!nudgeAll;renderSteps();};
 $('bMet').onclick=()=>{initAudio();UI.metro=!UI.metro;saveUI();renderTransport();};
 $('bRec').onclick=()=>{recArm=!recArm;renderTransport();};
 $('bKeys').onclick=()=>{keys=!keys;renderPads();renderTransport();};
-$('bView').onclick=()=>{view=view==='mix'?1:view===1?4:'mix';UI.view=view;saveUI();renderTransport();toast(view==='mix'?'MIX: every sound that is playing gets its own piece of the screen.':view===1?'FOCUS: only the latest hit.':'TRACKS: one quarter per track.',1800);};
+$('bView').onclick=()=>{view=view==='mix'?'focus':view==='focus'?1:view===1?4:'mix';UI.view=view;saveUI();renderTransport();
+  toast(view==='mix'?'MIX: every sound that is playing gets its own piece of the screen.':view==='focus'?'FOCUS: video follows the selected track ('+TL[selTrack]+').':view===1?'LATEST: only the most recent hit.':'TRACKS: one quarter per track.',1800);};
 $('bSlice').onclick=()=>openEditor(curSrc);
 const setBpm=v=>{S.bpm=Math.max(60,Math.min(180,v));save();renderTransport();renderEdInfo();waveDirty=true;if(ctx&&fx.ECHO)dly.delayTime.setValueAtTime(Math.min(1.9,stepDur()*3),ctx.currentTime);};
 $('bpmDn').onclick=()=>setBpm(S.bpm-1);$('bpmUp').onclick=()=>setBpm(S.bpm+1);
