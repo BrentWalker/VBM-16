@@ -116,6 +116,7 @@ header{display:flex;justify-content:space-between;align-items:center;padding:2px
 .slip button{padding:9px 0;font-size:12px}
 .slip .val{flex:2;background:var(--purple);font-size:10px}
 .seg button.on{background:var(--water);color:var(--ink)}
+#pChoke button{flex:1;padding:8px 0;font-size:11px}
 .sub{font-size:10px;opacity:.6;margin-top:4px}
 .ctl input[type=range]{flex:1;accent-color:var(--air)}
 .ctl output{width:38px;text-align:right}
@@ -225,6 +226,7 @@ select{font:inherit;font-size:12px;background:var(--slate);color:var(--w);border
     <div class="ctl"><label>PITCH</label><input type="range" id="pPitch" min="-12" max="12" step="1" value="0"><output id="oPitch">0</output></div>
     <div class="ctl"><label>LEVEL</label><input type="range" id="pVol" min="0" max="150" step="1" value="100"><output id="oVol">100</output></div>
     <div class="row"><button id="pRev">REVERSE OFF</button><button id="pAud">AUDITION</button></div>
+    <div class="ctl seg" id="pChoke"><label>MUTE GRP</label><button data-g="0">OFF</button><button data-g="1">1</button><button data-g="2">2</button><button data-g="3">3</button><button data-g="4">4</button></div>
     <div class="row seg" id="pMode"><button data-m="one">ONE SHOT</button><button data-m="gate">GATE</button><button data-m="loop">LOOP</button></div>
     <div class="ctl"><label>FADE IN</label><input type="range" id="pFi" min="0" max="200" step="1" value="0"><output id="oFi">0</output></div>
     <div class="ctl"><label>FADE OUT</label><input type="range" id="pFo" min="0" max="200" step="1" value="0"><output id="oFo">0</output></div>
@@ -272,13 +274,13 @@ select{font:inherit;font-size:12px;background:var(--slate);color:var(--w);border
     <p><a id="tutLink" href="https://claude.ai/artifact/KqWeYPqnK9pxDATQS2VJQC" style="color:var(--air)">Open the step by step tutorial</a></p>
     <p><b>Transport:</b> ▶ play and stop. Red dot arms live recording. - BPM + sets the tempo. The metronome clicks every beat while playing (it never ends up in an export). The pizza opens the slicer. The keyboard turns on KEYS. The eye switches between one big video and four (one per track).</p>
     <p><b>Top bar:</b> the floppy disk opens the save window (save or open a session, save or load samples, new session). The camera adds a video. Pinch either video player to zoom in, drag to look around, double tap or tap RESET to zoom back out (exports are not affected).</p>
-    <p><b>Adding video:</b> tap the camera at the top (or the pizza, then ● or + VIDEO). Pick what is in it: drums, bass, guitar, keys, vox, samples, FX or chaos. AUTO CHOP fills the selected bank with 16 chops right away. JUST UPLOAD opens the slicer so you chop it yourself.</p>
+    <p><b>Adding video:</b> tap the camera at the top (or the pizza, then ● or + VIDEO). Pick what is in it: drums, bass, guitar, keys, vox, samples, FX or chaos. AUTO CHOP fills the next empty bank with 16 chops and never overwrites a bank. JUST UPLOAD opens the slicer so you chop it yourself.</p>
     <p><b>Slicer:</b> each video is a tab. Drag either edge of the selection on the waveform (edges can pass each other). Hold inside the selection to slide it. Drag outside it to scroll, pinch to zoom, tap to preview a spot. The big ▶ plays the slice, LOOP repeats it. The [ and ] buttons nudge each edge, ½ and ×2 halve or double it, and the note buttons snap it to the beat. VIDEO SLIP moves the picture up to 1 second without moving the sound. Tap a pad under SEND TO PAD to drop the slice there, the next pad lights up so you can chop fast.</p>
     <p><b>Banks:</b> the 8 mini blocks above the pads hold 128 chops (8 banks of 16). Tap one to put it on the pads. Hold one until it lifts, then drag to reorder. Patterns follow the sounds.</p>
-    <p><b>Pads and tracks:</b> pads play on the selected track (A to D). Each track plays one sound at a time. M mutes a track.</p>
+    <p><b>Pads and tracks:</b> pads play on the selected track (A to D) and ring over each other. To make pads cut each other off (like an open and closed hat), put them in the same MUTE GRP in pad edit. M mutes a track.</p>
     <p><b>Sequencer:</b> tap a step to drop the selected pad, tap again to clear. A step shows bank:pad when the sound comes from another bank. LEN makes a pattern 1, 2, 4 or 8 bars, new bars start as copies. The numbers next to LEN pick which bar you edit, FOLLOW makes the view follow the playhead. With the red dot on, pad hits made while playing get recorded and snapped to the nearest step.</p>
     <p><b>FX:</b> hold to punch in, double tap to latch, tap again to release. Each effect changes the sound and the picture.</p>
-    <p><b>Pad edit:</b> pitch, level and reverse. ONE SHOT plays the whole slice, GATE stops when you let go (one step in the sequencer), LOOP repeats while held (in the sequencer it loops until the next hit on that track). FADE and DECAY shape the sound. FREEZE holds one frame. VIDEO SLIP fixes a pad's timing as long as its video is still loaded. EDIT SLICE reopens the pad in the slicer.</p>
+    <p><b>Pad edit:</b> pitch, level and reverse. ONE SHOT plays the whole slice, GATE stops when you let go (one step in the sequencer), LOOP repeats while held (in the sequencer it loops until that pad or its mute group plays again). MUTE GRP 1 to 4 makes pads in the same group cut each other off. FADE and DECAY shape the sound. FREEZE holds one frame. VIDEO SLIP fixes a pad's timing as long as its video is still loaded. EDIT SLICE reopens the pad in the slicer.</p>
     <p><b>KEYS:</b> the 16 pads become 16 notes of the selected pad.</p>
     <p><b>Patterns:</b> 16 patterns. While playing, a new pattern starts when the current one ends. Turn on CHAIN and tap patterns to build a song. COPY TO NEXT copies the pattern and its length.</p>
     <p><b>Session (floppy disk):</b> SAVE SESSION keeps every pad (sound and video), patterns and settings in one .zip. SAVE SAMPLES gives you WAV files for your DAW. LOAD SAMPLES puts your own audio on pads. Work also autosaves in this browser. Full original videos are not saved, so add a video again to re-slice from it.</p>
@@ -391,7 +393,7 @@ const FPS=12,MAXF=24,FRAME_M=320,MAXLISTEN=60,KEY='forge-video-sampler-v1';
 /* ---------- state ---------- */
 const MAXST=128,LENS=[1,2,4,8];
 const NP=128,NB=8;
-const PAD_DEF={padSemi:0,padVol:1,padRev:false,padFi:0,padFo:0,padDecay:100,padMode:'one',padFreeze:-1};
+const PAD_DEF={padChoke:0,padSemi:0,padVol:1,padRev:false,padFi:0,padFo:0,padDecay:100,padMode:'one',padFreeze:-1};
 function padDefaults(){const o={};for(const k in PAD_DEF)o[k]=Array(NP).fill(PAD_DEF[k]);return o;}
 const mkTrack=()=>Array(MAXST).fill(null);
 const mkPat=()=>Array.from({length:4},mkTrack);
@@ -468,10 +470,13 @@ function trigger(tr,pi,semi,t,live){
     if(shaped){g.gain.setValueAtTime(vol,Math.max(t+fiE,end-f));g.gain.linearRampToValueAtTime(0,end);}
   }
   src.connect(g);g.connect(trackG[tr]);
+  /* polyphonic by default: only pads in the same mute group cut each other, and a looping pad stops when it plays again */
+  const grp=S.padChoke[pi]||0;
+  voices.forEach(list=>{for(let k=list.length-1;k>=0;k--){const o=list[k];
+    if(o.start<=t&&((grp&&o.grp===grp)||(o.pad===pi&&o.vis&&o.vis.loop))){release(o,t,0.006);list.splice(k,1);}}});
   const vs=voices[tr];
-  for(let k=vs.length-1;k>=0;k--){const v=vs[k];if(v.start<=t){release(v,t,0.006);vs.splice(k,1);}}
   const vis={pad:pi,start:t,rate,rev,glitch:gl,loop:mode==='loop',end};
-  const v={src,g,start:t,vis,fo};vs.push(v);src.onended=()=>{const i=vs.indexOf(v);if(i>=0)vs.splice(i,1);};
+  const v={src,g,start:t,vis,fo,pad:pi,grp};vs.push(v);src.onended=()=>{const i=vs.indexOf(v);if(i>=0)vs.splice(i,1);};
   src.start(t);if(end!=null){try{src.stop(end+0.02);}catch(e){}}
   const q=vq[tr];let i=q.length;while(i>0&&q[i-1].start>t)i--;q.splice(i,0,vis);
   setTimeout(()=>flash(pi,tr),Math.max(0,(t-ctx.currentTime)*1000));
@@ -648,8 +653,10 @@ async function addVideo(file){
   est('What is in this video?');
   renderTpMode();$('typePick').classList.remove('hidden');
 }
+function nextEmptyBank(){for(let k=0;k<NB;k++){const c=(bank+k)%NB;if(!pads.slice(c*16,c*16+16).some(Boolean))return c;}return -1;}
 function renderTpMode(){const a=UI.autoChop!==false;$('tpAuto').classList.toggle('on',a);$('tpUp').classList.toggle('on',!a);
-  $('tpModeNote').textContent=a?'Fills the selected bank ('+(bank+1)+') with 16 chops.':'Opens the slicer so you chop it yourself.';}
+  const nb=nextEmptyBank();
+  $('tpModeNote').textContent=a?(nb<0?'All banks are full. Auto chop will not overwrite anything.':'Fills the next empty bank ('+(nb+1)+') with 16 chops.'):'Opens the slicer so you chop it yourself.';}
 function buildTypePick(){
   $('tpAuto').onclick=()=>{UI.autoChop=true;saveUI();renderTpMode();};
   $('tpUp').onclick=()=>{UI.autoChop=false;saveUI();renderTpMode();};
@@ -695,7 +702,9 @@ function finishSource(src,audio){
   if(S.format==='auto'&&sources.length===1)applyFormat();
   $('empty').classList.add('hidden');
   if(src.autoChop){
-    const b=bank;renderBanks();
+    const b=nextEmptyBank();
+    if(b<0){estFlash('All 8 banks are full, so nothing was overwritten. Clear a bank or send chops by hand.',5000);return;}
+    bank=b;renderBanks();
     fillAll('auto').then(()=>{closeEditor();toast('Bank '+(b+1)+' filled with 16 '+src.type.toLowerCase()+' chops from '+src.name+'.',3000);});
     return;
   }
@@ -933,7 +942,7 @@ function edLoop(){
 requestAnimationFrame(edLoop);
 window.addEventListener('resize',()=>{waveDirty=true;});
 
-function typeDefaults(i,src){const P=PROF[src.type]||PROF.DRUMS;S.padFi[i]=P.fi||0;S.padFo[i]=P.fo||0;S.padDecay[i]=100;S.padMode[i]='one';S.padFreeze[i]=-1;S.padRev[i]=false;}
+function typeDefaults(i,src){const P=PROF[src.type]||PROF.DRUMS;S.padFi[i]=P.fi||0;S.padFo[i]=P.fo||0;S.padDecay[i]=100;S.padMode[i]='one';S.padFreeze[i]=-1;S.padRev[i]=false;S.padChoke[i]=0;}
 async function sendToPad(li){const i=bank*16+li;
   const src=cur();if(!src||!src.audio){estFlash('Add a video first.',1500);return;}
   if(edBusy)return;pushUndo();edBusy=true;stopSel();
@@ -1301,6 +1310,7 @@ function renderPadPanel(){
   $('pVol').value=Math.round(S.padVol[selPad]*100);$('oVol').textContent=Math.round(S.padVol[selPad]*100);
   $('pRev').textContent='REVERSE '+(S.padRev[selPad]?'ON':'OFF');$('pRev').style.background=S.padRev[selPad]?COL.fire:'';
   document.querySelectorAll('#pMode button').forEach(b=>b.classList.toggle('on',(S.padMode[selPad]||'one')===b.dataset.m));
+  document.querySelectorAll('#pChoke button').forEach(b=>b.classList.toggle('on',(S.padChoke[selPad]||0)===+b.dataset.g));
   $('pFi').value=S.padFi[selPad]||0;$('oFi').textContent=(S.padFi[selPad]||0)+'ms';
   $('pFo').value=S.padFo[selPad]||0;$('oFo').textContent=(S.padFo[selPad]||0)+'ms';
   $('pDec').value=S.padDecay[selPad]||100;$('oDec').textContent=(S.padDecay[selPad]||100)+'%';
@@ -1365,7 +1375,7 @@ $('aRemove').onclick=removeSource;
 /* ---------- undo ---------- */
 const undoS=[],redoS=[];let lastPush={k:null,t:0};
 function snap(){return {pat:JSON.stringify(S.patterns),len:[...S.patLen],chain:[...S.chain],
-  pp:JSON.stringify({padSemi:S.padSemi,padVol:S.padVol,padRev:S.padRev,padFi:S.padFi,padFo:S.padFo,padDecay:S.padDecay,padMode:S.padMode,padFreeze:S.padFreeze}),
+  pp:JSON.stringify({padChoke:S.padChoke,padSemi:S.padSemi,padVol:S.padVol,padRev:S.padRev,padFi:S.padFi,padFo:S.padFo,padDecay:S.padDecay,padMode:S.padMode,padFreeze:S.padFreeze}),
   pads:[...pads],srcs:sources.map(x=>({id:x.id,s:x.sel?x.sel.s:null,e:x.sel?x.sel.e:null,slip:x.slip||0}))};}
 function pushUndo(k){
   const n=performance.now();
@@ -1411,6 +1421,7 @@ async function runSlip(){
 }
 $('pSlM5').onclick=()=>padSlip(-5*FR);$('pSlM1').onclick=()=>padSlip(-FR);$('pSlP1').onclick=()=>padSlip(FR);$('pSlP5').onclick=()=>padSlip(5*FR);$('pSlV').onclick=()=>padSlip(0);
 /* pad shaping */
+document.querySelectorAll('#pChoke button').forEach(b=>b.onclick=()=>{pushUndo();S.padChoke[selPad]=+b.dataset.g;save();renderPadPanel();});
 document.querySelectorAll('#pMode button').forEach(b=>b.onclick=()=>{pushUndo();S.padMode[selPad]=b.dataset.m;save();renderPadPanel();});
 $('pFi').oninput=e=>{pushUndo('fi'+selPad);S.padFi[selPad]=+e.target.value;save();renderPadPanel();};
 $('pFo').oninput=e=>{pushUndo('fo'+selPad);S.padFo[selPad]=+e.target.value;save();renderPadPanel();};
@@ -1455,9 +1466,9 @@ async function padFromRecord(rec){
   const p={buf,rbuf:reverseOf(buf),cat:m.cat||'TONE',name:m.name||undefined,len,start:m.start||0,slip:m.slip||0,srcId:null,srcName:m.srcName,frames,fps:frames.length/len,thumb:frames[0].toDataURL('image/jpeg',0.6)};
   recCache.set(p,rec);return p;
 }
-function stateJSON(){return {bpm:S.bpm,swing:S.swing,format:S.format,patterns:S.patterns,patLen:S.patLen,chain:S.chain,padSemi:S.padSemi,padVol:S.padVol,padRev:S.padRev,padFi:S.padFi,padFo:S.padFo,padDecay:S.padDecay,padMode:S.padMode,padFreeze:S.padFreeze};}
+function stateJSON(){return {bpm:S.bpm,swing:S.swing,format:S.format,patterns:S.patterns,patLen:S.patLen,chain:S.chain,padChoke:S.padChoke,padSemi:S.padSemi,padVol:S.padVol,padRev:S.padRev,padFi:S.padFi,padFo:S.padFo,padDecay:S.padDecay,padMode:S.padMode,padFreeze:S.padFreeze};}
 function applyState(st){
-  const keys=['bpm','swing','format','patterns','patLen','chain','padSemi','padVol','padRev','padFi','padFo','padDecay','padMode','padFreeze'];
+  const keys=['bpm','swing','format','patterns','patLen','chain','padChoke','padSemi','padVol','padRev','padFi','padFo','padDecay','padMode','padFreeze'];
   keys.forEach(k=>{if(st[k]!=null)S[k]=st[k];});
   S.patterns.forEach(P=>P.forEach(t=>{while(t.length<MAXST)t.push(null);}));
   if(!Array.isArray(S.patLen)||S.patLen.length!==16)S.patLen=Array(16).fill(1);
