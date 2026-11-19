@@ -24,7 +24,6 @@ header{display:flex;justify-content:space-between;align-items:center;padding:2px
 .hic{height:34px;width:40px;padding:0;background:var(--slate);color:var(--air)}
 .forge{font-weight:800;letter-spacing:.18em;font-size:14px;color:var(--air)}
 .hr{display:flex;gap:6px;align-items:center}
-#patInd{font-size:11px;background:var(--purple);padding:6px 8px;border-radius:8px}
 .ur{font-size:15px;padding:5px 9px;background:var(--slate)}
 #bExp{font-size:11px;padding:6px 10px;background:var(--fire);color:var(--ink);font-weight:700}
 .zbadge{position:absolute;right:8px;top:8px;z-index:3;font-size:11px;padding:5px 8px;background:rgba(49,48,67,.8);color:var(--air);border-radius:8px}
@@ -48,7 +47,8 @@ header{display:flex;justify-content:space-between;align-items:center;padding:2px
 .bpm button{background:transparent;flex:1;padding:8px 0}
 .bpm span{min-width:30px;text-align:center;font-size:13px;font-weight:700}
 #bSlice{background:var(--air);color:var(--ink);font-weight:700}
-.transport>button{padding:10px 0;position:relative}
+.transport>button{padding:0;height:44px;position:relative}
+.transport .bpm{height:44px}
 .transport .bpm{flex:1.7}
 #bRec{color:var(--fire)}#bRec.on{color:var(--ink)}
 #bMet.on{background:var(--water)!important}
@@ -188,7 +188,7 @@ select{font:inherit;font-size:12px;background:var(--slate);color:var(--w);border
 <div class="wrap">
   <header>
     <div class="brand"><span class="forge">VBM-16</span><button class="hic" id="bDisk" aria-label="Save and open"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h13l3 3v13H4z"/><path d="M8 4v5h7V4"/><rect x="7.5" y="13" width="9" height="7" rx="1"/></svg></button><label class="btn hic" aria-label="Add video"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="13" height="12" rx="2"/><path d="M15.5 10.2l5-3v9.6l-5-3"/><path d="M9 9.5v5M6.5 12h5"/></svg><input type="file" accept="video/*" class="fIn" hidden></label></div>
-    <div class="hr"><button class="ur" id="bUndo">↶</button><button class="ur" id="bRedo">↷</button><button id="bExp">EXPORT</button><div id="patInd">P1</div></div>
+    <div class="hr"><button class="ur" id="bUndo">↶</button><button class="ur" id="bRedo">↷</button><button id="bExp">EXPORT</button></div>
   </header>
 
   <section class="panel tight" id="secVid"><h3>VIDEO</h3>
@@ -396,7 +396,7 @@ const TYPES=[
 ];
 const PROF=Object.fromEntries(TYPES);
 const TL=['A','B','C','D'],TCOL=[COL.water,COL.fire,COL.air,COL.earth];
-const FXL=[['LPF','LOW'],['HPF','HIGH'],['CRUSH','CRUSH'],['ECHO','ECHO'],['STUT8','STUT 8'],['STUT16','STUT 16'],['REV','REV'],['GLITCH','GLITCH']];
+const FXL=[['LPF','LOW'],['HPF','HIGH'],['CRUSH','CRSH'],['ECHO','ECHO'],['STUT8','STUT 8'],['STUT16','STUT 16'],['REV','REV'],['GLITCH','GLTCH']];
 const FPS=12,MAXF=24,FRAME_M=320,MAXLISTEN=60,KEY='forge-video-sampler-v1';
 
 /* ---------- state ---------- */
@@ -512,7 +512,7 @@ function setFx(k,on){
 
 const ICON_PLAY='<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M7 4.5l13 7.5-13 7.5z" fill="currentColor"/></svg>';
 const ICON_STOP='<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1.5" fill="currentColor"/></svg>';
-const ICON_EYE_FOCUS='<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 12S5.5 3.8 12 3.8 22.5 12 22.5 12 18.5 20.2 12 20.2 1.5 12 1.5 12z"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="2.3" fill="currentColor"/></svg>';
+const ICON_EYE_FOCUS='<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 12S5.5 3.8 12 3.8 22.5 12 22.5 12 18.5 20.2 12 20.2 1.5 12 1.5 12z"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="2.3" fill="currentColor"/></svg>';
 const ICON_EYE='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.8-6.5 10-6.5S22 12 22 12s-3.8 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
 /* metronome: straight to the speakers, never into exports */
 function click(t,accent){
@@ -1275,7 +1275,6 @@ function renderSteps(){
     b.classList.toggle('sel',!nudgeAll&&off+s===selStep&&!!ev);
     b.classList.toggle('nl',!!(ev&&ev.n<0));b.classList.toggle('nr',!!(ev&&ev.n>0));});
   renderNudge();
-  $('patInd').textContent='P'+(editPat+1)+' · '+TL[selTrack]+(S.patLen[editPat]>1?' · '+(viewPage+1)+'/'+S.patLen[editPat]:'');
   renderPages();
 }
 function renderPads(){
