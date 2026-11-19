@@ -278,7 +278,7 @@ select{font:inherit;font-size:12px;background:var(--slate);color:var(--w);border
     <p><b>Pads and tracks:</b> pads play on the selected track (A to D) and ring over each other. To make pads cut each other off (like an open and closed hat), put them in the same MUTE GRP in pad edit. M mutes a track.</p>
     <p><b>Sequencer:</b> tap a step to drop the selected pad, tap again to clear. A step shows bank:pad when the sound comes from another bank. LEN makes a pattern 1, 2, 4 or 8 bars, new bars start as copies. The numbers next to LEN pick which bar you edit, FOLLOW makes the view follow the playhead. With the red dot on, pad hits made while playing get recorded and snapped to the nearest step.</p>
     <p><b>Nudge:</b> hold a step until it gets a dashed outline, then use ◀ and ▶ under the steps to push it early or late (◀◀ and ▶▶ move 4 at a time, up to half a step each way). Tap the readout to put it back on the grid. ALL nudges every step on the track at once, for a laid back or pushed feel. A nudged step shows a mark on the side it moved toward.</p>
-    <p><b>FX:</b> hold to punch in, double tap to latch, tap again to release. Each effect changes the sound and the picture.</p>
+    <p><b>FX:</b> hold to punch in, double tap to latch, tap again to release. Each effect changes the sound and the picture. ST8 and ST16 stutter in 8th and 16th notes.</p>
     <p><b>Pad edit:</b> pitch, level and reverse. ONE SHOT plays the whole slice, GATE stops when you let go (one step in the sequencer), LOOP repeats while held (in the sequencer it loops until that pad or its mute group plays again). MUTE GRP 1 to 4 makes pads in the same group cut each other off. FADE and DECAY shape the sound. FREEZE holds one frame. VIDEO SLIP fixes a pad's timing as long as its video is still loaded. EDIT SLICE reopens the pad in the slicer.</p>
     <p><b>KEYS:</b> the 16 pads become 16 notes of the selected pad.</p>
     <p><b>Patterns:</b> 16 patterns. While playing, a new pattern starts when the current one ends. Turn on CHAIN and tap patterns to build a song. COPY TO NEXT copies the pattern and its length.</p>
@@ -396,7 +396,7 @@ const TYPES=[
 ];
 const PROF=Object.fromEntries(TYPES);
 const TL=['A','B','C','D'],TCOL=[COL.water,COL.fire,COL.air,COL.earth];
-const FXL=[['LPF','LOW'],['HPF','HIGH'],['CRUSH','CRSH'],['ECHO','ECHO'],['STUT8','STUT 8'],['STUT16','STUT 16'],['REV','REV'],['GLITCH','GLTCH']];
+const FXL=[['LPF','LOW'],['HPF','HIGH'],['CRUSH','CRSH'],['ECHO','ECHO'],['STUT8','ST8'],['STUT16','ST16'],['REV','REV'],['GLITCH','GLTCH']];
 const FPS=12,MAXF=24,FRAME_M=320,MAXLISTEN=60,KEY='forge-video-sampler-v1';
 
 /* ---------- state ---------- */
