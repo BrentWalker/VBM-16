@@ -67,8 +67,11 @@ header{display:flex;justify-content:space-between;align-items:center;padding:2px
 .pages button.view{background:var(--air);color:var(--ink);font-weight:700}
 .pages button.play::after{content:"";position:absolute;left:50%;bottom:2px;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:var(--fire)}
 .steps{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;margin-top:8px}
-.steps button{height:30px;padding:0;font-size:10px;background:#3a3a50;border-radius:6px}
+.steps button{height:30px;padding:0;font-size:10px;background:#28273a;border-radius:6px}
 .steps button.beat{box-shadow:inset 0 0 0 1px rgba(173,207,222,.35)}
+.steps button.sel{outline:2px dashed var(--fire);outline-offset:-3px}
+.steps button.nl{box-shadow:inset 3px 0 0 var(--ink)}
+.steps button.nr{box-shadow:inset -3px 0 0 var(--ink)}
 .steps button.ph{outline:2px solid var(--w);outline-offset:-2px}
 .pads{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
 .pad{position:relative;aspect-ratio:1.25;border-radius:12px;background:var(--slate) center/cover no-repeat;padding:0;overflow:hidden;transition:transform .05s}
@@ -128,7 +131,8 @@ select{font:inherit;font-size:12px;background:var(--slate);color:var(--w);border
 .help p{margin:4px 0}
 .modal{position:fixed;inset:0;background:rgba(20,20,30,.85);display:flex;align-items:center;justify-content:center;z-index:20;padding:16px}
 .mbox{background:var(--ink);border:1px solid var(--purple);border-radius:16px;padding:14px;width:100%;max-width:420px;text-align:center}
-#saveWin{z-index:15}
+#saveWin,#expWin{z-index:15}
+#eLoops button{padding:8px 0;font-size:11px}
 .sw{text-align:left;max-height:90vh;overflow-y:auto}
 .swT{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;letter-spacing:.12em;color:var(--air)}
 .sw .help{margin-top:8px}
@@ -215,6 +219,7 @@ select{font:inherit;font-size:12px;background:var(--slate);color:var(--w);border
   <div class="row" id="tracks" style="margin-top:0"></div>
   <div class="pageRow"><button id="bLen">LEN 1</button><div class="pages" id="pages"></div><button id="bFollow" class="on">FOLLOW</button></div>
   <div class="steps" id="steps"></div>
+  <div class="row slip" id="stepNudge"><button id="snM4">◀◀</button><button id="snM1">◀</button><button class="val" id="snV">HOLD A STEP TO NUDGE</button><button id="snP1">▶</button><button id="snP4">▶▶</button><button id="snAll" style="flex:0 0 46px;font-size:10px">ALL</button></div>
   </section>
   <section class="panel tight" id="secFx"><h3>FX</h3><div class="fx" id="fx"></div></section>
   <section class="panel tight" id="secPads"><h3>PADS <span id="bankName">BANK 1</span></h3>
@@ -260,14 +265,6 @@ select{font:inherit;font-size:12px;background:var(--slate);color:var(--w);border
     <div class="ctl"><label>SWING</label><input type="range" id="gSw" min="0" max="60" step="1" value="0"><output id="oSw">0%</output></div>
   </section>
 
-  <section class="panel" id="secExp">
-    <h3>EXPORT</h3>
-    <div class="row">
-      <select id="eLen"><option value="pat" selected>Pattern length</option><option value="1">1 bar</option><option value="2">2 bars</option><option value="4">4 bars</option><option value="8">8 bars</option><option value="chain">Whole chain</option></select>
-      <select id="eFmt"><option value="auto">Format: first video</option><option value="9:16">9:16</option><option value="1:1">1:1</option><option value="16:9">16:9</option></select>
-    </div>
-    <div class="help"><p>Exports start on the downbeat and stop right on the bar, so the clip loops clean.</p></div>
-  </section>
 
   <section class="panel help" id="secHelp">
     <h3>HOW IT WORKS</h3>
@@ -279,12 +276,13 @@ select{font:inherit;font-size:12px;background:var(--slate);color:var(--w);border
     <p><b>Banks:</b> the 8 mini blocks above the pads hold 128 chops (8 banks of 16). Tap one to put it on the pads. Hold one until it lifts, then drag to reorder. Patterns follow the sounds.</p>
     <p><b>Pads and tracks:</b> pads play on the selected track (A to D) and ring over each other. To make pads cut each other off (like an open and closed hat), put them in the same MUTE GRP in pad edit. M mutes a track.</p>
     <p><b>Sequencer:</b> tap a step to drop the selected pad, tap again to clear. A step shows bank:pad when the sound comes from another bank. LEN makes a pattern 1, 2, 4 or 8 bars, new bars start as copies. The numbers next to LEN pick which bar you edit, FOLLOW makes the view follow the playhead. With the red dot on, pad hits made while playing get recorded and snapped to the nearest step.</p>
+    <p><b>Nudge:</b> hold a step until it gets a dashed outline, then use ◀ and ▶ under the steps to push it early or late (◀◀ and ▶▶ move 4 at a time, up to half a step each way). Tap the readout to put it back on the grid. ALL nudges every step on the track at once, for a laid back or pushed feel. A nudged step shows a mark on the side it moved toward.</p>
     <p><b>FX:</b> hold to punch in, double tap to latch, tap again to release. Each effect changes the sound and the picture.</p>
     <p><b>Pad edit:</b> pitch, level and reverse. ONE SHOT plays the whole slice, GATE stops when you let go (one step in the sequencer), LOOP repeats while held (in the sequencer it loops until that pad or its mute group plays again). MUTE GRP 1 to 4 makes pads in the same group cut each other off. FADE and DECAY shape the sound. FREEZE holds one frame. VIDEO SLIP fixes a pad's timing as long as its video is still loaded. EDIT SLICE reopens the pad in the slicer.</p>
     <p><b>KEYS:</b> the 16 pads become 16 notes of the selected pad.</p>
     <p><b>Patterns:</b> 16 patterns. While playing, a new pattern starts when the current one ends. Turn on CHAIN and tap patterns to build a song. COPY TO NEXT copies the pattern and its length.</p>
     <p><b>Session (floppy disk):</b> SAVE SESSION keeps every pad (sound and video), patterns and settings in one .zip. SAVE SAMPLES gives you WAV files for your DAW. LOAD SAMPLES puts your own audio on pads. Work also autosaves in this browser. Full original videos are not saved, so add a video again to re-slice from it.</p>
-    <p><b>Export:</b> records a clean loop of the pattern, a set number of bars or the whole chain, in 9:16, 1:1, 16:9 or the shape of your first video.</p>
+    <p><b>Export:</b> tap EXPORT at the top. Pick the length (pattern, 1 to 8 bars or the whole chain), how many times it loops (1× to 16×) and the shape (9:16, 1:1, 16:9 or your first video), then RECORD. It starts on the downbeat and ends right on the bar.</p>
     <p><b>Undo:</b> ↶ undoes your last change, ↷ brings it back. Tap any panel title to minimize it.</p>
   </section>
 </div>
@@ -336,6 +334,16 @@ select{font:inherit;font-size:12px;background:var(--slate);color:var(--w);border
     <div id="mTxt"></div>
     <video id="mVid" class="hidden" playsinline loop muted></video>
     <div class="row"><button id="mSave" class="hidden">SAVE VIDEO</button><button id="mClose">CLOSE</button></div>
+  </div>
+</div>
+<div id="expWin" class="modal hidden">
+  <div class="mbox sw">
+    <div class="swT"><span>EXPORT VIDEO</span></div>
+    <div class="ctl"><label>LENGTH</label><select id="eLen" style="flex:1"><option value="pat" selected>Pattern length</option><option value="1">1 bar</option><option value="2">2 bars</option><option value="4">4 bars</option><option value="8">8 bars</option><option value="chain">Whole chain</option></select></div>
+    <div class="ctl"><label>LOOPS</label><div class="row seg" id="eLoops" style="flex:1;margin:0"><button data-l="1">1×</button><button data-l="2">2×</button><button data-l="4">4×</button><button data-l="8">8×</button><button data-l="16">16×</button></div></div>
+    <div class="ctl"><label>FORMAT</label><select id="eFmt" style="flex:1"><option value="auto">First video</option><option value="9:16">9:16</option><option value="1:1">1:1</option><option value="16:9">16:9</option></select></div>
+    <div class="help" id="eSum"></div>
+    <div class="row"><button id="bExpGo" class="hl">RECORD</button><button id="expClose">CLOSE</button></div>
   </div>
 </div>
 <div id="saveWin" class="modal hidden">
@@ -525,7 +533,7 @@ function stop(){
   editPat=curPat;renderTransport();renderPats();renderSteps();
 }
 function tick(){
-  while(nextTime<ctx.currentTime+0.12){
+  while(nextTime<ctx.currentTime+0.12+stepDur()*0.5){
     const t=nextTime+(step%2?S.swing*stepDur()*0.5:0);
     scheduleStep(step,t);
     nextTime+=stepDur();step++;
@@ -542,7 +550,7 @@ function scheduleStep(s,t){
   for(let tr=0;tr<4;tr++){
     if(muted[tr])continue;
     if(stut){if(s%stut===0&&lastHit[tr])trigger(tr,lastHit[tr].pad,lastHit[tr].semi,t);continue;}
-    const ev=pat[tr][s];if(ev){trigger(tr,ev.pad,ev.semi,t);lastHit[tr]=ev;}
+    const ev=pat[tr][s];if(ev){trigger(tr,ev.pad,ev.semi,Math.max(ctx.currentTime,t+(ev.n||0)*stepDur()));lastHit[tr]=ev;}
   }
   const e={s,t,p:curPat};uiQ.push(e);sched.push(e);if(sched.length>48)sched.shift();
 }
@@ -1149,12 +1157,12 @@ function buildUI(){
   for(let t=0;t<4;t++){
     const w=document.createElement('div');w.className='track';
     const b=document.createElement('button');b.className='tsel';b.textContent=TL[t];b.style.borderBottomColor=TCOL[t];
-    b.onpointerdown=e=>{e.preventDefault();selTrack=t;renderTracks();renderSteps();};
+    b.onpointerdown=e=>{e.preventDefault();selTrack=t;selStep=-1;renderTracks();renderSteps();};
     const m=document.createElement('button');m.className='tmute';m.textContent='M';
     m.onpointerdown=e=>{e.preventDefault();muted[t]=!muted[t];renderTracks();};
     w.append(b,m);$('tracks').append(w);trkEls.push({b,m});
   }
-  for(let s=0;s<16;s++){const b=document.createElement('button');if(s%4===0)b.classList.add('beat');b.onpointerdown=e=>{e.preventDefault();tapStep(s);};$('steps').append(b);stepEls.push(b);}
+  for(let s=0;s<16;s++){const b=document.createElement('button');if(s%4===0)b.classList.add('beat');stepPress(b,s);$('steps').append(b);stepEls.push(b);}
   for(let i=0;i<16;i++){const b=document.createElement('button');b.className='pad';b.innerHTML='<span class="n"></span><span class="i"></span><span class="k"></span>';b.onpointerdown=e=>{e.preventDefault();try{b.setPointerCapture(e.pointerId);}catch(_){}tapPad(i);};
     b.onpointerup=b.onpointercancel=()=>endLive(i);
     $('pads').append(b);padEls.push(b);}
@@ -1189,12 +1197,37 @@ function tapPad(i){
   }
   renderPads();
 }
+/* tap a step to place or clear it, hold it to pick it for nudging */
+const NUD=1/24;let selStep=-1,nudgeAll=false;
+function stepPress(b,s){
+  let tm=null,held=false;
+  b.onpointerdown=e=>{e.preventDefault();held=false;clearTimeout(tm);
+    tm=setTimeout(()=>{held=true;const gi=viewPage*16+s;if(S.patterns[editPat][selTrack][gi]){selStep=gi;try{navigator.vibrate&&navigator.vibrate(15);}catch(_){}renderSteps();}},420);};
+  b.onpointerup=()=>{clearTimeout(tm);if(!held)tapStep(s);};
+  b.onpointercancel=b.onpointerleave=()=>clearTimeout(tm);
+}
+function nudge(d){
+  const row=S.patterns[editPat][selTrack];
+  const targets=nudgeAll?row.map((ev,i)=>ev?i:-1).filter(i=>i>=0&&i<plen(editPat)):(selStep>=0&&row[selStep]?[selStep]:[]);
+  if(!targets.length){$('snV').textContent='HOLD A STEP TO NUDGE';return;}
+  pushUndo('nudgeStep');
+  targets.forEach(i=>{const ev=row[i];ev.n=d===0?0:Math.max(-12,Math.min(12,Math.round((ev.n||0)/NUD)+d))*NUD;if(!ev.n)delete ev.n;});
+  save();renderSteps();
+}
+function renderNudge(){
+  const row=S.patterns[editPat][selTrack];$('snAll').classList.toggle('on',nudgeAll);
+  let n=null;
+  if(nudgeAll){const evs=row.slice(0,plen(editPat)).filter(Boolean);n=evs.length?(evs[0].n||0):0;$('snV').textContent=evs.length?'ALL '+TL[selTrack]+' '+nudgeTxt(n):'NO STEPS ON '+TL[selTrack];return;}
+  if(selStep>=0&&row[selStep]){n=row[selStep].n||0;$('snV').textContent='STEP '+(selStep%16+1)+(S.patLen[editPat]>1?' BAR '+(Math.floor(selStep/16)+1):'')+' '+nudgeTxt(n);}
+  else $('snV').textContent='HOLD A STEP TO NUDGE';
+}
+function nudgeTxt(n){const t=Math.round(n/NUD),ms=Math.round(n*stepDur()*1000);return (t>0?'+':'')+t+'/24 '+(ms>0?'+':'')+ms+'ms';}
 function tapStep(s){
   initAudio();if(!hasPads())return;
   pushUndo();
   const row=S.patterns[editPat][selTrack],gi=viewPage*16+s,ev=row[gi],semi=keys?lastSemi:0;
   if(ev&&ev.pad===selPad&&ev.semi===semi)row[gi]=null;
-  else{row[gi]={pad:selPad,semi};if(!playing)trigger(selTrack,selPad,semi,ctx.currentTime);}
+  else{row[gi]={pad:selPad,semi};selStep=gi;if(!playing)trigger(selTrack,selPad,semi,ctx.currentTime);}
   save();renderSteps();renderPats();
 }
 function tapPat(i){
@@ -1214,7 +1247,10 @@ function renderSteps(){
   const row=S.patterns[editPat][selTrack],off=viewPage*16;
   stepEls.forEach((b,s)=>{const ev=row[off+s];
     if(ev){const p=pads[ev.pad];b.style.background=p?CATS[p.cat].c:COL.purple;b.style.color=COL.ink;b.textContent=(Math.floor(ev.pad/16)===bank?String(ev.pad%16+1):padLabel(ev.pad))+(ev.semi?'·'+ev.semi:'');}
-    else{b.style.background='';b.style.color='';b.textContent='';}});
+    else{b.style.background='';b.style.color='';b.textContent='';}
+    b.classList.toggle('sel',!nudgeAll&&off+s===selStep&&!!ev);
+    b.classList.toggle('nl',!!(ev&&ev.n<0));b.classList.toggle('nr',!!(ev&&ev.n>0));});
+  renderNudge();
   $('patInd').textContent='P'+(editPat+1)+' · '+TL[selTrack]+(S.patLen[editPat]>1?' · '+(viewPage+1)+'/'+S.patLen[editPat]:'');
   renderPages();
 }
@@ -1324,6 +1360,8 @@ function renderAll(){renderTracks();renderSteps();renderPads();renderFx();render
 
 /* ---------- controls ---------- */
 $('bPlay').onclick=()=>{playing?stop():start();};
+$('snM4').onclick=()=>nudge(-4);$('snM1').onclick=()=>nudge(-1);$('snP1').onclick=()=>nudge(1);$('snP4').onclick=()=>nudge(4);$('snV').onclick=()=>nudge(0);
+$('snAll').onclick=()=>{nudgeAll=!nudgeAll;renderSteps();};
 $('bMet').onclick=()=>{initAudio();UI.metro=!UI.metro;saveUI();renderTransport();};
 $('bRec').onclick=()=>{recArm=!recArm;renderTransport();};
 $('bKeys').onclick=()=>{keys=!keys;renderPads();renderTransport();};
@@ -1351,7 +1389,7 @@ $('bLen').onclick=()=>{pushUndo('len');
   S.patLen[p]=nx;if(viewPage>=nx)viewPage=0;save();renderSteps();renderPats();
 };
 $('bFollow').onclick=()=>{follow=!follow;renderPages();};
-$('eFmt').onchange=e=>{S.format=e.target.value;save();applyFormat();};
+$('eFmt').onchange=e=>{S.format=e.target.value;save();applyFormat();renderExp();};
 document.querySelectorAll('.fIn').forEach(inp=>inp.addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';addVideo(f);}));
 $('bDemo').onclick=demoKit;
 $('mClose').onclick=()=>{$('modal').classList.add('hidden');$('mVid').pause();};
@@ -1611,7 +1649,7 @@ async function exportClip(){
   const mime=pickMime();
   if(mime===null||!cv.captureStream||!recDest){modal('This browser cannot record video from the page. Try Chrome on Android or desktop, or Safari on a recent iPhone.');return;}
   if(playing)stop();
-  const lenSel=$('eLen').value,bars=lenSel==='chain'?(S.chain.length?S.chain.reduce((a,p)=>a+S.patLen[p],0):S.patLen[curPat]):lenSel==='pat'?S.patLen[queued!=null?queued:curPat]:+lenSel;
+  const lenSel=$('eLen').value,bars=expBars()*expLoops;
   if(lenSel==='chain'&&!chainOn&&S.chain.length){chainOn=true;renderChain();}
   const durS=bars*16*stepDur();
   const stream=new MediaStream([...cv.captureStream(30).getVideoTracks(),...recDest.stream.getAudioTracks()]);
@@ -1627,10 +1665,22 @@ async function exportClip(){
     v.play().catch(()=>{});
   };
   rec.start();
-  start(ctx.currentTime+0.25);
-  setTimeout(()=>{stop();setTimeout(()=>{try{rec.stop();}catch(e){}},60);},(durS+0.25)*1000);
+  start(ctx.currentTime+0.06);
+  setTimeout(()=>{stop();setTimeout(()=>{try{rec.stop();}catch(e){}},40);},(durS+0.06)*1000);
 }
-$('bExp').onclick=exportClip;
+let expLoops=1;
+function expBars(){const v=$('eLen').value;return v==='chain'?(S.chain.length?S.chain.reduce((a,p)=>a+S.patLen[p],0):S.patLen[curPat]):v==='pat'?S.patLen[queued!=null?queued:curPat]:+v;}
+function renderExp(){
+  document.querySelectorAll('#eLoops button').forEach(b=>b.classList.toggle('on',+b.dataset.l===expLoops));
+  const b=expBars(),tot=b*expLoops,sec=tot*16*stepDur();
+  $('eSum').innerHTML='<p>'+b+(b>1?' bars':' bar')+' × '+expLoops+' = <b>'+tot+' bars</b>, about '+(sec<60?sec.toFixed(1)+' seconds':Math.floor(sec/60)+' min '+Math.round(sec%60)+' s')+' at '+S.bpm+' BPM. It starts on the downbeat and ends right on the bar, so it loops clean.</p>';
+}
+document.querySelectorAll('#eLoops button').forEach(b=>b.onclick=()=>{expLoops=+b.dataset.l;renderExp();});
+$('eLen').onchange=renderExp;
+$('bExp').onclick=()=>{renderExp();$('expWin').classList.remove('hidden');};
+$('expClose').onclick=()=>$('expWin').classList.add('hidden');
+$('expWin').addEventListener('click',e=>{if(e.target.id==='expWin')$('expWin').classList.add('hidden');});
+$('bExpGo').onclick=()=>{$('expWin').classList.add('hidden');exportClip();};
 $('mSave').onclick=async()=>{
   if(!lastBlob)return;
   if(!downloads){$('mTxt').textContent=await saveStandalone(lastName,lastBlob);return;}
