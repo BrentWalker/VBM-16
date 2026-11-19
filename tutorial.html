@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VBM-16 · Getting Started</title>
+<style>
+:root{--ink:#313043;--slate:#424C60;--purple:#57556F;--earth:#7C5D48;--air:#ADCFDE;--fire:#DC7B78;--water:#7EB3D2;--w:#fff}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:#1f1e2c;color:var(--w);font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;overflow:hidden}
+.phone{position:relative;width:100%;max-width:430px;height:100%;max-height:932px;margin:0 auto;background:var(--ink);display:flex;flex-direction:column;overflow:hidden}
+@media (min-width:500px){body{display:flex;align-items:center;justify-content:center;padding:16px}.phone{height:844px;border-radius:44px;box-shadow:0 0 0 10px #111,0 20px 60px rgba(0,0,0,.6)}}
+.top{display:flex;justify-content:space-between;align-items:center;padding:16px 20px 6px}
+.brand{font-weight:800;letter-spacing:.18em;color:var(--air);font-size:14px}
+.brand span{color:var(--w);opacity:.6;font-weight:400;font-size:10px;letter-spacing:.14em;margin-left:8px}
+.count{font-size:11px;opacity:.6}
+.track{flex:1;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.track::-webkit-scrollbar{display:none}
+.card{flex:0 0 100%;scroll-snap-align:center;padding:6px 20px 0;display:flex;flex-direction:column;overflow-y:auto}
+.vis{background:#262535;border-radius:20px;padding:14px;min-height:250px;display:flex;flex-direction:column;justify-content:center;gap:8px}
+.step{font-size:10px;letter-spacing:.16em;color:var(--air);margin:16px 0 4px}
+h2{margin:0 0 10px;font-size:21px;line-height:1.25}
+ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px}
+li{font-size:13px;line-height:1.5;padding-left:16px;position:relative;opacity:.92}
+li::before{content:"";position:absolute;left:0;top:7px;width:6px;height:6px;border-radius:2px;background:var(--water)}
+b{color:var(--air)}
+.bot{display:flex;align-items:center;gap:10px;padding:12px 20px 22px}
+.dots{display:flex;gap:6px;flex:1;justify-content:center}
+.dots i{width:6px;height:6px;border-radius:3px;background:var(--purple);transition:all .2s}
+.dots i.on{width:18px;background:var(--air)}
+.nav{border:0;border-radius:14px;padding:12px 16px;font:inherit;font-size:12px;font-weight:700;color:var(--ink);background:var(--air);min-width:84px}
+.nav.ghost{background:var(--slate);color:var(--w)}
+.nav:disabled{opacity:.3}
+/* mini ui pieces */
+.r{display:flex;gap:5px}.r>*{flex:1}
+.k{background:var(--slate);border-radius:9px;height:34px;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--w)}
+.k svg{width:18px;height:18px}
+.k.air{background:var(--air);color:var(--ink)}.k.wat{background:var(--water);color:var(--ink)}.k.fir{background:var(--fire);color:var(--ink)}.k.pur{background:var(--purple)}
+.k.big{height:52px;border-radius:26px;background:var(--water);color:var(--ink)}
+.tag{display:inline-block;font-size:9px;background:var(--fire);color:var(--ink);border-radius:5px;padding:2px 6px;font-weight:700;align-self:center}
+.vid{height:110px;border-radius:12px;background:linear-gradient(135deg,#4a4866,#2a2940);position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.vid .hand{width:56px;height:56px;border-radius:50%;background:var(--earth);box-shadow:0 0 0 10px rgba(124,93,72,.3)}
+.wave{height:58px;border-radius:9px;background:#1d1c2a;position:relative;overflow:hidden}
+.wave .sel{position:absolute;top:0;bottom:0;left:28%;width:30%;background:rgba(87,85,111,.75)}
+.wave .e{position:absolute;top:0;bottom:0;width:2px;background:var(--water)}
+.wave .e::before,.wave .e::after{content:"";position:absolute;left:-6px;width:14px;height:13px;background:var(--water)}
+.wave .e::before{top:0}.wave .e::after{bottom:0}
+.wave svg{position:absolute;inset:0;width:100%;height:100%}
+.slipbar{position:absolute;bottom:6px;height:4px;background:var(--fire);left:22%;width:30%;border-radius:2px}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+.pd{aspect-ratio:1.3;border-radius:8px;background:var(--slate);font-size:9px;padding:3px 5px;position:relative}
+.pd.f{background:linear-gradient(160deg,#5a5878,#3a3950)}
+.pd.next{box-shadow:inset 0 0 0 2px var(--air)}
+.pd.hit{background:var(--fire);color:var(--ink)}
+.pd .dot{position:absolute;right:5px;top:4px;width:7px;height:7px;border-radius:50%}
+.banks{display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
+.bk{aspect-ratio:1;border-radius:4px;background:#1d1c2a;padding:2px;display:grid;grid-template-columns:repeat(4,1fr);gap:1px}
+.bk i{border-radius:1px;background:#3d3c55}
+.bk.cur{box-shadow:0 0 0 2px var(--air)}
+.bk.lift{transform:scale(1.2);box-shadow:0 0 0 2px var(--fire)}
+.steps{display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
+.st{height:22px;border-radius:5px;background:#3a3a50;font-size:8px;display:flex;align-items:center;justify-content:center;color:var(--ink)}
+.st.on{background:var(--earth)}.st.sn{background:var(--fire)}.st.ht{background:var(--air)}.st.ph{outline:2px solid #fff;outline-offset:-2px}
+.types{display:grid;grid-template-columns:repeat(2,1fr);gap:5px}
+.ty{background:var(--slate);border-radius:9px;padding:7px 8px;font-size:10px;font-weight:700;display:flex;align-items:center;gap:6px}
+.ty i{font-style:normal;width:18px;height:18px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;color:var(--ink);font-size:10px}
+.seg{display:flex;gap:5px}.seg>*{flex:1}
+.lbl{font-size:9px;opacity:.6;letter-spacing:.1em}
+.big-title{font-size:30px;font-weight:800;letter-spacing:.14em;color:var(--air);text-align:center}
+.sub{font-size:12px;opacity:.75;text-align:center;line-height:1.5}
+.cta{display:block;text-align:center;text-decoration:none;background:var(--air);color:var(--ink);border-radius:16px;padding:15px;font-weight:800;font-size:14px;margin-top:16px}
+.fxr{display:grid;grid-template-columns:repeat(4,1fr);gap:4px}
+.fxr .k{height:28px;font-size:9px;background:var(--purple)}
+.zip{display:flex;align-items:center;gap:10px;background:var(--slate);border-radius:12px;padding:10px}
+.zip .ic{width:34px;height:40px;border-radius:6px;background:var(--water);color:var(--ink);font-size:9px;font-weight:800;display:flex;align-items:flex-end;justify-content:center;padding-bottom:4px}
+.zip .ic.w{background:var(--earth);color:var(--w)}
+.zip .ic.v{background:var(--fire)}
+.zip div{font-size:11px;line-height:1.4}
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="top"><div class="brand">VBM-16<span>GETTING STARTED</span></div><div class="count" id="count">1 / 10</div></div>
+  <div class="track" id="track">
+
+    <!-- 1 -->
+    <section class="card">
+      <div class="vis" style="align-items:center">
+        <div class="big-title">VBM-16</div>
+        <div class="sub">Turn any video into a drum kit.<br>Every hit plays its own piece of video.</div>
+        <div class="grid4" style="width:80%;margin-top:6px">
+          <div class="pd f"><span class="dot" style="background:var(--earth)"></span></div><div class="pd hit"></div><div class="pd f"><span class="dot" style="background:var(--air)"></span></div><div class="pd f"></div>
+        </div>
+      </div>
+      <div class="step">WELCOME</div>
+      <h2>Your phone is the sampler</h2>
+      <ul>
+        <li>Film anything: a drum pad, a guitar, a voice, the truck.</li>
+        <li>VBM-16 chops it into pads. Hit a pad and you hear the sound and see that moment of video.</li>
+        <li>Sequence the pads into a beat and export it as a music video that loops clean.</li>
+      </ul>
+    </section>
+
+    <!-- 2 -->
+    <section class="card">
+      <div class="vis">
+        <div class="lbl">TRANSPORT</div>
+        <div class="r">
+          <div class="k"><svg viewBox="0 0 24 24"><path d="M7 4.5l13 7.5-13 7.5z" fill="currentColor"/></svg></div>
+          <div class="k" style="color:var(--fire)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="6.5" fill="currentColor"/></svg></div>
+          <div class="k" style="flex:1.7">- 92 +</div>
+          <div class="k wat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.2 3.5h5.6L19 20.5H5z"/><path d="M12 16.5l5.5-9.5"/><circle cx="17.5" cy="7" r="1.4" fill="currentColor"/><path d="M7.2 15.5h9.6"/></svg></div>
+        </div>
+        <div class="r">
+          <div class="k air"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 6.2c5.4-2.9 11.6-2.9 17 0L12 21z"/><path d="M3.5 6.2c5.4-2.9 11.6-2.9 17 0" stroke-width="3.2"/><circle cx="10" cy="10" r="1.5" fill="currentColor" stroke="none"/><circle cx="14.6" cy="11.4" r="1.3" fill="currentColor" stroke="none"/><circle cx="11.8" cy="15" r="1.1" fill="currentColor" stroke="none"/></svg></div>
+          <div class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="5.5" width="20" height="13" rx="2"/><path d="M7 5.5v13M12 5.5v13M17 5.5v13"/><rect x="5.6" y="5.5" width="2.8" height="7" fill="currentColor" stroke="none"/><rect x="10.6" y="5.5" width="2.8" height="7" fill="currentColor" stroke="none"/><rect x="15.6" y="5.5" width="2.8" height="7" fill="currentColor" stroke="none"/></svg></div>
+          <div class="k"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 12s3.8-6.5 10-6.5S22 12 22 12s-3.8 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></div>
+        </div>
+      </div>
+      <div class="step">STEP 1</div>
+      <h2>Know your buttons</h2>
+      <ul>
+        <li><b>▶</b> plays and stops. The <b>red dot</b> records pad hits live.</li>
+        <li><b>- 92 +</b> is the tempo. The <b>metronome</b> clicks each beat (it never shows up in exports).</li>
+        <li>The <b>pizza</b> opens the slicer. The <b>keyboard</b> turns pads into notes. The <b>eye</b> switches between one video and four.</li>
+      </ul>
+    </section>
+
+    <!-- 3 -->
+    <section class="card">
+      <div class="vis">
+        <div class="lbl">WHAT'S IN THIS VIDEO?</div>
+        <div class="seg"><div class="k wat">AUTO CHOP</div><div class="k">JUST UPLOAD</div></div>
+        <div class="types">
+          <div class="ty"><i style="background:var(--earth)">●</i>DRUMS</div><div class="ty"><i style="background:var(--earth)">▬</i>BASS</div>
+          <div class="ty"><i style="background:var(--water)">♪</i>GUITAR</div><div class="ty"><i style="background:var(--air)">▦</i>KEYS</div>
+          <div class="ty"><i style="background:var(--fire)">◡</i>VOX</div><div class="ty"><i style="background:var(--air)">◎</i>SAMPLES</div>
+          <div class="ty"><i style="background:var(--fire)">✦</i>FX</div><div class="ty"><i style="background:var(--fire)">✸</i>CHAOS</div>
+        </div>
+      </div>
+      <div class="step">STEP 2</div>
+      <h2>Add a video</h2>
+      <ul>
+        <li>Tap the <b>pizza</b>, then <b>●</b> to film or <b>+ VIDEO</b> to pick one.</li>
+        <li>Choose <b>AUTO CHOP</b> to get 16 chops right away, or <b>JUST UPLOAD</b> to chop it yourself.</li>
+        <li>Pick what's in the video. Drums get tight hits, vox gets phrases, chaos gets random chops.</li>
+        <li>On iPhone it plays the clip silently once to grab the sound, so give it a few seconds.</li>
+      </ul>
+    </section>
+
+    <!-- 4 -->
+    <section class="card">
+      <div class="vis">
+        <div class="vid"><div class="hand"></div></div>
+        <div class="wave">
+          <svg viewBox="0 0 300 58" preserveAspectRatio="none"><path d="M0 29 L20 29 L22 8 L24 50 L26 14 L28 44 L32 29 L80 29 L82 4 L84 54 L86 10 L88 48 L92 22 L96 36 L100 29 L160 29 L162 12 L164 46 L166 18 L170 29 L230 29 L232 6 L234 52 L236 14 L240 29 L300 29" stroke="#ADCFDE" stroke-width="2" fill="none"/></svg>
+          <div class="sel"></div><div class="e" style="left:28%"></div><div class="e" style="left:58%"></div>
+        </div>
+        <div class="r"><div class="k">ZOOM −</div><div class="k wat">LOOP</div><div class="k big" style="flex:1.5"><svg viewBox="0 0 24 24"><path d="M7 4.5l13 7.5-13 7.5z" fill="currentColor"/></svg></div><div class="k">FIT</div></div>
+        <div class="r"><div class="k">◀ [</div><div class="k">[ ▶</div><div class="k">10 ms</div><div class="k">◀ ]</div><div class="k">] ▶</div></div>
+      </div>
+      <div class="step">STEP 3</div>
+      <h2>Chop it yourself</h2>
+      <ul>
+        <li><b>Drag either edge</b> on the waveform. Edges can cross, and whichever is on the left becomes the start.</li>
+        <li><b>Hold inside the selection</b> until it lights up, then drag to slide the whole slice.</li>
+        <li>Pinch to zoom. Tap the wave to hear a spot.</li>
+        <li>Press the big <b>▶</b> with <b>LOOP</b> on and nudge with <b>[</b> and <b>]</b> until it's clean. ½, ×2 and the note buttons set the length.</li>
+      </ul>
+    </section>
+
+    <!-- 5 -->
+    <section class="card">
+      <div class="vis">
+        <div class="vid" style="height:90px"><div class="hand"></div><div style="position:absolute;bottom:8px;left:10px;font-size:9px;opacity:.8">finger lands late? slip it</div></div>
+        <div class="wave"><svg viewBox="0 0 300 58" preserveAspectRatio="none"><path d="M0 29 L80 29 L82 4 L84 54 L86 10 L88 48 L92 22 L96 36 L100 29 L300 29" stroke="#ADCFDE" stroke-width="2" fill="none"/></svg><div class="sel"></div><div class="e" style="left:28%"></div><div class="e" style="left:58%"></div><div class="slipbar"></div></div>
+        <div class="r"><div class="k">◀◀</div><div class="k">◀</div><div class="k pur" style="flex:2;font-size:9px">VIDEO SLIP −3 f</div><div class="k">▶</div><div class="k">▶▶</div></div>
+      </div>
+      <div class="step">STEP 4</div>
+      <h2>Line up the picture</h2>
+      <ul>
+        <li>Phone cameras often show the picture a little late compared with the sound.</li>
+        <li><b>VIDEO SLIP</b> moves the picture earlier or later, up to 1 second, while the sound stays put.</li>
+        <li>The red bar shows where the video now comes from. Loop it and tap <b>◀</b> until your finger lands right on the hit.</li>
+        <li>Slip stays set for that video, so every chop from it is already lined up.</li>
+      </ul>
+    </section>
+
+    <!-- 6 -->
+    <section class="card">
+      <div class="vis">
+        <div class="lbl">BANKS · 8 X 16</div>
+        <div class="banks">
+          <div class="bk cur"><i style="background:var(--earth)"></i><i style="background:var(--earth)"></i><i style="background:var(--fire)"></i><i style="background:var(--fire)"></i><i style="background:var(--air)"></i><i style="background:var(--air)"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="bk"><i style="background:var(--water)"></i><i style="background:var(--water)"></i><i style="background:var(--water)"></i><i style="background:var(--water)"></i><i style="background:var(--water)"></i><i style="background:var(--water)"></i><i style="background:var(--water)"></i><i style="background:var(--water)"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="bk lift"><i style="background:var(--fire)"></i><i style="background:var(--fire)"></i><i style="background:var(--fire)"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="bk"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="bk"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="bk"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="bk"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <div class="bk"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="lbl" style="margin-top:4px">SEND TO PAD</div>
+        <div class="grid4"><div class="pd f">1</div><div class="pd f">2</div><div class="pd f">3</div><div class="pd f">4</div><div class="pd f">5</div><div class="pd f">6</div><div class="pd next">7<span class="tag" style="position:absolute;right:3px;bottom:3px;font-size:7px;background:var(--air)">NEXT</span></div><div class="pd">8</div></div>
+      </div>
+      <div class="step">STEP 5</div>
+      <h2>Send chops to pads</h2>
+      <ul>
+        <li>Under <b>SEND TO PAD</b>, tap a pad and the slice drops in. The next pad lights up, so you can chop, tap, chop, tap.</li>
+        <li>You get <b>8 banks of 16</b>, so 128 chops. Tap a mini block to pick a bank. AUTO CHOP fills the bank you have selected.</li>
+        <li><b>Hold a bank</b> until it lifts, then drag it to reorder. Your patterns follow the sounds.</li>
+      </ul>
+    </section>
+
+    <!-- 7 -->
+    <section class="card">
+      <div class="vis">
+        <div class="r"><div class="k pur" style="border-bottom:3px solid var(--water)">A</div><div class="k" style="border-bottom:3px solid var(--fire)">B</div><div class="k" style="border-bottom:3px solid var(--air)">C</div><div class="k" style="border-bottom:3px solid var(--earth)">D</div></div>
+        <div class="r"><div class="k pur" style="flex:0 0 54px;font-size:9px">LEN 2</div><div class="k air">1</div><div class="k">2</div><div class="k wat" style="flex:0 0 64px;font-size:9px">FOLLOW</div></div>
+        <div class="steps">
+          <div class="st on ph">1</div><div class="st"></div><div class="st ht">6</div><div class="st"></div><div class="st sn">3</div><div class="st"></div><div class="st on">1</div><div class="st"></div>
+          <div class="st"></div><div class="st"></div><div class="st on">1</div><div class="st"></div><div class="st sn">3</div><div class="st"></div><div class="st ht">2:4</div><div class="st"></div>
+        </div>
+      </div>
+      <div class="step">STEP 6</div>
+      <h2>Build a beat</h2>
+      <ul>
+        <li>Pick a track (<b>A to D</b>), tap a pad, then tap steps to place it. Tap a step again to clear it. <b>M</b> mutes a track.</li>
+        <li>Each track plays one sound at a time, like a Pocket Operator.</li>
+        <li>Arm the <b>red dot</b> and play pads while it runs to record live. Hits snap to the grid.</li>
+        <li><b>LEN</b> makes a pattern 1, 2, 4 or 8 bars. A step like <b>2:4</b> means bank 2, pad 4.</li>
+      </ul>
+    </section>
+
+    <!-- 8 -->
+    <section class="card">
+      <div class="vis">
+        <div class="lbl">FX · HOLD OR DOUBLE TAP</div>
+        <div class="fxr"><div class="k">LOW</div><div class="k">HIGH</div><div class="k air">CRUSH</div><div class="k">ECHO</div><div class="k">STUT 8</div><div class="k fir">STUT 16</div><div class="k">REV</div><div class="k">GLITCH</div></div>
+        <div class="lbl" style="margin-top:6px">PAD EDIT</div>
+        <div class="r"><div class="k">ONE SHOT</div><div class="k wat">GATE</div><div class="k">LOOP</div></div>
+        <div class="r"><div class="k pur" style="font-size:9px">FADE</div><div class="k pur" style="font-size:9px">DECAY</div><div class="k pur" style="font-size:9px">FREEZE</div><div class="k pur" style="font-size:9px">SLIP</div></div>
+      </div>
+      <div class="step">STEP 7</div>
+      <h2>Shape it</h2>
+      <ul>
+        <li><b>FX:</b> hold to punch in, double tap to lock it on (it turns red), tap again to release. Every effect changes both the sound and the picture.</li>
+        <li><b>Pad edit:</b> ONE SHOT plays the whole chop, GATE stops when you let go, LOOP repeats while held.</li>
+        <li>FADE and DECAY clean up and shorten. FREEZE holds one frame. EDIT SLICE reopens the pad in the slicer.</li>
+      </ul>
+    </section>
+
+    <!-- 9 -->
+    <section class="card">
+      <div class="vis">
+        <div class="lbl">PATTERNS</div>
+        <div class="steps"><div class="st" style="background:var(--water)">1</div><div class="st" style="background:var(--slate);color:#fff">2</div><div class="st" style="background:var(--slate);color:#fff">3</div><div class="st">4</div><div class="st">5</div><div class="st">6</div><div class="st">7</div><div class="st">8</div></div>
+        <div class="r"><div class="k wat">CHAIN</div><div class="k" style="flex:2;background:transparent;justify-content:flex-start">1 1 2 3</div></div>
+        <div class="r"><div class="k" style="font-size:9px">COPY TO NEXT</div><div class="k" style="font-size:9px">CLEAR TRACK</div></div>
+        <div class="r"><div class="k" style="font-size:16px">↶</div><div class="k" style="font-size:16px">↷</div></div>
+      </div>
+      <div class="step">STEP 8</div>
+      <h2>Make it a song</h2>
+      <ul>
+        <li>You have <b>16 patterns</b>. Tap one while playing and it starts when the current one ends.</li>
+        <li>Turn on <b>CHAIN</b> and tap patterns in order to build the song, like verse, verse, hook, bridge.</li>
+        <li><b>COPY TO NEXT</b> duplicates a pattern so you can change just the ending.</li>
+        <li>Messed up? <b>↶</b> undoes it and <b>↷</b> brings it back.</li>
+      </ul>
+    </section>
+
+    <!-- 10 -->
+    <section class="card">
+      <div class="vis">
+        <div class="zip"><div class="ic">ZIP</div><div><b>SAVE SESSION</b><br>Every pad, pattern and setting</div></div>
+        <div class="zip"><div class="ic w">WAV</div><div><b>SAVE SAMPLES</b><br>Your chops for any DAW</div></div>
+        <div class="zip"><div class="ic v">MP4</div><div><b>EXPORT</b><br>A music video that loops clean</div></div>
+      </div>
+      <div class="step">STEP 9</div>
+      <h2>Save and share</h2>
+      <ul>
+        <li><b>SAVE SESSION</b> keeps everything in one file. On iPhone, choose <b>Save to Files</b>. <b>OPEN</b> brings it back.</li>
+        <li>Work also autosaves on your phone. Full original videos aren't saved, so add a video again if you want to re-chop it.</li>
+        <li><b>EXPORT</b> records your pattern or chain on the beat, in 9:16 for TikTok and Reels or 1:1 and 16:9.</li>
+        <li>Tap any panel title to shrink it and keep your screen clean.</li>
+      </ul>
+      <a class="cta" href="./">OPEN VBM-16</a>
+    </section>
+
+  </div>
+  <div class="bot">
+    <button class="nav ghost" id="prev">BACK</button>
+    <div class="dots" id="dots"></div>
+    <button class="nav" id="next">NEXT</button>
+  </div>
+</div>
+<script>
+(()=>{
+  const track=document.getElementById('track'),cards=[...track.children],dots=document.getElementById('dots'),N=cards.length;
+  cards.forEach(()=>dots.appendChild(document.createElement('i')));
+  let idx=0;
+  const go=i=>{idx=Math.max(0,Math.min(N-1,i));track.scrollTo({left:idx*track.clientWidth,behavior:'smooth'});};
+  const update=()=>{
+    idx=Math.round(track.scrollLeft/Math.max(1,track.clientWidth));
+    [...dots.children].forEach((d,i)=>d.classList.toggle('on',i===idx));
+    document.getElementById('count').textContent=(idx+1)+' / '+N;
+    document.getElementById('prev').disabled=idx===0;
+    document.getElementById('next').textContent=idx===N-1?'DONE':'NEXT';
+  };
+  track.addEventListener('scroll',()=>requestAnimationFrame(update),{passive:true});
+  document.getElementById('prev').onclick=()=>go(idx-1);
+  document.getElementById('next').onclick=()=>{if(idx===N-1)go(0);else go(idx+1);};
+  window.addEventListener('resize',()=>go(idx));
+  update();
+})();
+</script>
+</body>
+</html>
