@@ -117,6 +117,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 #sset .calbtn[disabled]{opacity:.5}
 #sset .bignum{font:800 30px Inter,system-ui,sans-serif;color:var(--air);display:block;margin:2px 0}
 #sset .srow{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:13px;color:rgba(255,255,255,.82);margin:8px 0}
+#xLuRow.dim{opacity:.35}
+#xset .sheet{max-height:92vh;overflow-y:auto}
 #svsheet{position:fixed;inset:0;z-index:30;background:rgba(49,48,67,.75);display:flex;align-items:flex-end;justify-content:center}
 #svsheet .sheet{width:100%;max-width:560px;background:#424C60;border-radius:22px 22px 0 0;padding:18px 18px calc(env(safe-area-inset-bottom) + 18px);border-top:1px solid var(--line)}
 #svsheet h4{margin:0 0 8px;font-size:12px;letter-spacing:.16em;color:var(--white)}
@@ -471,6 +473,9 @@ header.foot{margin:18px 0 0;padding-top:12px;border-top:1px solid var(--line)}
   <div class="xrow" style="grid-template-columns:86px 1fr"><span>Seam</span><div class="chips" id="xSeamChips"></div></div>
   <div class="xrow"><span>Attack</span><input type="range" id="xAtR" min="0" max="50" step="1"><input type="number" id="xAt" min="0" max="50" inputmode="numeric"></div>
   <div class="xrow"><span>Release</span><input type="range" id="xRlR" min="0" max="200" step="1"><input type="number" id="xRl" min="0" max="200" inputmode="numeric"></div>
+  <div class="xrow" style="grid-template-columns:86px 1fr"><span>Master</span><div class="chips" id="xMstChips"></div></div>
+  <div class="xrow" id="xLuRow"><span>Loudness</span><input type="range" id="xLuR" min="-20" max="-6" step="0.5"><input type="number" id="xLu" min="-20" max="-6" step="0.5" inputmode="decimal"></div>
+  <p class="hint" style="margin:-4px 0 12px;font-size:11px">Loop Lock Master cleans the low end, adds phone speaker presence, glues and warms the beat, then sets it to the loudness you pick (LUFS) with a limiter that never clips (-1 dB true peak). It works around the loop as a circle, so the seam doesn't pump. Platforms turn loud uploads down to about -14, so louder isn't always better: -14 to -12 is the sweet spot.</p>
   <p class="hint" style="margin:-4px 0 12px;font-size:11px">Offset shortens the file by the app's restart pause so the beat lands on time. Release fades the end into that pause, attack fades back in after it (both only used when offset is above 0). Crossfade blends the loop's end into its start. All in ms. Seam Quietest starts and ends the file at the loop's quietest moment, so the app's restart silence lands where the beat is already quiet.</p>
   <div class="btns"><button id="xCancel">CANCEL</button><button class="save" id="xSave">SAVE</button></div>
 </div></div>
@@ -3286,7 +3291,7 @@ function render(){
   $('#lockTop .shk').setAttribute('d',S.locked?'M7 11V8a5 5 0 0 1 10 0v3':'M7 11V8a5 5 0 0 1 9.6-2');
   ['#lockTop','#halfT','#dblT','#slB','#slF','#resK'].forEach(id=>$(id).disabled=!has);
   $('#drawer').classList.toggle('hide',!drawerOpen); $('#moreB').textContent=drawerOpen?'LESS ▴':'MORE ▾';
-  ['#resChips','#divChips','#divChips2','#sCalChips','#xSeamChips','#fmtChips','#fitChips','#repChips','#fadeChips','#platChips','#calPlatChips','#seamChips','#tagSeamChips','#tagBedChips','#tagVolChips'].forEach(syncChips);
+  ['#resChips','#divChips','#divChips2','#sCalChips','#xSeamChips','#xMstChips','#fmtChips','#fitChips','#repChips','#fadeChips','#platChips','#calPlatChips','#seamChips','#tagSeamChips','#tagBedChips','#tagVolChips'].forEach(syncChips);
   $('#fitRow').style.display=S.fmt==='orig'?'none':'flex';
   $('#newVid').classList.toggle('hide',!S.dur); $('#stopB').disabled=!S.dur; $('#stopB').classList.toggle('hot',!!S.mode||S.busy);
   $('#exportB').disabled=!has||S.busy; $$('#exrow button').forEach(b=>{ b.disabled=!has||(S.busy&&S.xBusy!==b.dataset.x); b.classList.toggle('busy',S.xBusy===b.dataset.x); if(S.xBusy!==b.dataset.x) b.querySelector('small').textContent=xSmall(b.dataset.x); });
@@ -3336,6 +3341,68 @@ function plan(){
 // audio is the master: exact sample loop with the seam crossfade, gently resampled to fill the frames exactly.
 // Then pick where the file starts. A loop is a circle, so starting the file at the loop's quietest moment hides
 // the phone player's restart pause there instead of on a hit.
+/* ---------- Loop Lock Master: everything runs around the loop as a circle so the seam stays seamless ---------- */
+function bq(type,f,Q,gDb,sr){ const A=Math.pow(10,gDb/40), w=2*Math.PI*f/sr, cs=Math.cos(w), sn=Math.sin(w), al=sn/(2*Q); let b0,b1,b2,a0,a1,a2;
+  if(type==='hp'){ b0=(1+cs)/2; b1=-(1+cs); b2=(1+cs)/2; a0=1+al; a1=-2*cs; a2=1-al; }
+  else if(type==='peak'){ b0=1+al*A; b1=-2*cs; b2=1-al*A; a0=1+al/A; a1=-2*cs; a2=1-al/A; }
+  else { const sq=2*Math.sqrt(A)*al; b0=A*((A+1)+(A-1)*cs+sq); b1=-2*A*((A-1)+(A+1)*cs); b2=A*((A+1)+(A-1)*cs-sq); a0=(A+1)-(A-1)*cs+sq; a1=2*((A-1)-(A+1)*cs); a2=(A+1)-(A-1)*cs-sq; }
+  return [b0/a0,b1/a0,b2/a0,a1/a0,a2/a0]; }
+// two laps around the loop, keep the second, so filters are already settled at the seam
+function bqLoop(x,c){ const n=x.length, y=new Float32Array(n); let x1=0,x2=0,y1=0,y2=0;
+  for(let lap=0;lap<2;lap++) for(let i=0;i<n;i++){ const v=x[i], o=c[0]*v+c[1]*x1+c[2]*x2-c[3]*y1-c[4]*y2; x2=x1; x1=v; y2=y1; y1=o; if(lap) y[i]=o; }
+  return y; }
+function lufsLoop(chs,sr){ // ITU BS.1770 integrated loudness with gating
+  const k1=bq('shelf',1681.97,0.7072,3.9998,sr), k2=bq('hp',38.135,0.5003,0,sr), n=chs[0].length;
+  const kw=chs.map(c=>bqLoop(bqLoop(c,k1),k2)), B=Math.round(0.4*sr), H=Math.round(0.1*sr), ms=[];
+  const cs=new Float64Array(n+1); for(let i=0;i<n;i++){ let v=0; for(const c of kw) v+=c[i]*c[i]; cs[i+1]=cs[i]+v; }
+  const win=a=>{ const e=a+B; return e<=n?cs[e]-cs[a]:(cs[n]-cs[a])+cs[Math.min(n,e-n)]; };
+  for(let a=0;a<n;a+=H) ms.push(win(a)/B);
+  const L=m=>-0.691+10*Math.log10(m+1e-20);
+  let g=ms.filter(m=>L(m)>-70); if(!g.length) return -70;
+  const rel=L(g.reduce((s,m)=>s+m,0)/g.length)-10; g=g.filter(m=>L(m)>rel); if(!g.length) return -70;
+  return L(g.reduce((s,m)=>s+m,0)/g.length); }
+// 4x oversampled peaks (true peak estimate)
+const TPK=(()=>{ const P=4,T=8,h=[]; for(let p=0;p<P;p++){ const r=[]; for(let t=-T+1;t<=T;t++){ const x=t-p/P; const w=0.5+0.5*Math.cos(Math.PI*x/T); r.push(x===0?1:Math.sin(Math.PI*x)/(Math.PI*x)*w); } h.push(r); } return {P,T,h}; })();
+function tpLoop(c){ const n=c.length, out=new Float32Array(n), {P,T,h}=TPK;
+  for(let i=0;i<n;i++){ let m=Math.abs(c[i]); for(let p=1;p<P;p++){ const r=h[p]; let v=0; for(let t=0;t<2*T;t++) v+=r[t]*c[(i-T+1+t+n)%n]; const a=Math.abs(v); if(a>m) m=a; } out[i]=m; }
+  return out; }
+function masterLoop(full,sr,target){
+  const n=full[0].length, ch=full.length; if(n<sr*0.2) return;
+  // 1 clean low end, 2 phone presence and a little air
+  const hp=bq('hp',30,0.707,0,sr), pk=bq('peak',3500,0.8,1.5,sr), sh=bq('shelf',10000,0.7,1,sr);
+  const x=full.map(c=>bqLoop(bqLoop(bqLoop(c,hp),pk),sh));
+  // 3 glue compressor, stereo linked, 2:1 soft knee, threshold from the loop's own level
+  let rms=0; for(const c of x) for(let i=0;i<n;i++) rms+=c[i]*c[i]; rms=Math.sqrt(rms/(n*ch))||1e-9;
+  const thr=20*Math.log10(rms)+3, ratio=2, knee=6, at=Math.exp(-1/(0.010*sr)), rl=Math.exp(-1/(0.120*sr));
+  const gr=new Float32Array(n); let env=-120;
+  for(let lap=0;lap<2;lap++) for(let i=0;i<n;i++){ let a=0; for(const c of x){ const v=Math.abs(c[i]); if(v>a) a=v; }
+    const d=20*Math.log10(a+1e-9); env=d>env?at*env+(1-at)*d:rl*env+(1-rl)*d;
+    const o=env-thr; let r=0; if(o>knee/2) r=o*(1-1/ratio); else if(o>-knee/2){ const q=o+knee/2; r=(1-1/ratio)*q*q/(2*knee); }
+    if(lap) gr[i]=Math.min(r,6); }
+  for(const c of x) for(let i=0;i<n;i++) c[i]*=Math.pow(10,-gr[i]/20);
+  // 4 warmth: gentle tape style saturation that only bites on the loud parts
+  let pk0=0; for(const c of x) for(let i=0;i<n;i++){ const a=Math.abs(c[i]); if(a>pk0) pk0=a; }
+  const pre=0.8/(pk0||1); for(const c of x) for(let i=0;i<n;i++){ const v=c[i]*pre; c[i]=(0.6*v+0.4*Math.tanh(1.6*v)/1.6)/pre; }
+  // 5 loudness to target plus a true peak limiter at -1 dBTP, two rounds so the limiting is accounted for
+  const ceil=Math.pow(10,-1/20), look=Math.max(1,Math.round(0.0015*sr)), rel=Math.exp(-1/(0.06*sr));
+  let gain=Math.pow(10,(target-lufsLoop(x,sr))/20), y=null;
+  for(let round=0;round<3;round++){
+    const z=x.map(c=>{ const o=new Float32Array(n); for(let i=0;i<n;i++) o[i]=c[i]*gain; return o; });
+    const tps=z.map(tpLoop), req=new Float32Array(n);
+    for(let i=0;i<n;i++){ let m=0; for(const t of tps) if(t[i]>m) m=t[i]; req[i]=m>ceil?ceil/m:1; }
+    const mn=new Float32Array(n); for(let i=0;i<n;i++){ let m=1; for(let j=0;j<=look;j++){ const v=req[(i+j)%n]; if(v<m) m=v; } mn[i]=m; }
+    const av=new Float32Array(n); let sum=0; for(let j=0;j<look;j++) sum+=mn[(n-look+j)%n];
+    for(let i=0;i<n;i++){ sum+=mn[i]-mn[(i-look+n)%n]; av[i]=Math.min(sum/look,mn[i]); }
+    const g=new Float32Array(n); let e=1; for(let lap=0;lap<2;lap++) for(let i=0;i<n;i++){ const a=av[i]; e=a<e?a:e+(a-e)*(1-rel); if(lap) g[i]=e; }
+    for(const c of z) for(let i=0;i<n;i++) c[i]*=g[i];
+    y=z; const fix=target-lufsLoop(y,sr); if(Math.abs(fix)<0.2||round===2) break; gain*=Math.pow(10,fix/20);
+  }
+  let top=0; for(const c of y){ const t=tpLoop(c); for(let i=0;i<n;i++) if(t[i]>top) top=t[i]; }
+  const trim=top>ceil?ceil/top:1;
+  for(let c=0;c<ch;c++){ const d=full[c], s=y[c]; for(let i=0;i<n;i++) d[i]=s[i]*trim; }
+  let mg=0; for(let i=0;i<n;i++) if(gr[i]>mg) mg=gr[i];
+  S.lastMaster={lufs:lufsLoop(full,sr),tp:20*Math.log10(top*trim||1e-9),gr:mg};
+}
 function exportAudio(pl){
   const b=S.buf, sr=S.sr, ch=Math.min(2,b.numberOfChannels), n=S.n, s0=S.s0, X=Math.round(S.fade/1000*sr);
   const Lf=Math.round(pl.N0/pl.fps*sr), full=[];
@@ -3353,6 +3420,7 @@ function exportAudio(pl){
   let k=0;
   const tagHere=S.tag&&S.seamSpot==='tag', tagPosF=Math.round(S.tagPos*Lf/n);
   if(S.tag) mixTag(full,Lf,tagPosF);
+  if(S.master) masterLoop(full,sr,S.masterLu!=null?S.masterLu:-14);
   if(tagHere){
     const tl=Math.min(S.tag.buf.length,Lf-1), T0=Math.round((pl.D||pl.N/pl.fps)*sr);
     if(S.tagSeam==='before') k=Math.floor(tagPosF/spf)%pl.N0;
@@ -3451,22 +3519,22 @@ $('#sCalFile').onchange=async e=>{
 $('#setB').onclick=()=>{ $('#sFps').textContent=fmtFps(S.fps)+' fps'; $('#sset').classList.remove('hide'); $('#sset').scrollTop=0; };
 $('#sClose').onclick=()=>$('#sset').classList.add('hide');
 $('#sFps').onclick=()=>{ $('#fpsB').click(); $('#sFps').textContent=fmtFps(S.fps)+' fps'; };
-$('#sReset').onclick=()=>{ XS={gen:{off:0,xf:5,at:2,rl:4,seam:'start'},ig:{off:115,xf:5,at:2,rl:4,seam:'start'},yt:{off:115,xf:5,at:2,rl:4,seam:'start'},tt:{off:0,xf:5,at:2,rl:4,seam:'start'}}; saveXS(); xLabel(); render(); toast('Export buttons reset'); };
+$('#sReset').onclick=()=>{ XS={gen:{off:0,xf:5,at:2,rl:4,seam:'start',mst:false,lu:-14},ig:{off:115,xf:5,at:2,rl:4,seam:'start',mst:true,lu:-13},yt:{off:115,xf:5,at:2,rl:4,seam:'start',mst:true,lu:-14},tt:{off:0,xf:5,at:2,rl:4,seam:'start',mst:true,lu:-13}}; saveXS(); xLabel(); render(); toast('Export buttons reset'); };
 /* quick export buttons: tap exports with that button's own offset and crossfade, then opens the share sheet.
    Hold a button to change its numbers; they're saved on this phone. */
 const XB={gen:{name:'Export',fmt:null,plat:null},ig:{name:'Instagram',fmt:'916',plat:'Instagram'},yt:{name:'YouTube Shorts',fmt:'916',plat:'Shorts'},tt:{name:'TikTok',fmt:'916',plat:'TikTok'}};
-var XS={gen:{off:0,xf:5,at:2,rl:4,seam:'start'},ig:{off:115,xf:5,at:2,rl:4,seam:'start'},yt:{off:115,xf:5,at:2,rl:4,seam:'start'},tt:{off:0,xf:5,at:2,rl:4,seam:'start'}};
+var XS={gen:{off:0,xf:5,at:2,rl:4,seam:'start',mst:false,lu:-14},ig:{off:115,xf:5,at:2,rl:4,seam:'start',mst:true,lu:-13},yt:{off:115,xf:5,at:2,rl:4,seam:'start',mst:true,lu:-14},tt:{off:0,xf:5,at:2,rl:4,seam:'start',mst:true,lu:-13}};
 try{ if(PRESETS.Instagram&&PRESETS.Instagram.cal) XS.ig.off=Math.round(PRESETS.Instagram.ms); if(PRESETS.TikTok&&PRESETS.TikTok.cal) XS.tt.off=Math.round(PRESETS.TikTok.ms); if(PRESETS.Shorts&&PRESETS.Shorts.cal) XS.yt.off=Math.round(PRESETS.Shorts.ms); }catch(_){}
-try{ const v=JSON.parse(localStorage.getItem('ll_xbtn')||'null'); if(v) for(const k in XS) if(v[k]) XS[k]={off:clamp(+v[k].off||0,0,300),xf:clamp(+v[k].xf||0,0,100),at:clamp(v[k].at!=null?+v[k].at:2,0,50),rl:clamp(v[k].rl!=null?+v[k].rl:4,0,200),seam:v[k].seam==='auto'?'auto':'start'}; }catch(_){}
+try{ const v=JSON.parse(localStorage.getItem('ll_xbtn')||'null'); if(v) for(const k in XS) if(v[k]) XS[k]={off:clamp(+v[k].off||0,0,300),xf:clamp(+v[k].xf||0,0,100),at:clamp(v[k].at!=null?+v[k].at:2,0,50),rl:clamp(v[k].rl!=null?+v[k].rl:4,0,200),seam:v[k].seam==='auto'?'auto':'start',mst:v[k].mst!=null?!!v[k].mst:XS[k].mst,lu:clamp(v[k].lu!=null?+v[k].lu:XS[k].lu,-20,-6)}; }catch(_){}
 function saveXS(){ try{ localStorage.setItem('ll_xbtn',JSON.stringify(XS)); }catch(_){} }
-const xSmall=k=>XS[k].off+' · '+XS[k].xf+(XS[k].seam==='auto'?' · q':'');
+const xSmall=k=>XS[k].off+' · '+XS[k].xf+(XS[k].seam==='auto'?' · q':'')+(XS[k].mst?' · M':'');
 function xLabel(){ $$('#exrow button').forEach(b=>{ b.querySelector('small').textContent=xSmall(b.dataset.x); }); }
 async function quickExport(k){
   if(!S.buf||S.busy) return;
   if(S.mode==='all') stop();
-  const cfg=XB[k], keep={fmt:S.fmt,fit:S.fit,gap:S.gap,fade:S.fade,platform:S.platform,attack:S.attack,release:S.release,seamSpot:S.seamSpot};
+  const cfg=XB[k], keep={fmt:S.fmt,fit:S.fit,gap:S.gap,fade:S.fade,platform:S.platform,attack:S.attack,release:S.release,seamSpot:S.seamSpot,master:S.master,masterLu:S.masterLu};
   if(cfg.fmt){ S.fmt=cfg.fmt; S.fit='cover'; }
-  S.gap=XS[k].off; S.fade=XS[k].xf; S.attack=XS[k].at; S.release=XS[k].rl; S.seamSpot=XS[k].seam||'start'; S.xBusy=k; render();
+  S.gap=XS[k].off; S.fade=XS[k].xf; S.attack=XS[k].at; S.release=XS[k].rl; S.seamSpot=XS[k].seam||'start'; S.master=!!XS[k].mst; S.masterLu=XS[k].lu; S.xBusy=k; render();
   const blob=await runExport();
   Object.assign(S,keep); S.xBusy=null; render();
   if(!blob){ toast($('#exStatus').textContent||'Export failed',$('#exStatus').textContent==='Export stopped.'?1800:4500); return; }
@@ -3478,16 +3546,19 @@ async function quickExport(k){
 let xEdit=null;
 S.xSeam='start';
 buildChips('#xSeamChips',[['start','Loop start'],['auto','Quietest']],()=>S.xSeam,v=>{ S.xSeam=v; });
+S.xMst='off';
+buildChips('#xMstChips',[['off','No'],['on','Loop Lock master']],()=>S.xMst,v=>{ S.xMst=v; $('#xLuRow').classList.toggle('dim',v!=='on'); });
+$('#xLuR').oninput=()=>$('#xLu').value=$('#xLuR').value; $('#xLu').oninput=()=>$('#xLuR').value=clamp(+$('#xLu').value||-14,-20,-6);
 function openXset(k){ xEdit=k; $('#xsetT').textContent=XB[k].name.toUpperCase()+' EXPORT SETTINGS';
-  $('#xOff').value=$('#xOffR').value=XS[k].off; $('#xXf').value=$('#xXfR').value=XS[k].xf; $('#xAt').value=$('#xAtR').value=XS[k].at; S.xSeam=XS[k].seam||'start'; syncChips('#xSeamChips'); $('#xRl').value=$('#xRlR').value=XS[k].rl; $('#xset').classList.remove('hide'); }
+  $('#xOff').value=$('#xOffR').value=XS[k].off; $('#xXf').value=$('#xXfR').value=XS[k].xf; $('#xAt').value=$('#xAtR').value=XS[k].at; S.xSeam=XS[k].seam||'start'; syncChips('#xSeamChips'); $('#xRl').value=$('#xRlR').value=XS[k].rl; S.xMst=XS[k].mst?'on':'off'; syncChips('#xMstChips'); $('#xLu').value=$('#xLuR').value=XS[k].lu; $('#xLuRow').classList.toggle('dim',!XS[k].mst); $('#xset').classList.remove('hide'); }
 $('#xAtR').oninput=()=>$('#xAt').value=$('#xAtR').value; $('#xRlR').oninput=()=>$('#xRl').value=$('#xRlR').value;
 $('#xAt').oninput=()=>$('#xAtR').value=clamp(+$('#xAt').value||0,0,50); $('#xRl').oninput=()=>$('#xRlR').value=clamp(+$('#xRl').value||0,0,200);
 $('#xOffR').oninput=()=>$('#xOff').value=$('#xOffR').value; $('#xXfR').oninput=()=>$('#xXf').value=$('#xXfR').value;
 $('#xOff').oninput=()=>$('#xOffR').value=clamp(+$('#xOff').value||0,0,300); $('#xXf').oninput=()=>$('#xXfR').value=clamp(+$('#xXf').value||0,0,100);
 $('#xCancel').onclick=()=>{ $('#xset').classList.add('hide'); xEdit=null; };
 $('#xset').addEventListener('pointerdown',e=>{ if(e.target.id==='xset') $('#xCancel').click(); });
-$('#xSave').onclick=()=>{ if(!xEdit) return; XS[xEdit]={off:Math.round(clamp(+$('#xOff').value||0,0,300)),xf:Math.round(clamp(+$('#xXf').value||0,0,100)),at:Math.round(clamp(+$('#xAt').value||0,0,50)),rl:Math.round(clamp(+$('#xRl').value||0,0,200)),seam:S.xSeam||'start'};
-  saveXS(); xLabel(); $('#xset').classList.add('hide'); toast(XB[xEdit].name+': offset '+XS[xEdit].off+', crossfade '+XS[xEdit].xf+', attack '+XS[xEdit].at+', release '+XS[xEdit].rl+' ms, seam '+(XS[xEdit].seam==='auto'?'quietest':'loop start')+'. Saved.'); xEdit=null; };
+$('#xSave').onclick=()=>{ if(!xEdit) return; XS[xEdit]={off:Math.round(clamp(+$('#xOff').value||0,0,300)),xf:Math.round(clamp(+$('#xXf').value||0,0,100)),at:Math.round(clamp(+$('#xAt').value||0,0,50)),rl:Math.round(clamp(+$('#xRl').value||0,0,200)),seam:S.xSeam||'start',mst:S.xMst==='on',lu:Math.round(clamp(+$('#xLu').value||-14,-20,-6)*2)/2};
+  saveXS(); xLabel(); $('#xset').classList.add('hide'); toast(XB[xEdit].name+': offset '+XS[xEdit].off+', crossfade '+XS[xEdit].xf+', attack '+XS[xEdit].at+', release '+XS[xEdit].rl+' ms, seam '+(XS[xEdit].seam==='auto'?'quietest':'loop start')+(XS[xEdit].mst?', master '+XS[xEdit].lu+' LUFS':', no master')+'. Saved.'); xEdit=null; };
 $$('#exrow button').forEach(b=>{
   let t=null, held=false;
   b.addEventListener('pointerdown',e=>{ held=false; clearTimeout(t); t=setTimeout(()=>{ held=true; openXset(b.dataset.x); },500); });
