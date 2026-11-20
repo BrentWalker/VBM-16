@@ -3430,8 +3430,11 @@ function exportAudio(pl){
     // energy of the stretch just before each frame boundary; the phone fills about this much with silence
     const Gs=Math.max(Math.round(sr*0.03),Math.round((Math.max(S.gap,60)+(S.release||0))/1000*sr)), m=full[0], cs=new Float64Array(Lf+1);
     for(let i=0;i<Lf;i++){ let v=m[i]*m[i]; if(full[1]) v+=full[1][i]*full[1][i]; cs[i+1]=cs[i]+v; }
-    const win=(e)=>{ const s=e-Gs; return s>=0?cs[e]-cs[s]:(cs[e]+cs[Lf]-cs[Lf+s]); };
-    let best=Infinity; for(let f=0;f<pl.N0;f++){ const e=Math.round(f*spf), en=win(e===0?Lf:e)+0.25*win(Math.min(Lf,e+Math.round(sr*0.01))); if(en<best-1e-9){ best=en; k=f; } }
+    // energy in [e-len, e) around the loop
+    const winL=(e,len)=>{ e=((e%Lf)+Lf)%Lf||Lf; const s=e-len; return s>=0?cs[e]-cs[s]:(cs[e]+cs[Lf]-cs[Lf+s]); };
+    // Instagram also mutes about the first 45 ms of the file at every restart, so keep that stretch quiet too
+    const Ga=Math.round(sr*0.05);
+    let best=Infinity; for(let f=0;f<pl.N0;f++){ const e=Math.round(f*spf), en=winL(e,Gs)+winL(e+Ga,Ga); if(en<best-1e-9){ best=en; k=f; } }
   }
   pl.k=k; const rot=Math.round(k*spf), T=Math.round((pl.D||pl.N/pl.fps)*sr), fadeOn=pl.g>0, Fi=Math.max(1,Math.round(sr*(S.attack!=null?S.attack:2)/1000)), Fo=Math.max(1,Math.round(sr*(S.release!=null?S.release:4)/1000));
   // sample i of the file (any i, also before 0 and after the end, for encoder warm up and flush)
