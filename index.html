@@ -182,6 +182,13 @@ select{font:inherit;font-size:12px;background:var(--slate);color:var(--w);border
 .mpad.tgt::before{content:"NEXT";position:absolute;right:4px;bottom:3px;font-size:8px;z-index:1;background:var(--air);color:var(--ink);padding:1px 3px;border-radius:3px}
 header>button,header>label.btn{flex:1 1 0;min-width:0;height:42px;padding:0;border-radius:11px}
 header>#bExp{flex:1.7 1 0}
+.vgrip{height:16px;width:72px;margin:6px auto 0;border-radius:8px;background:var(--purple);touch-action:none;cursor:ns-resize;position:relative}
+.vgrip::before,.vgrip::after{content:"";position:absolute;left:18px;right:18px;height:2px;border-radius:1px;background:var(--air);opacity:.7}
+.vgrip::before{top:5px}.vgrip::after{top:9px}
+.vopt{margin-top:6px}
+.vopt button{padding:9px 0;font-size:11px;background:var(--purple)}
+.vopt button.on{background:var(--air)!important;color:var(--ink)!important}
+#vLay,#vFit{background:var(--slate)}
 </style>
 </head>
 <body>
@@ -204,6 +211,10 @@ header>#bExp{flex:1.7 1 0}
       </div>
     </div>
   </div>
+  <div class="vgrip" id="vGrip" title="Drag to resize, double tap for presets"></div>
+  <div class="row vopt"><button id="vFit">FILL</button><button id="vLay">STACK</button><button id="vWave">WAVE</button><button id="vTag">TAG</button></div>
+  <div class="row vopt" id="vfxRow"><button data-v="zoom">ZOOM</button><button data-v="shake">SHK</button><button data-v="vhs">VHS</button><button data-v="duo">DUO</button></div>
+  <div class="row vopt hidden" id="tagRow"><input id="tagText" class="txt" maxlength="24" aria-label="Producer tag text"><button id="tagPos" style="flex:0 0 56px">↘</button></div>
   </section>
 
   <div class="row transport">
@@ -272,6 +283,7 @@ header>#bExp{flex:1.7 1 0}
     <p><a id="tutLink" href="https://claude.ai/artifact/KqWeYPqnK9pxDATQS2VJQC" style="color:var(--air)">Open the step by step tutorial</a></p>
     <p><b>Transport:</b> ▶ play and stop. Red dot arms live recording. - BPM + sets the tempo. The metronome clicks every beat while playing (it never ends up in an export). The pizza opens the slicer. The keyboard turns on KEYS. The eye switches the video between MIX (every sound that is playing gets its own piece of the screen, from any bank), FOCUS (bigger, rounder eye: the video follows the track you have selected, A to D), 1 (only the latest hit) and 4 (one quarter per track).</p>
     <p><b>Top bar:</b> the floppy disk opens the save window (save or open a session, save or load samples, new session). The camera adds a video. Pinch either video player to zoom in, drag to look around, double tap or tap RESET to zoom back out (exports are not affected).</p>
+    <p><b>Video options</b> (under the video): drag the bar to resize the video window, double tap it for small, medium, large and tall. FILL crops the picture to fill its space, FIT shows the whole frame. The layout button picks how MIX shares the screen: STACK, GRID, PIP (newest hits in small corner windows), COLLAGE (hits land at random spots) or DIAGONAL. WAVE draws the playing sound's waveform over the video. TAG puts your producer tag on the picture, type it and tap the arrow to pick a corner. Picture FX: ZOOM punches in on every hit, SHK shakes on hits, VHS adds scanlines and wobble, DUO tints each track in its own color. Everything you see here is in your exports.</p>
     <p><b>Adding video:</b> tap the camera at the top (or the pizza, then ● or + VIDEO). Pick what is in it: drums, bass, guitar, keys, vox, samples, FX or chaos. AUTO CHOP fills the next empty bank with 16 chops and never overwrites a bank. JUST UPLOAD opens the slicer so you chop it yourself.</p>
     <p><b>Slicer:</b> each video is a tab. Drag either edge of the selection on the waveform (edges can pass each other). Hold inside the selection to slide it. Drag outside it to scroll, pinch to zoom, tap to preview a spot. The big ▶ plays the slice, LOOP repeats it. The [ and ] buttons nudge each edge, ½ and ×2 halve or double it, and the note buttons snap it to the beat. VIDEO SLIP moves the picture up to 1 second without moving the sound. Tap a pad under SEND TO PAD to drop the slice there, the next pad lights up so you can chop fast.</p>
     <p><b>Banks:</b> the 8 mini blocks above the pads hold 128 chops (8 banks of 16). Tap one to put it on the pads. Hold one until it lifts, then drag to reorder. Patterns follow the sounds.</p>
@@ -427,6 +439,9 @@ let selTrack=0,selPad=0,keys=false,lastSemi=0,muted=[false,false,false,false];
 let playing=false,step=0,nextTime=0,timer=null,recArm=false,exporting=false;
 const fx={},latched={},lastTap={};FXL.forEach(([k])=>{fx[k]=false;latched[k]=false;lastTap[k]=0;});
 let vq=[[],[],[],[]],voices=[[],[],[],[]],lastHit=[null,null,null,null],uiQ=[],sched=[];
+/* picture options (per device): fit or fill, MIX layout, picture FX, producer tag, waveform */
+const VO={fit:UI.fit||'fill',layout:UI.layout||'stack',fx:Object.assign({zoom:false,shake:false,vhs:false,duo:false},UI.vfx||{}),tag:!!UI.tag,tagText:UI.tagText||'BEATSMITH',tagPos:UI.tagPos||3,wave:!!UI.wave};
+function saveVO(){UI.fit=VO.fit;UI.layout=VO.layout;UI.vfx=VO.fx;UI.tag=VO.tag;UI.tagText=VO.tagText;UI.tagPos=VO.tagPos;UI.wave=VO.wave;saveUI();}
 /* video view: 'mix' gives every sounding pad screen space, 1 shows the latest hit, 4 gives each track a quarter */
 let view=[1,4,'mix','focus'].includes(UI.view)?UI.view:'mix';
 let sources=[],curSrc=-1,srcSeq=0,edOpen=false,target=0,edBusy=false,loopMode=true,nudgeIdx=1,waveDirty=true;
@@ -1059,20 +1074,87 @@ function applyFormat(){
   const map={'9:16':9/16,'1:1':1,'16:9':16/9};
   sizeCanvas(S.format==='auto'?(sources[0]?sources[0].aspect:1):map[S.format]||1);
 }
-function drawVoice(v,x,y,w,h,now){
+function drawVoice(v,x,y,w,h,now,clip){
   const p=pads[v.pad];if(!p)return;
   const el=(now-v.start)*v.rate,n=p.frames.length;
   let fi=Math.floor(el*p.fps);
   if(v.loop&&v.end==null)fi=((fi%n)+n)%n;else if(v.loop)fi=(((Math.floor((Math.min(now,v.end)-v.start)*v.rate*p.fps))%n)+n)%n;else fi=Math.min(n-1,Math.max(0,fi));
   if(v.rev)fi=n-1-fi;
   const fz=S.padFreeze[v.pad];if(fz!=null&&fz>=0)fi=Math.round(fz/100*(n-1));
-  const f=p.frames[fi],sc=Math.max(w/f.width,h/f.height),dw=f.width*sc,dh=f.height*sc;
-  g2.save();g2.beginPath();g2.rect(x,y,w,h);g2.clip();
+  const f=p.frames[fi];
+  let sc=VO.fit==='fit'?Math.min(w/f.width,h/f.height):Math.max(w/f.width,h/f.height);
+  const dt=now-v.start;
+  if(VO.fx.zoom&&dt>=0&&dt<0.2){const q=1-dt/0.2;sc*=1+0.2*q*q;}
+  const dw=f.width*sc,dh=f.height*sc;
+  g2.save();g2.beginPath();if(clip)clip(g2);else g2.rect(x,y,w,h);g2.clip();
+  if(VO.fit==='fit'){g2.fillStyle=COL.ink;g2.fillRect(x,y,w,h);}
   g2.drawImage(f,x+(w-dw)/2,y+(h-dh)/2,dw,dh);
   if(v.glitch){for(let k=0;k<5;k++){const sy=y+Math.random()*h,sh=4+Math.random()*h*0.08,off=(Math.random()-0.5)*w*0.25;g2.drawImage(cv,x,sy,w,sh,x+off,sy,w,sh);}}
+  if(VO.fx.duo){/* duotone: grey it, tint with the track color, lift the shadows to ink */
+    const ga=g2.globalAlpha;g2.globalAlpha=1;
+    g2.globalCompositeOperation='saturation';g2.fillStyle='#888';g2.fillRect(x,y,w,h);
+    g2.globalCompositeOperation='multiply';g2.fillStyle=TCOL[v.tr!=null?v.tr:selTrack];g2.fillRect(x,y,w,h);
+    g2.globalCompositeOperation='screen';g2.fillStyle=COL.ink;g2.fillRect(x,y,w,h);
+    g2.globalCompositeOperation='source-over';g2.globalAlpha=ga;
+  }
   const endT=v.end!=null?v.end:(v.loop?Infinity:v.start+p.len/v.rate),over=now-endT;if(over>0){g2.fillStyle='rgba(49,48,67,'+Math.min(0.55,over*1.5)+')';g2.fillRect(x,y,w,h);}
   if(el<0.08){g2.fillStyle='rgba(255,255,255,'+(0.18*(1-el/0.08))+')';g2.fillRect(x,y,w,h);}
   g2.restore();
+}
+/* MIX layouts for 2 to 4 sounding pads */
+function drawMix(show,W,H,now){
+  const n=show.length,L=VO.layout,gap=()=>{g2.fillStyle=COL.ink;};
+  const border=(x,y,w,h)=>{g2.strokeStyle=COL.ink;g2.lineWidth=Math.max(3,W*0.006);g2.strokeRect(x,y,w,h);};
+  if(L==='pip'){
+    const byAge=[...show].sort((a,b)=>a.start-b.start),main=byAge[0],small=byAge.slice(1).reverse().slice(0,3);
+    drawVoice(main,0,0,W,H,now);
+    const s=Math.min(W,H)*0.36,m=Math.min(W,H)*0.04,spots=[[W-s-m,m],[m,m],[W-s-m,H-s-m]];
+    small.forEach((v,k)=>{const [x,y]=spots[k];drawVoice(v,x,y,s,s,now);border(x,y,s,s);});
+    return;
+  }
+  if(L==='collage'){
+    const byAge=[...show].sort((a,b)=>a.start-b.start);drawVoice(byAge[0],0,0,W,H,now);
+    byAge.slice(1).forEach(v=>{if(!v.cr){const z=0.42+Math.random()*0.26;v.cr={z,x:Math.random()*(1-z),y:Math.random()*(1-z)};}
+      const sz=Math.min(W,H)*v.cr.z,x=v.cr.x*(W-sz)/(1-v.cr.z||1),y=v.cr.y*(H-sz)/(1-v.cr.z||1);drawVoice(v,x,y,sz,sz,now);border(x,y,sz,sz);});
+    return;
+  }
+  if(L==='diag'){
+    const sk=W*0.14,bw=W/n;
+    show.forEach((v,k)=>{const x0=k*bw,x1=(k+1)*bw;
+      drawVoice(v,x0-sk,0,bw+2*sk,H,now,c=>{c.moveTo(x0+(k?sk:-sk*2),0);c.lineTo(x1+(k<n-1?sk:sk*2),0);c.lineTo(x1-(k<n-1?sk:-sk*2),H);c.lineTo(x0-(k?sk:sk*2),H);c.closePath();});});
+    g2.strokeStyle=COL.ink;g2.lineWidth=Math.max(3,W*0.008);
+    for(let k=1;k<n;k++){g2.beginPath();g2.moveTo(k*bw+sk,0);g2.lineTo(k*bw-sk,H);g2.stroke();}
+    return;
+  }
+  if(L==='grid'&&n===3){
+    drawVoice(show[0],0,0,W,H/2,now);drawVoice(show[1],0,H/2,W/2,H/2,now);drawVoice(show[2],W/2,H/2,W/2,H/2,now);
+    g2.fillStyle=COL.ink;g2.fillRect(0,H/2-1,W,2);g2.fillRect(W/2-1,H/2,2,H/2);return;
+  }
+  if(n===4){const hw=W/2,hh=H/2;show.forEach((v,k)=>drawVoice(v,(k%2)*hw,Math.floor(k/2)*hh,hw,hh,now));g2.fillStyle=COL.ink;g2.fillRect(W/2-1,0,2,H);g2.fillRect(0,H/2-1,W,2);return;}
+  const along=L==='grid'?!(H>=W):(H>=W);/* stack splits along the long side, grid across it */
+  if(along){const bh=H/n;show.forEach((v,k)=>drawVoice(v,0,k*bh,W,bh,now));g2.fillStyle=COL.ink;for(let k=1;k<n;k++)g2.fillRect(0,k*bh-1,W,2);}
+  else{const bw=W/n;show.forEach((v,k)=>drawVoice(v,k*bw,0,bw,H,now));g2.fillStyle=COL.ink;for(let k=1;k<n;k++)g2.fillRect(k*bw-1,0,2,H);}
+}
+function vhs(W,H){
+  g2.save();g2.globalCompositeOperation='lighter';g2.globalAlpha=0.16;g2.drawImage(cv,W*0.006,0);g2.drawImage(cv,-W*0.006,0);g2.restore();
+  for(let k=0;k<3;k++){const y=Math.random()*H,h=H*(0.01+Math.random()*0.03);g2.drawImage(cv,0,y,W,h,(Math.random()-0.5)*W*0.04,y,W,h);}
+  g2.fillStyle='rgba(0,0,0,.2)';const st=Math.max(3,Math.round(H/180));for(let y=0;y<H;y+=st)g2.fillRect(0,y,W,st/2);
+  g2.fillStyle='rgba(255,255,255,.07)';for(let k=0;k<240;k++)g2.fillRect(Math.random()*W,Math.random()*H,2,2);
+}
+function wavePeaks(p){if(p.wpk)return p.wpk;const d=p.buf.getChannelData(0),N=160,o=new Float32Array(N),b=Math.max(1,Math.floor(d.length/N));let mx=1e-6;
+  for(let i=0;i<N;i++){let m=0;for(let j=i*b,e=Math.min(d.length,j+b);j<e;j++){const a=Math.abs(d[j]);if(a>m)m=a;}o[i]=m;if(m>mx)mx=m;}for(let i=0;i<N;i++)o[i]/=mx;return p.wpk=o;}
+function waveOverlay(v,W,H,now){
+  const p=v&&pads[v.pad];if(!p)return;const pk=wavePeaks(p),N=pk.length;
+  const y0=H*0.8,bh=H*0.15,bw=W/N,el=Math.max(0,(now-v.start)*v.rate),prog=v.loop?((el%p.len)/p.len):Math.min(1,el/p.len);
+  for(let i=0;i<N;i++){const k=v.rev?N-1-i:i,a=pk[k],hh=Math.max(2,a*bh);const played=i/N<=prog;
+    g2.fillStyle=played?'rgba(173,207,222,.95)':'rgba(255,255,255,.4)';g2.fillRect(i*bw+bw*0.15,y0+(bh-hh)/2,bw*0.7,hh);}
+}
+function tagOverlay(W,H){
+  const t=(VO.tagText||'').trim();if(!t)return;const fs=Math.round(Math.min(W,H)*0.055),m=Math.min(W,H)*0.04;
+  g2.save();g2.font='800 '+fs+'px ui-monospace,SFMono-Regular,Menlo,monospace';g2.textBaseline='alphabetic';
+  const tw=g2.measureText(t).width,pos=VO.tagPos,x=(pos===1||pos===3)?W-m-tw:m,y=(pos>=2)?H-m:m+fs;
+  g2.fillStyle='rgba(49,48,67,.55)';g2.fillRect(x-fs*0.35,y-fs*1.05,tw+fs*0.7,fs*1.45);
+  g2.fillStyle='rgba(255,255,255,.92)';g2.fillText(t,x,y);g2.restore();
 }
 function post(W,H){
   if(fx.LPF||fx.CRUSH){
@@ -1112,33 +1194,67 @@ function loop(){
     q.forEach(v=>{if(v.start<=now&&now<endT(v))sounding.push(v);});
   }
   let latest=null;for(const a of act)if(a&&(!latest||a.start>latest.start))latest=a;
+  let shook=false;
+  if(VO.fx.shake&&latest){const d=now-latest.start;if(d>=0&&d<0.24){const m=W*0.035*(1-d/0.24);g2.save();g2.translate((Math.random()-0.5)*2*m,(Math.random()-0.5)*2*m);shook=true;}}
+  let shown=null;
   if(view===4){
     const hw=W/2,hh=H/2;
     for(let t=0;t<4;t++){const x=(t%2)*hw,y=Math.floor(t/2)*hh;if(act[t])drawVoice(act[t],x,y,hw,hh,now);}
   }else if(view==='mix'&&sounding.length>1){
-    const show=sounding.sort((a,b)=>b.start-a.start).slice(0,4).sort((a,b)=>a.tr-b.tr||a.start-b.start),n=show.length;
-    if(n===4){const hw=W/2,hh=H/2;show.forEach((v,k)=>drawVoice(v,(k%2)*hw,Math.floor(k/2)*hh,hw,hh,now));}
-    else if(H>=W){const bh=H/n;show.forEach((v,k)=>drawVoice(v,0,k*bh,W,bh,now));}
-    else{const bw=W/n;show.forEach((v,k)=>drawVoice(v,k*bw,0,bw,H,now));}
-    g2.fillStyle=COL.ink;
-    if(n===4){g2.fillRect(W/2-1,0,2,H);g2.fillRect(0,H/2-1,W,2);}
-    else for(let k=1;k<n;k++){if(H>=W)g2.fillRect(0,k*H/n-1,W,2);else g2.fillRect(k*W/n-1,0,2,H);}
+    const show=sounding.sort((a,b)=>b.start-a.start).slice(0,4).sort((a,b)=>a.tr-b.tr||a.start-b.start);
+    drawMix(show,W,H,now);shown=latest;
   }else if(view==='focus'){
     /* follows the selected track; falls back to the latest hit until that track plays */
-    const v=act[selTrack]||latest;
+    const v=act[selTrack]||latest;shown=v;
     if(v)drawVoice(v,0,0,W,H,now);else if(pads[selPad])drawVoice({pad:selPad,start:-99,rate:1,rev:false},0,0,W,H,now);
   }else{
-    const one=view==='mix'&&sounding.length===1?sounding[0]:latest;
+    const one=view==='mix'&&sounding.length===1?sounding[0]:latest;shown=one;
     if(one)drawVoice(one,0,0,W,H,now);
     else if(pads[selPad])drawVoice({pad:selPad,start:-99,rate:1,rev:false},0,0,W,H,now);
   }
+  if(view===4)shown=latest;
+  if(shook)g2.restore();
   g2.globalAlpha=1;post(W,H);
+  if(VO.fx.vhs)vhs(W,H);
+  if(VO.wave)waveOverlay(shown,W,H,now);
+  if(VO.tag)tagOverlay(W,H);
   if(view===4){
     g2.fillStyle=COL.ink;g2.fillRect(W/2-1,0,2,H);g2.fillRect(0,H/2-1,W,2);
     if(!exporting){for(let t=0;t<4;t++){const x=(t%2)*W/2+8,y=Math.floor(t/2)*H/2+8;g2.fillStyle=TCOL[t];g2.fillRect(x,y,22,22);g2.fillStyle=COL.ink;g2.font='bold 15px ui-monospace,Menlo,monospace';g2.fillText(TL[t],x+6,y+16);}}
   }
 }
 requestAnimationFrame(loop);
+
+/* ---------- video options ---------- */
+const LAYOUTS=[['stack','STACK'],['grid','GRID'],['pip','PIP'],['collage','COLLAGE'],['diag','DIAGONAL']];
+const TAGPOS=['↖','↗','↙','↘'];
+function renderVO(){
+  $('vFit').textContent=VO.fit==='fit'?'FIT':'FILL';
+  $('vLay').textContent=(LAYOUTS.find(l=>l[0]===VO.layout)||LAYOUTS[0])[1];
+  $('vWave').classList.toggle('on',VO.wave);$('vTag').classList.toggle('on',VO.tag);
+  $('tagRow').classList.toggle('hidden',!VO.tag);$('tagText').value=VO.tagText;$('tagPos').textContent=TAGPOS[VO.tagPos];
+  document.querySelectorAll('#vfxRow button').forEach(b=>b.classList.toggle('on',!!VO.fx[b.dataset.v]));
+}
+$('vFit').onclick=()=>{VO.fit=VO.fit==='fit'?'fill':'fit';saveVO();renderVO();};
+$('vLay').onclick=()=>{const i=LAYOUTS.findIndex(l=>l[0]===VO.layout);VO.layout=LAYOUTS[(i+1)%LAYOUTS.length][0];saveVO();renderVO();
+  toast('MIX layout: '+LAYOUTS.find(l=>l[0]===VO.layout)[1]+(view==='mix'?'':' (shows in MIX view)'),1600);};
+$('vWave').onclick=()=>{VO.wave=!VO.wave;saveVO();renderVO();};
+$('vTag').onclick=()=>{VO.tag=!VO.tag;saveVO();renderVO();};
+$('tagText').addEventListener('input',e=>{VO.tagText=e.target.value;saveVO();});
+$('tagText').addEventListener('pointerdown',e=>e.stopPropagation());
+$('tagPos').onclick=()=>{VO.tagPos=(VO.tagPos+1)%4;saveVO();renderVO();};
+document.querySelectorAll('#vfxRow button').forEach(b=>b.onclick=()=>{VO.fx[b.dataset.v]=!VO.fx[b.dataset.v];saveVO();renderVO();});
+/* drag the grip to resize the video window, double tap it for presets */
+(()=>{
+  const st=$('stage'),gr=$('vGrip'),PRE=[0.26,0.36,0.52,0.78];let y0=0,h0=0,drag=false,lastTap=0;
+  const setH=f=>{f=Math.max(0.2,Math.min(0.85,f));st.style.height=Math.round(f*window.innerHeight)+'px';UI.stageH=f;saveUI();};
+  if(UI.stageH)st.style.height=Math.round(UI.stageH*window.innerHeight)+'px';
+  gr.addEventListener('pointerdown',e=>{e.preventDefault();const n=performance.now();
+    if(n-lastTap<300){const cur=st.offsetHeight/window.innerHeight;const nx=PRE.find(p=>p>cur+0.02);setH(nx!=null?nx:PRE[0]);lastTap=0;return;}
+    lastTap=n;drag=true;y0=e.clientY;h0=st.offsetHeight;try{gr.setPointerCapture(e.pointerId);}catch(_){}});
+  gr.addEventListener('pointermove',e=>{if(!drag)return;setH((h0+e.clientY-y0)/window.innerHeight);});
+  const up=()=>{drag=false;};gr.addEventListener('pointerup',up);gr.addEventListener('pointercancel',up);
+})();
 
 /* ---------- pinch to zoom on the video players (view only, exports are not affected) ---------- */
 function makeZoomable(box,getTarget){
@@ -1720,7 +1836,7 @@ document.querySelectorAll('section.panel[id]').forEach(sec=>{
 /* works offline once installed (only where the page is hosted on its own) */
 if(/github\.io$|beatsmith/i.test(location.hostname))$('tutLink').href='tutorial.html';
 if('serviceWorker' in navigator&&location.protocol==='https:'&&window.top===window){try{navigator.serviceWorker.register('sw.js').catch(()=>{});}catch(e){}}
-buildUI();buildTypePick();applyFormat();renderAll();renderEdBtns();renderUndo();
+buildUI();buildTypePick();applyFormat();renderAll();renderEdBtns();renderUndo();renderVO();
 restoreAutosave();
 })();
 </script>
