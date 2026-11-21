@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>VBM-16: Getting Started</title>
+<meta name="theme-color" content="#313043">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#313043;--panel:#3A3C51;--card:#424C60;--line:rgba(255,255,255,.1);--txt:#E9ECF2;--dim:#A7AEBF;
+  --coral:#DC7B78;--blue:#7EB3D2;--air:#ADCFDE;--earth:#7C5D48}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.55 Inter,system-ui,-apple-system,sans-serif}
+.wrap{max-width:430px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 18px) 18px calc(env(safe-area-inset-bottom) + 40px)}
+header{display:flex;align-items:center;gap:12px;margin:6px 0 4px}
+header svg{width:44px;height:44px;flex:none}
+h1{margin:0;font-size:20px;letter-spacing:.2em;font-weight:700}
+h1 b{color:var(--coral)}
+.sub{color:var(--dim);font-size:13px;margin:0 0 18px}
+.hero{border-radius:18px;padding:14px 16px;background:linear-gradient(135deg,rgba(220,123,120,.22),rgba(126,179,210,.22));border:1px solid var(--line);margin-bottom:18px}
+.hero p{margin:0}
+nav{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 20px}
+nav a{font-size:12px;font-weight:600;color:var(--air);text-decoration:none;padding:6px 11px;border:1px solid rgba(173,207,222,.35);border-radius:999px}
+section{margin:0 0 22px}
+h2{font-size:11px;letter-spacing:.18em;color:var(--dim);margin:0 0 10px;font-weight:700;text-transform:uppercase}
+.step{display:flex;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin-bottom:8px}
+.n{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--bg);background:linear-gradient(135deg,var(--coral),var(--blue))}
+.step b{display:block;margin-bottom:2px}
+.step p{margin:0;color:var(--dim);font-size:14px}
+.step p strong{color:var(--txt)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin-bottom:8px}
+.card b{display:block;margin-bottom:2px}
+.card p{margin:0;color:var(--dim);font-size:14px}
+.card p strong{color:var(--txt)}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:24px;padding:0 8px;border-radius:999px;border:1px solid var(--line);background:var(--card);font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--txt);vertical-align:1px}
+.s{color:var(--coral);border-color:rgba(220,123,120,.45)}
+.l{color:var(--blue);border-color:rgba(126,179,210,.45)}
+.k{background:rgba(124,93,72,.55);border-color:var(--earth)}
+table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;font-size:14px;margin-bottom:8px}
+td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td:first-child{color:var(--dim);width:34%}
+td:last-child{font-weight:600}
+.mono{font-family:"JetBrains Mono",monospace;font-size:13px}
+.note{font-size:13px;color:var(--dim);margin:8px 2px 0}
+a{color:var(--air)}
+.foot{text-align:center;color:var(--dim);font-size:12px;margin-top:28px}
+.back{display:block;text-align:center;margin:18px 0 0;padding:13px;border-radius:999px;font-weight:700;letter-spacing:.08em;color:var(--bg);text-decoration:none;background:linear-gradient(90deg,var(--coral),var(--blue))}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <svg viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="5" fill="#313043"/>
+    <g transform="translate(4.2 4.2)"><rect x="0" y="0" width="3.3" height="3.3" rx=".7" fill="#57556F"/><rect x="4.2" y="0" width="3.3" height="3.3" rx=".7" fill="#57556F"/><rect x="8.4" y="0" width="3.3" height="3.3" rx=".7" fill="#57556F"/><rect x="12.6" y="0" width="3.3" height="3.3" rx=".7" fill="#7EB3D2"/>
+    <rect x="0" y="4.2" width="3.3" height="3.3" rx=".7" fill="#57556F"/><rect x="4.2" y="4.2" width="3.3" height="3.3" rx=".7" fill="#57556F"/><rect x="8.4" y="4.2" width="3.3" height="3.3" rx=".7" fill="#ADCFDE"/><rect x="12.6" y="4.2" width="3.3" height="3.3" rx=".7" fill="#57556F"/>
+    <rect x="0" y="8.4" width="3.3" height="3.3" rx=".7" fill="#57556F"/><rect x="4.2" y="8.4" width="3.3" height="3.3" rx=".7" fill="#DC7B78"/><rect x="8.4" y="8.4" width="3.3" height="3.3" rx=".7" fill="#57556F"/><rect x="12.6" y="8.4" width="3.3" height="3.3" rx=".7" fill="#57556F"/>
+    <rect x="0" y="12.6" width="3.3" height="3.3" rx=".7" fill="#7C5D48"/><rect x="4.2" y="12.6" width="3.3" height="3.3" rx=".7" fill="#57556F"/><rect x="8.4" y="12.6" width="3.3" height="3.3" rx=".7" fill="#57556F"/><rect x="12.6" y="12.6" width="3.3" height="3.3" rx=".7" fill="#57556F"/></g></svg>
+  <h1>VBM<b>-16</b></h1>
+</header>
+<p class="sub">Getting started · Version 1 · BeatSmith</p>
+
+<div class="hero"><p>VBM-16 turns any video into a drum kit. Chop your clips onto pads, sequence a beat, and every hit plays its own piece of video. Export it as a music video that loops clean.</p></div>
+
+<nav>
+  <a href="#install">Install</a><a href="#beat">Make a beat</a><a href="#screen">The screen</a><a href="#types">Video types</a><a href="#slicer">Slicer</a><a href="#banks">Banks and pads</a><a href="#seq">Sequencer</a><a href="#fx">FX</a><a href="#video">Video</a><a href="#save">Save and export</a><a href="#tips">Tips</a><a href="#help">Fixes</a>
+</nav>
+
+<section id="install">
+  <h2>Put it on your iPhone</h2>
+  <div class="step"><div class="n">1</div><div><b>Open the app in Safari</b><p><a href="https://brentwalker.github.io/VBM-16/">brentwalker.github.io/VBM-16</a></p></div></div>
+  <div class="step"><div class="n">2</div><div><b>Add to Home Screen</b><p>Tap <strong>Share</strong>, then <strong>Add to Home Screen</strong>, then <strong>Add</strong>.</p></div></div>
+  <div class="step"><div class="n">3</div><div><b>Open it from the icon</b><p>It runs full screen, works without signal after the first open, and brings your last pads and patterns back.</p></div></div>
+</section>
+
+<section id="beat">
+  <h2>Make your first beat</h2>
+  <div class="step"><div class="n">1</div><div><b>Add a video</b><p>Tap the <strong>camera</strong> at the top. Film something or pick a clip from Photos or Files.</p></div></div>
+  <div class="step"><div class="n">2</div><div><b>Pick what's in it</b><p>Choose <span class="btn l">AUTO CHOP</span> and a type like <span class="btn">DRUMS</span>. VBM-16 listens to the clip, reads its key and fills the next empty bank with 16 chops.</p></div></div>
+  <div class="step"><div class="n">3</div><div><b>Pick a track and a pad</b><p>Tap track <span class="btn">A</span>, then tap a pad. You hear the hit and see its video.</p></div></div>
+  <div class="step"><div class="n">4</div><div><b>Place steps</b><p>Tap steps in the sequencer to drop that pad on the beat. Tap a step again to clear it.</p></div></div>
+  <div class="step"><div class="n">5</div><div><b>Play it</b><p>Tap <span class="btn">▶</span>. Turn on the <strong>metronome</strong> if you want a click. Set the tempo with <span class="btn">-</span> and <span class="btn">+</span>.</p></div></div>
+  <div class="step"><div class="n">6</div><div><b>Build it up</b><p>Put other sounds on tracks <span class="btn">B</span>, <span class="btn">C</span> and <span class="btn">D</span>. Pads from any bank can go on any track.</p></div></div>
+  <div class="step"><div class="n">7</div><div><b>Shape it</b><p>Hold an effect in the FX row, or hold a track slot under it to give a whole track reverb, drive or delay.</p></div></div>
+  <div class="step"><div class="n">8</div><div><b>Save and export</b><p>Tap the <strong>floppy disk</strong> to save your session. Tap <span class="btn s">EXPORT</span> to record your beat as a video.</p></div></div>
+</section>
+
+<section id="screen">
+  <h2>The screen, top to bottom</h2>
+  <div class="card"><b>Top bar</b><p>Floppy disk opens the save window. Camera adds a video. <span class="btn">↶</span> undo and <span class="btn">↷</span> redo cover your last 60 changes. <span class="btn s">EXPORT</span> opens the export window.</p></div>
+  <div class="card"><b>Video</b><p>Shows your hits as they play. Pinch to zoom in, drag to look around, double tap to zoom back out. Drag the bar under it to resize, double tap the bar for small, medium, large and tall.</p></div>
+  <div class="card"><b>Transport</b><p><span class="btn">▶</span> play, red dot live record, tempo, metronome, <strong>pizza</strong> opens the slicer, <strong>keyboard</strong> turns on KEYS, <strong>eye</strong> picks the video view.</p></div>
+  <div class="card"><b>VIDEO FX</b><p>FIT or FILL, MIX layout, WAVE, TAG, and the picture effects ZOOM, SHK, VHS and DUO.</p></div>
+  <div class="card"><b>FX and track FX</b><p>The top row punches effects into everything. The row under it holds 2 effects per track.</p></div>
+  <div class="card"><b>Sequencer</b><p>Tracks A to D with mute, LEN, bar pages, FOLLOW, the 16 steps and the nudge row.</p></div>
+  <div class="card"><b>Banks</b><p>The 8 bank blocks, the 16 pads and the red clear button.</p></div>
+  <div class="card"><b>Pad edit, Patterns, Groove, How it works</b><p>Everything about the selected pad, the 16 patterns and the chain, BPM and swing, and the in-app help.</p></div>
+  <p class="note">Tap any panel title to minimize it. Hold a minimized title to drag it into a new order. VIDEO and the transport always stay on top.</p>
+</section>
+
+<section id="types">
+  <h2>Video types</h2>
+  <table>
+    <tr><td>DRUMS</td><td>Tight hits up to 1 s, sorted kick, snare, hat</td></tr>
+    <tr><td>BASS</td><td>Note chops up to 2 s</td></tr>
+    <tr><td>GUITAR</td><td>Note chops up to 2 s</td></tr>
+    <tr><td>KEYS</td><td>Note chops up to 2 s</td></tr>
+    <tr><td>VOX</td><td>Phrase chops up to 3 s with soft fades</td></tr>
+    <tr><td>SAMPLES</td><td>Record and loop chops up to 2 s</td></tr>
+    <tr><td>FX</td><td>Risers, hits and sweeps up to 3 s with long fade outs</td></tr>
+    <tr><td>CHAOS</td><td>Random spots and lengths, some flipped backwards</td></tr>
+  </table>
+  <p class="note"><strong>AUTO CHOP</strong> fills the next empty bank and never overwrites one. <strong>JUST UPLOAD</strong> opens the slicer so you chop it yourself.</p>
+  <p class="note"><strong>Scale reader:</strong> every video gets its key read, like <span class="mono">V1 Cm</span> on its tab. Pads with a clear pitch also show their note.</p>
+</section>
+
+<section id="slicer">
+  <h2>Chop it yourself (the slicer)</h2>
+  <div class="step"><div class="n">1</div><div><b>Open the slicer</b><p>Tap the <strong>pizza</strong>. Each video is a tab across the top. <span class="btn">+ VIDEO</span> adds another.</p></div></div>
+  <div class="step"><div class="n">2</div><div><b>Set the slice</b><p>Drag either edge on the waveform. Edges can pass each other, whichever is on the left is the start. Tap the wave to hear a spot, pinch to zoom.</p></div></div>
+  <div class="step"><div class="n">3</div><div><b>Slide it</b><p>Hold inside the selection until it lights up, then drag to move the whole slice. Zoomed in with an edge off screen? Slide in from the left side to pull the start, from the right side to pull the end.</p></div></div>
+  <div class="step"><div class="n">4</div><div><b>Check the loop</b><p>Press the big <span class="btn">▶</span> with <span class="btn l">LOOP</span> on. Nudge with <span class="btn">[</span> and <span class="btn">]</span>. The middle button sets 1 ms, 10 ms or 1 frame. <span class="btn">½</span>, <span class="btn">×2</span> and the note buttons set the length to the beat.</p></div></div>
+  <div class="step"><div class="n">5</div><div><b>Line up the picture</b><p><span class="btn">VIDEO SLIP</span> moves the picture up to 1 second earlier or later while the sound stays put. The red bar shows where the video now comes from.</p></div></div>
+  <div class="step"><div class="n">6</div><div><b>Send it</b><p>Tap a pad under <strong>SEND TO PAD</strong>. The next pad lights up as NEXT, so you can chop, tap, chop, tap. The bank blocks above pick which bank you fill.</p></div></div>
+</section>
+
+<section id="banks">
+  <h2>Banks and pads</h2>
+  <div class="card"><b>8 banks of 16</b><p>128 chops in all. Tap a bank block to put it on the pads. Hold a block until it lifts, then drag it to reorder. Your patterns follow the sounds.</p></div>
+  <div class="card"><b>Clear</b><p>Hold the red button at the bottom of BANKS and tap a bank block or a pad. Double tap the red button to keep clear mode on. Undo brings it back.</p></div>
+  <div class="card"><b>Play modes</b><p><span class="btn">ONE SHOT</span> plays the whole chop. <span class="btn">GATE</span> stops when you let go, one step in the sequencer. <span class="btn">LOOP</span> repeats while held, and in the sequencer until that pad plays again.</p></div>
+  <div class="card"><b>Mute groups</b><p>Pads ring over each other. Put pads in the same <span class="btn">MUTE GRP</span> 1 to 4 to make them cut each other off, like an open and closed hat.</p></div>
+  <div class="card"><b>Shape a pad</b><p>Pitch, level, reverse, fade in, fade out, decay, freeze frame and video slip. <span class="btn">EDIT SLICE</span> reopens it in the slicer while its video is loaded.</p></div>
+</section>
+
+<section id="seq">
+  <h2>Sequencer and patterns</h2>
+  <div class="card"><b>Tracks</b><p>A to D. Pads play on the selected track. <span class="btn">M</span> mutes a track. A step shows bank:pad, like <span class="mono">2:4</span>, when the sound is from another bank.</p></div>
+  <div class="card"><b>Longer patterns</b><p><span class="btn">LEN</span> makes a pattern 1, 2, 4 or 8 bars. New bars start as copies. The numbers pick which bar you edit, <span class="btn">FOLLOW</span> makes the view follow the playhead.</p></div>
+  <div class="card"><b>Live record</b><p>Arm the red dot and play pads while it runs. Hits snap to the nearest step.</p></div>
+  <div class="card"><b>Nudge</b><p>Hold a step until it gets a dashed outline, then push it early or late with <span class="btn">◀</span> and <span class="btn">▶</span>. <span class="btn">ALL</span> nudges the whole track for a laid back or pushed feel.</p></div>
+  <div class="card"><b>KEYS</b><p>The 16 pads become 16 notes of the selected pad, labeled with note names when it has a clear pitch.</p></div>
+  <div class="card"><b>Patterns and chain</b><p>16 patterns. A new pattern starts when the current one ends. Turn on <span class="btn">CHAIN</span> and tap patterns in order to build a song. <span class="btn">COPY TO NEXT</span> duplicates one.</p></div>
+</section>
+
+<section id="fx">
+  <h2>FX</h2>
+  <table>
+    <tr><td>LOW · HIGH</td><td>Filters on everything</td></tr>
+    <tr><td>1/2</td><td>Slows the beat 25%, pitch stays</td></tr>
+    <tr><td>ECHO</td><td>Echo in time with the beat</td></tr>
+    <tr><td>ST8 · ST16</td><td>Stutter in 8th or 16th notes</td></tr>
+    <tr><td>REV</td><td>Hits play backwards</td></tr>
+    <tr><td>OCT↓</td><td>An octave down, slowed like tape</td></tr>
+  </table>
+  <p class="note">Hold to punch in, double tap to lock it on, tap again to release. Most of them change the picture too: LOW blurs, HIGH inverts, ECHO leaves trails, REV tints, OCT↓ slows the video.</p>
+  <h2 style="margin-top:16px">Track FX (2 per track)</h2>
+  <table>
+    <tr><td>GAIN</td><td>Level, -12 to +12 dB</td></tr>
+    <tr><td>DRV</td><td>Drive, light grit to heavy</td></tr>
+    <tr><td>LCUT · HCUT</td><td>Low cut and high cut</td></tr>
+    <tr><td>LBST · HBST</td><td>Low boost and high boost, up to +12 dB</td></tr>
+    <tr><td>VERB</td><td>Reverb</td></tr>
+    <tr><td>DLY</td><td>Delay in time with the beat</td></tr>
+  </table>
+  <p class="note">Hold a track slot to pick up to 2 and set each one's amount. Tap the slot to turn them on and off.</p>
+</section>
+
+<section id="video">
+  <h2>Video views and VIDEO FX</h2>
+  <table>
+    <tr><td>MIX</td><td>Every sound playing gets its own piece of the screen</td></tr>
+    <tr><td>FOCUS</td><td>Big round eye: follows your selected track</td></tr>
+    <tr><td>1</td><td>Only the latest hit</td></tr>
+    <tr><td>4</td><td>One quarter per track</td></tr>
+  </table>
+  <div class="card"><b>MIX layouts</b><p>STACK, GRID, PIP (new hits in corner windows), COLLAGE (hits land at random spots) and DIAGONAL.</p></div>
+  <div class="card"><b>Picture FX</b><p><span class="btn">ZOOM</span> punches in on hits, <span class="btn">SHK</span> shakes, <span class="btn">VHS</span> adds scanlines and wobble, <span class="btn">DUO</span> tints each track its own color.</p></div>
+  <div class="card"><b>WAVE and TAG</b><p>WAVE draws the playing sound's waveform over the video. TAG puts your producer tag on every frame, type it and pick a corner.</p></div>
+  <p class="note">Everything you see is in your exports. Zooming the player is only for you and doesn't change exports.</p>
+</section>
+
+<section id="save">
+  <h2>Save and export</h2>
+  <div class="card"><b>Floppy disk</b><p><span class="btn l">SAVE SESSION</span> keeps every pad, pattern and setting in one .zip. <span class="btn">OPEN</span> brings it back. <span class="btn">SAVE SAMPLES</span> gives you WAV files for any DAW. <span class="btn">LOAD SAMPLES</span> puts your own audio on pads.</p></div>
+  <div class="card"><b>INIT</b><p>In the floppy disk window: clear just the patterns, just the pads, or everything. Undo brings pads and patterns back.</p></div>
+  <div class="card"><b>Export</b><p>Pick the length (pattern, 1 to 8 bars or the whole chain), how many times it loops (1× to 16×) and the shape (9:16, 1:1, 16:9 or your first video), then <span class="btn s">RECORD</span>. It starts on the downbeat and ends right on the bar.</p></div>
+  <p class="note">In the home screen app, tap the save button when the file is ready, then pick <strong>Save to Files</strong> or <strong>Save Video</strong>. Work also autosaves on your phone. Full original videos aren't saved, so add a video again to re-chop it.</p>
+</section>
+
+<section id="tips">
+  <h2>Tips for better beats</h2>
+  <div class="card"><b>Shoot at 30 fps</b><p>Steady light, phone still, the sound close to the mic. Clean hits chop better.</p></div>
+  <div class="card"><b>Match keys</b><p>Check the key on each video's tab before mixing samples, so your chops sit together.</p></div>
+  <div class="card"><b>Hats in a mute group</b><p>Put the open and closed hat in the same group so the closed one chokes the open one.</p></div>
+  <div class="card"><b>Fatten the low end</b><p>LBST on the 808 track and LCUT on the sample track keeps the bass clear.</p></div>
+  <div class="card"><b>Fix late video once</b><p>Phone cameras often show the picture a few frames late. Set VIDEO SLIP in the slicer and every chop from that video comes out lined up.</p></div>
+  <div class="card"><b>Brand every export</b><p>Turn on TAG and every video you post carries your name.</p></div>
+</section>
+
+<section id="help">
+  <h2>Fixes</h2>
+  <div class="card"><b>"Listening to the audio" takes a while</b><p>On iPhone, VBM-16 plays the clip silently once to grab the sound, about as long as the clip, up to the first 60 seconds.</p></div>
+  <div class="card"><b>The finger lands late on the hit</b><p>Use VIDEO SLIP in the slicer and tap <span class="btn">◀</span> one frame at a time until it lines up.</p></div>
+  <div class="card"><b>"All 8 banks are full"</b><p>Auto chop never overwrites. Clear a bank with the red button in BANKS, then add the video again.</p></div>
+  <div class="card"><b>A click at the start or end of a chop</b><p>Raise FADE IN or FADE OUT on that pad a few ms.</p></div>
+  <div class="card"><b>The key reads wrong</b><p>Busy drums and noisy clips are hard to read. Trust your ears and use the second choice it shows when it isn't sure.</p></div>
+  <div class="card"><b>The update isn't showing</b><p>Close the home screen app fully and open it again while you have signal.</p></div>
+</section>
+
+<a class="back" href="./">OPEN VBM-16</a>
+<p class="foot">VBM-16 Version 1 · BeatSmith Media</p>
+</div>
+</body>
+</html>

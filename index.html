@@ -299,7 +299,7 @@ section.panel.lifted{transform:scale(1.02);box-shadow:0 8px 24px rgba(0,0,0,.45)
 
   <section class="panel help" id="secHelp">
     <h3>HOW IT WORKS</h3>
-    <p><a id="tutLink" href="https://claude.ai/artifact/KqWeYPqnK9pxDATQS2VJQC" style="color:var(--air)">Open the step by step tutorial</a></p>
+    <p><a id="manLink" href="https://brentwalker.github.io/VBM-16/manual.html" style="color:var(--air)">Open the full manual</a> · <a id="tutLink" href="https://claude.ai/artifact/KqWeYPqnK9pxDATQS2VJQC" style="color:var(--air)">Quick tutorial</a></p>
     <p><b>Transport:</b> ▶ play and stop. Red dot arms live recording. - BPM + sets the tempo. The metronome clicks every beat while playing (it never ends up in an export). The pizza opens the slicer. The keyboard turns on KEYS. The eye switches the video between MIX (every sound that is playing gets its own piece of the screen, from any bank), FOCUS (bigger, rounder eye: the video follows the track you have selected, A to D), 1 (only the latest hit) and 4 (one quarter per track).</p>
     <p><b>Top bar:</b> the floppy disk opens the save window (save or open a session, save or load samples, INIT to clear). The camera adds a video. Pinch either video player to zoom in, drag to look around, double tap or tap RESET to zoom back out (exports are not affected).</p>
     <p><b>Video size:</b> drag the bar under the video to resize it, double tap the bar for small, medium, large and tall.</p>
@@ -2064,7 +2064,7 @@ document.querySelectorAll('section.panel[id]').forEach(sec=>{
   });
 });
 /* works offline once installed (only where the page is hosted on its own) */
-if(/github\.io$|beatsmith/i.test(location.hostname))$('tutLink').href='tutorial.html';
+if(/github\.io$|beatsmith/i.test(location.hostname)){$('tutLink').href='tutorial.html';$('manLink').href='manual.html';}
 if('serviceWorker' in navigator&&location.protocol==='https:'&&window.top===window){try{navigator.serviceWorker.register('sw.js').catch(()=>{});}catch(e){}}
 buildUI();buildTypePick();applyFormat();renderAll();renderEdBtns();renderUndo();renderVO();
 restoreAutosave();
