@@ -79,7 +79,35 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 .toolrow{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px}
 .toolrow .tb{height:36px;font-size:10.5px}
 #xfB{letter-spacing:0;color:var(--dim)} #xfB.on{color:var(--white);background:rgba(124,93,72,.55);border-color:var(--earth)}
-#exrow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
+#tabpanels{margin-top:8px;height:54px}
+@media (max-height:720px){ #stage{height:30vh} #wave{height:clamp(110px,17vh,200px)} #app{padding-bottom:calc(env(safe-area-inset-bottom) + 8px)} }
+#exrow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;height:54px}
+#eqrow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;height:54px}
+.eqk{display:flex;align-items:center;gap:8px;padding:0 8px;border-radius:16px;border:1px solid var(--line);background:var(--panel);touch-action:none;-webkit-user-select:none;user-select:none}
+.knob{width:40px;height:40px;flex:none;border-radius:50%;position:relative;background:radial-gradient(circle at 35% 30%,#56607A,#2E3142 75%);border:1px solid rgba(255,255,255,.14);box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.knob i{position:absolute;left:50%;top:4px;width:3px;height:12px;margin-left:-1.5px;border-radius:2px;background:var(--air);transform-origin:50% 16px}
+.eqk[data-k="lo"] .knob i{background:var(--fire)} .eqk[data-k="hi"] .knob i{background:var(--water)}
+.eqt{display:flex;flex-direction:column;line-height:1.15;min-width:0}
+.eqt b{font-size:10px;letter-spacing:.14em;color:var(--txt)}
+.eqt span{font:600 11px "JetBrains Mono",monospace;color:var(--white);white-space:nowrap}
+.eqt em{font-style:normal;font-size:9px;color:var(--dim);white-space:nowrap}
+.eqk.cut span{color:var(--fire)} .eqk.boost span{color:var(--air)}
+#saverow{display:grid;grid-template-columns:1fr 1fr;gap:8px;height:54px}
+#saverow button{height:54px;border-radius:16px;border:1px solid var(--line);background:var(--panel);color:var(--txt);font:800 12px Inter,system-ui,sans-serif;letter-spacing:.1em;display:flex;align-items:center;justify-content:center;gap:8px}
+#saverow button svg{width:20px;height:20px}
+#pSave{background:linear-gradient(135deg,rgba(220,123,120,.35),rgba(126,179,210,.35))!important;color:var(--white)!important}
+#tabs{display:grid;grid-template-columns:repeat(3,1fr);margin-top:8px;border-top:1px solid var(--line)}
+#tabs button{height:34px;background:none;border:0;border-top:2px solid transparent;margin-top:-1px;color:var(--dim);font:700 11px Inter,system-ui,sans-serif;letter-spacing:.16em}
+#tabs button.on{color:var(--white);border-top-color:var(--air)}
+#psheet{position:fixed;inset:0;z-index:30;background:rgba(49,48,67,.75);display:flex;align-items:flex-end;justify-content:center}
+#psheet .sheet{width:100%;max-width:560px;max-height:80vh;overflow-y:auto;background:#424C60;border-radius:22px 22px 0 0;padding:18px 18px calc(env(safe-area-inset-bottom) + 18px);border-top:1px solid var(--line)}
+#psheet h4{margin:0 0 10px;font-size:12px;letter-spacing:.16em;color:var(--white)}
+.prow{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:14px;background:rgba(49,48,67,.45);margin-bottom:6px}
+.prow div{flex:1;min-width:0} .prow b{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis} .prow small{color:var(--dim);font-size:11px}
+.prow button{height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:none;color:var(--txt);font:700 11px Inter,system-ui,sans-serif;letter-spacing:.08em}
+.prow .po{color:var(--bg1);background:linear-gradient(90deg,var(--fire),var(--water));border:0}
+#pX{width:100%;height:48px;border-radius:24px;border:1px solid var(--line);background:none;color:var(--white);font:700 14px Inter,system-ui,sans-serif;letter-spacing:.08em;margin-top:8px}
+#plist .empty{color:var(--dim);font-size:13px;padding:8px 2px}
 #exrow button{height:54px;border-radius:16px;border:1px solid var(--line);background:var(--panel);display:flex;align-items:center;justify-content:center;
   font:800 17px Inter,system-ui,sans-serif;letter-spacing:.04em;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:manipulation;position:relative}
 #exrow button svg{width:24px;height:24px}
@@ -203,12 +231,24 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
     <button class="tb mono" id="xfB" title="Crossfade at the loop seam (tap to change)">XF 5 ms</button>
     <button class="tb l" id="jL" title="Jump to the loop end">END ⇥</button>
   </div>
-  <div id="exrow">
+  <div id="tabpanels">
+  <div id="exrow" class="tpanel">
     <button class="xg" data-x="gen" title="Export (hold for settings)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3"/><path d="M7.5 7.5L12 3l4.5 4.5"/><path d="M5 12v6.5A2.5 2.5 0 0 0 7.5 21h9a2.5 2.5 0 0 0 2.5-2.5V12"/></svg><small></small></button>
     <button class="xi" data-x="ig" title="Export for Instagram (hold for settings)">IG<small></small></button>
     <button class="xy" data-x="yt" title="Export for YouTube Shorts (hold for settings)">YT<small></small></button>
     <button class="xt" data-x="tt" title="Export for TikTok (hold for settings)">TT<small></small></button>
   </div>
+  <div id="eqrow" class="tpanel hide">
+    <div class="eqk" data-k="lo"><div class="knob" id="kn_lo"><i></i></div><div class="eqt"><b>LOW</b><span id="kv_lo">0 dB</span><em>120 Hz</em></div></div>
+    <div class="eqk" data-k="mi"><div class="knob" id="kn_mi"><i></i></div><div class="eqt"><b>MID</b><span id="kv_mi">0 dB</span><em>2.5 kHz</em></div></div>
+    <div class="eqk" data-k="hi"><div class="knob" id="kn_hi"><i></i></div><div class="eqt"><b>HIGH</b><span id="kv_hi">0 dB</span><em>10 kHz</em></div></div>
+  </div>
+  <div id="saverow" class="tpanel hide">
+    <button id="pSave"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h7V3"/><rect x="8" y="13" width="8" height="6"/></svg>SAVE PROJECT</button>
+    <button id="pOpen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h7l2 2h9v11H3z"/></svg>PROJECTS</button>
+  </div>
+  </div>
+  <div id="tabs"><button data-t="exrow" class="on">EXPORT</button><button data-t="eqrow">EQ</button><button data-t="saverow">SAVE</button></div>
 <div id="toast"></div>
 <div id="sset" class="hide"><div class="sbody">
   <div class="shead"><h2 style="display:flex;align-items:center;gap:8px"><svg class="llogo" viewBox="0 0 24 24" fill="none" stroke="#ADCFDE" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9.6 11V3.8a2.4 2.4 0 0 1 4.8 0V11"/><path d="M5.5 15V13.5a2.5 2.5 0 0 1 2.5-2.5H18.5"/><path d="M16.4 8.9l2.1 2.1-2.1 2.1"/><path d="M18.5 15v1.5a2.5 2.5 0 0 1-2.5 2.5H5.5"/><path d="M7.6 16.9L5.5 19l2.1 2.1"/><circle cx="12" cy="14.2" r="1.15" fill="#ADCFDE" stroke="none"/><path d="M11.4 14.8L11 16.9H13L12.6 14.8Z" fill="#ADCFDE" stroke="none"/></svg>LOOP <b>LOCK</b></h2><button id="sClose">DONE</button></div>
@@ -235,6 +275,8 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
   <div class="sitem"><b>XF</b>Crossfade while you listen: blends the end of the loop into the start so it doesn't click. Tap to change.</div>
   <div class="sitem"><b>Metronome</b>Clicks on the section lines. Tap for on, again for double time, again for off.</div>
   <div class="sitem"><b>Export buttons</b>Tap one to export, then pick where it goes in the share sheet. IG, YT and TT come out vertical 9:16, the first button keeps the video's shape. Hold any of them for its own settings. The small label shows them: offset·crossfade, Q for Seam Quietest, M for Master.</div>
+  <div class="sitem"><b>EQ tab</b>Low shelf 120 Hz, mid bell 2.5 kHz, high shelf 10 kHz, 12 dB either way. Drag a knob up or down, double tap to reset. You hear it while playing and it goes into every export.</div>
+  <div class="sitem"><b>Save tab</b>Save Project keeps the video and everything about the loop, EQ included. Projects lists them so you can open or delete one.</div>
   <div class="sitem"><b>Stop</b>The square stops all playback and cancels an export that's running.</div>
   <div class="sitem"><b>Picks up where you left off</b>Close the app and it reopens with your last video and loop.</div>
   <div class="sitem"><b>New video</b>The camera icon in the corner of the video. Pick from your library or Files.</div>
@@ -271,6 +313,11 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
   <p class="hint" style="margin:0 0 10px;font-size:11px">Bar skip plays the first section, then the last one, on repeat.</p>
   <div class="chips" id="divChips2"></div>
   <button id="dDone" style="width:100%;height:44px;border-radius:999px;font-weight:700;letter-spacing:.08em;font-size:12px;color:#313043;background:linear-gradient(90deg,var(--fire),var(--water))">DONE</button>
+</div></div>
+<div id="psheet" class="hide"><div class="sheet">
+  <h4>PROJECTS</h4>
+  <div id="plist"></div>
+  <button id="pX">CLOSE</button>
 </div></div>
 <div id="svsheet" class="hide"><div class="sheet">
   <h4>EXPORT READY</h4>
@@ -2238,7 +2285,7 @@ const fileDesc=f=>'"'+(f.name||'file')+'", '+(f.type||'unknown type')+', '+(f.si
 
 async function loadFile(f,restoring){
   stop();
-  if(!restoring){ S.pendingRestore=null; try{ localStorage.removeItem('ll_session'); }catch(_){} saveVideo(f); }
+  if(!restoring){ S.eq={lo:0,mi:0,hi:0}; if(typeof eqAll==='function') eqAll(); S.pendingRestore=null; try{ localStorage.removeItem('ll_session'); }catch(_){} saveVideo(f); }
   if(S.url) URL.revokeObjectURL(S.url);
   S.url=URL.createObjectURL(f); S.fileName=f.name.replace(/\.[^.]+$/,''); S.file=f;
   S.buf=null; S.mono=null; S.mip=[]; S.bpm=null; S.step='import';
@@ -2577,7 +2624,7 @@ function play(mode,opt={}){
     src.onended=()=>{ if(S.mode==='all') stop(); };
   }
   if(period){ off=opt.at!=null?opt.at:(opt.keep&&sameMode?prevPhase:0); off=((off%period)+period)%period; }
-  src.connect(g); g.connect(c.destination);
+  src.connect(g); g.connect(eqIn());
   const t0=c.currentTime+(wasPlaying?0.005:0.06);
   if(wasPlaying){ g.gain.setValueAtTime(0,t0); g.gain.linearRampToValueAtTime(1,t0+0.012); }
   src.start(t0, mode==='all'?clamp(S.head,0,S.dur-0.05):off);
@@ -2956,7 +3003,8 @@ function plan(){
 // the phone player's restart pause there instead of on a hit.
 /* ---------- Loop Lock Master: everything runs around the loop as a circle so the seam stays seamless ---------- */
 function bq(type,f,Q,gDb,sr){ const A=Math.pow(10,gDb/40), w=2*Math.PI*f/sr, cs=Math.cos(w), sn=Math.sin(w), al=sn/(2*Q); let b0,b1,b2,a0,a1,a2;
-  if(type==='hp'){ b0=(1+cs)/2; b1=-(1+cs); b2=(1+cs)/2; a0=1+al; a1=-2*cs; a2=1-al; }
+  if(type==='ls'){ const sq=2*Math.sqrt(A)*al; b0=A*((A+1)-(A-1)*cs+sq); b1=2*A*((A-1)-(A+1)*cs); b2=A*((A+1)-(A-1)*cs-sq); a0=(A+1)+(A-1)*cs+sq; a1=-2*((A-1)+(A+1)*cs); a2=(A+1)+(A-1)*cs-sq; }
+  else if(type==='hp'){ b0=(1+cs)/2; b1=-(1+cs); b2=(1+cs)/2; a0=1+al; a1=-2*cs; a2=1-al; }
   else if(type==='peak'){ b0=1+al*A; b1=-2*cs; b2=1-al*A; a0=1+al/A; a1=-2*cs; a2=1-al/A; }
   else { const sq=2*Math.sqrt(A)*al; b0=A*((A+1)+(A-1)*cs+sq); b1=-2*A*((A-1)+(A+1)*cs); b2=A*((A+1)+(A-1)*cs-sq); a0=(A+1)-(A-1)*cs+sq; a1=2*((A-1)-(A+1)*cs); a2=(A+1)-(A-1)*cs-sq; }
   return [b0/a0,b1/a0,b2/a0,a1/a0,a2/a0]; }
@@ -3031,6 +3079,7 @@ function exportAudio(pl){
   }
   const spf=Lf/pl.N0;
   let k=0;
+  eqLoop(full,sr);
   if(S.master) masterLoop(full,sr,S.masterLu!=null?S.masterLu:-14);
   if(S.seamSpot==='auto'){
     // energy of the stretch just before each frame boundary; the phone fills about this much with silence
@@ -3416,13 +3465,15 @@ const IDB={db:null,
   open(){ if(this.db) return Promise.resolve(this.db); return new Promise((res,rej)=>{ const r=indexedDB.open('looplock',1);
     r.onupgradeneeded=()=>r.result.createObjectStore('kv'); r.onsuccess=()=>{ this.db=r.result; res(this.db); }; r.onerror=()=>rej(r.error); }); },
   async put(k,v){ const db=await this.open(); return new Promise((res,rej)=>{ const t=db.transaction('kv','readwrite'); t.objectStore('kv').put(v,k); t.oncomplete=res; t.onerror=()=>rej(t.error); t.onabort=()=>rej(t.error); }); },
+  async keys(){ const db=await this.open(); return new Promise((res,rej)=>{ const q=db.transaction('kv').objectStore('kv').getAllKeys(); q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); }); },
+  async del(k){ const db=await this.open(); return new Promise((res,rej)=>{ const t=db.transaction('kv','readwrite'); t.objectStore('kv').delete(k); t.oncomplete=res; t.onerror=()=>rej(t.error); }); },
   async get(k){ const db=await this.open(); return new Promise((res,rej)=>{ const q=db.transaction('kv').objectStore('kv').get(k); q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); }); }
 };
 async function saveVideo(f){ try{ await IDB.put('video',{blob:f,name:f.name,type:f.type,size:f.size}); }catch(e){} }
 let sessT=null;
 function queueSession(){ if(!S.buf||S.pendingRestore||!S.file) return; clearTimeout(sessT); sessT=setTimeout(saveSession,400); }
 function saveSession(){ if(!S.buf||!S.file) return;
-  const o={name:S.file.name,size:S.file.size,sr:S.sr,s0:S.s0,n:S.n,div:S.div,locked:S.locked,view:S.view,res:S.res,met:S.met,fade:S.fade,step:S.step,fps:S.fps,bpm:S.bpm,grid0:S.grid0};
+  const o=sessionObj();
   try{ localStorage.setItem('ll_session',JSON.stringify(o)); }catch(_){} }
 function applySession(o){
   try{
@@ -3431,6 +3482,7 @@ function applySession(o){
     if(!(n>0)||s0<0||s0+n>T) return false;
     S.s0=s0; S.n=n; S.div=o.div||4; S.locked=!!o.locked; S.res=o.res||S.res; S.met=o.met||'off';
     if(o.fade!=null) S.fade=o.fade; if(o.fps){ S.fps=o.fps; S.frames=Math.floor(S.dur*S.fps+1e-6); }
+    if(o.eq){ S.eq={lo:+o.eq.lo||0,mi:+o.eq.mi||0,hi:+o.eq.hi||0}; eqAll(); }
     if(o.bpm!=null) S.bpm=o.bpm; if(o.grid0!=null) S.grid0=o.grid0*k;
     goStep(o.step&&o.step!=='import'?o.step:'find');
     if(Array.isArray(o.view)&&o.view[1]>o.view[0]){ S.view=o.view.slice(); render(); }
@@ -3444,6 +3496,58 @@ function applySession(o){
   S.pendingRestore=o; impMsg('Picking up where you left off…');
   ac(); await loadFile(new File([v.blob],v.name,{type:v.type||'video/mp4'}),true);
 }catch(e){ S.pendingRestore=null; } })();
+
+/* ---------- EQ: low shelf 120 Hz, mid bell 2.5 kHz, high shelf 10 kHz, ±12 dB ---------- */
+const EQF={lo:{type:'lowshelf',f:120,q:0.7071},mi:{type:'peaking',f:2500,q:0.8},hi:{type:'highshelf',f:10000,q:0.7071}};
+S.eq={lo:0,mi:0,hi:0};
+let EQN=null;
+function eqIn(){ const c=ac(); if(!EQN||EQN.ctx!==c){ const n={ctx:c};
+  for(const k of ['lo','mi','hi']){ const b=c.createBiquadFilter(); b.type=EQF[k].type; b.frequency.value=EQF[k].f; b.Q.value=EQF[k].q; b.gain.value=S.eq[k]; n[k]=b; }
+  n.lo.connect(n.mi); n.mi.connect(n.hi); n.hi.connect(c.destination); EQN=n; }
+  return EQN.lo; }
+function eqLoop(full,sr){ if(!S.eq||(!S.eq.lo&&!S.eq.mi&&!S.eq.hi)) return;
+  const cs=[]; if(S.eq.lo) cs.push(bq('ls',EQF.lo.f,EQF.lo.q,S.eq.lo,sr)); if(S.eq.mi) cs.push(bq('peak',EQF.mi.f,EQF.mi.q,S.eq.mi,sr)); if(S.eq.hi) cs.push(bq('shelf',EQF.hi.f,EQF.hi.q,S.eq.hi,sr));
+  for(let ch=0;ch<full.length;ch++){ let x=full[ch]; for(const c of cs) x=bqLoop(x,c); full[ch]=x; } }
+function eqSet(k,v){ v=Math.round(clamp(v,-12,12)*2)/2; if(Math.abs(v)<0.25) v=0; S.eq[k]=v;
+  if(EQN) EQN[k].gain.setTargetAtTime(v,EQN.ctx.currentTime,0.015);
+  const el=document.querySelector('.eqk[data-k="'+k+'"]'); el.classList.toggle('cut',v<0); el.classList.toggle('boost',v>0);
+  $('#kv_'+k).textContent=(v>0?'+':'')+v+' dB'; $('#kn_'+k+' i').style.transform='rotate('+(v/12*135)+'deg)'; }
+function eqAll(){ for(const k of ['lo','mi','hi']) eqSet(k,S.eq[k]||0); }
+// drag up or down on a knob: 160 px is the full range. Double tap resets to 0.
+$$('.eqk').forEach(el=>{ const k=el.dataset.k; let y0=0,v0=0,id=null,lastTap=0;
+  el.addEventListener('pointerdown',e=>{ id=e.pointerId; el.setPointerCapture(id); y0=e.clientY; v0=S.eq[k];
+    const now=performance.now(); if(now-lastTap<300){ eqSet(k,0); queueSession(); id=null; } lastTap=now; });
+  el.addEventListener('pointermove',e=>{ if(e.pointerId!==id) return; eqSet(k,v0+(y0-e.clientY)/160*24); });
+  const up=e=>{ if(e.pointerId!==id) return; id=null; queueSession(); };
+  el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up); });
+eqAll();
+
+/* ---------- tabs ---------- */
+$$('#tabs button').forEach(b=>b.onclick=()=>{ $$('#tabs button').forEach(x=>x.classList.toggle('on',x===b)); $$('.tpanel').forEach(p=>p.classList.toggle('hide',p.id!==b.dataset.t)); });
+
+/* ---------- saved projects: the video plus everything about the loop ---------- */
+function sessionObj(){ return {name:S.file.name,size:S.file.size,sr:S.sr,s0:S.s0,n:S.n,div:S.div,locked:S.locked,view:S.view,res:S.res,met:S.met,fade:S.fade,step:S.step,fps:S.fps,bpm:S.bpm,grid0:S.grid0,eq:Object.assign({},S.eq)}; }
+$('#pSave').onclick=async()=>{ if(!S.buf||!S.file){ toast('Import a video first'); return; }
+  const d=new Date(), id='proj:'+d.getTime(), label=S.file.name.replace(/\.[^.]+$/,'')+' · '+(ln()).toFixed(2)+' s';
+  try{ await IDB.put(id,{id,label,date:d.getTime(),blob:S.file,type:S.file.type,session:sessionObj()}); toast('Project saved'); }
+  catch(e){ toast('Could not save the project here'+(e&&e.name?' ('+e.name+')':''),3000); } };
+async function listProjects(){ const box=$('#plist'); box.innerHTML='';
+  let keys=[]; try{ keys=(await IDB.keys()).filter(k=>String(k).startsWith('proj:')).sort().reverse(); }catch(e){}
+  if(!keys.length){ box.innerHTML='<div class="empty">No saved projects yet. Tap Save Project to keep the one you\'re on.</div>'; return; }
+  for(const k of keys){ const p=await IDB.get(k); if(!p) continue; const row=document.createElement('div'); row.className='prow';
+    const when=new Date(p.date).toLocaleString([], {month:'short',day:'numeric',hour:'numeric',minute:'2-digit'});
+    row.innerHTML='<div><b></b><small>'+when+'</small></div><button class="pd">DELETE</button><button class="po">OPEN</button>';
+    row.querySelector('b').textContent=p.label;
+    row.querySelector('.po').onclick=async()=>{ $('#psheet').classList.add('hide'); stopAll();
+      const f=new File([p.blob],p.session.name,{type:p.type||'video/mp4'});
+      saveVideo(f); try{ localStorage.setItem('ll_session',JSON.stringify(p.session)); }catch(_){}
+      S.pendingRestore=p.session; impMsg('Opening '+p.label+'…'); ac(); await loadFile(f,true); };
+    row.querySelector('.pd').onclick=async()=>{ if(row.dataset.sure!=='1'){ row.dataset.sure='1'; row.querySelector('.pd').textContent='SURE?'; return; }
+      try{ await IDB.del(k); }catch(e){} row.remove(); if(!$('#plist').children.length) listProjects(); };
+    box.appendChild(row); } }
+$('#pOpen').onclick=()=>{ $('#psheet').classList.remove('hide'); listProjects(); };
+$('#pX').onclick=()=>$('#psheet').classList.add('hide');
+$('#psheet').onclick=e=>{ if(e.target.id==='psheet') $('#psheet').classList.add('hide'); };
 
 render(); requestAnimationFrame(tick);
 </script>
