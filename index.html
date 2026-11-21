@@ -141,7 +141,7 @@ select{font:inherit;font-size:12px;background:var(--slate);color:var(--w);border
 .tfx button.on{background:var(--air);color:var(--ink)}
 #tfxAmts .ctl output{width:56px}
 #tfxAmts .ctl label{width:74px}
-.tfxGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0}
+.tfxGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0}
 .tfxGrid button{padding:10px 0;font-size:13px;flex-direction:column;gap:2px;line-height:1.1}
 .tfxGrid button.on{background:var(--air);color:var(--ink)}
 button.danger{background:var(--fire);color:var(--ink);font-weight:700}
@@ -308,7 +308,7 @@ header>#bExp{flex:1.7 1 0}
     <p><b>Pads and tracks:</b> pads play on the selected track (A to D) and ring over each other. To make pads cut each other off (like an open and closed hat), put them in the same MUTE GRP in pad edit. M mutes a track.</p>
     <p><b>Sequencer:</b> tap a step to drop the selected pad, tap again to clear. A step shows bank:pad when the sound comes from another bank. LEN makes a pattern 1, 2, 4 or 8 bars, new bars start as copies. The numbers next to LEN pick which bar you edit, FOLLOW makes the view follow the playhead. With the red dot on, pad hits made while playing get recorded and snapped to the nearest step.</p>
     <p><b>Nudge:</b> hold a step until it gets a dashed outline, then use ◀ and ▶ under the steps to push it early or late (◀◀ and ▶▶ move 4 at a time, up to half a step each way). Tap the readout to put it back on the grid. ALL nudges every step on the track at once, for a laid back or pushed feel. A nudged step shows a mark on the side it moved toward.</p>
-    <p><b>Track FX</b> (the row under FX): one slot per track, A to D. Hold a slot to choose up to 2 effects for that track: GAIN (level, -12 to +12 dB), DRV (drive), LCUT (low cut), HCUT (high cut), VERB (reverb) and DLY (delay, in time with the beat). Each chosen effect gets a slider for how much. Tap the slot to turn that track's effects on and off.</p>
+    <p><b>Track FX</b> (the row under FX): one slot per track, A to D. Hold a slot to choose up to 2 effects for that track: GAIN (level, -12 to +12 dB), DRV (drive), LCUT (low cut), HCUT (high cut), LBST (low boost, up to +12 dB of bass), HBST (high boost, up to +12 dB of air and sparkle), VERB (reverb) and DLY (delay, in time with the beat). Each chosen effect gets a slider for how much. Tap the slot to turn that track's effects on and off.</p>
     <p><b>FX:</b> hold to punch in, double tap to latch, tap again to release. LOW and HIGH filter, ECHO repeats, ST8 and ST16 stutter in 8th and 16th notes, REV plays hits backwards. 1/2 slows the beat down by 25% while held (sounds keep their pitch). OCT↓ plays every hit an octave down, slowed like tape, so the video slows down with it.</p>
     <p><b>Pad edit:</b> pitch, level and reverse. ONE SHOT plays the whole slice, GATE stops when you let go (one step in the sequencer), LOOP repeats while held (in the sequencer it loops until that pad or its mute group plays again). MUTE GRP 1 to 4 makes pads in the same group cut each other off. FADE and DECAY shape the sound. FREEZE holds one frame. VIDEO SLIP fixes a pad's timing as long as its video is still loaded. EDIT SLICE reopens the pad in the slicer.</p>
     <p><b>KEYS:</b> the 16 pads become 16 notes of the selected pad.</p>
@@ -456,7 +456,7 @@ const FPS=12,MAXF=24,FRAME_M=320,MAXLISTEN=60,KEY='forge-video-sampler-v1';
 const MAXST=128,LENS=[1,2,4,8];
 const NP=128,NB=8;
 /* track FX: label, and what the amount slider does */
-const TFX=[['GAIN','GAIN','LEVEL'],['DRV','DRV','DRIVE'],['LCUT','LCUT','LOW CUT'],['HCUT','HCUT','HIGH CUT'],['VERB','VERB','REVERB'],['DLY','DLY','DELAY']];
+const TFX=[['GAIN','GAIN','LEVEL'],['DRV','DRV','DRIVE'],['LCUT','LCUT','LOW CUT'],['HCUT','HCUT','HIGH CUT'],['LBST','LBST','LOW BOOST'],['HBST','HBST','HIGH BOOST'],['VERB','VERB','REVERB'],['DLY','DLY','DELAY']];
 const TFX_OLD={LOW:'HCUT',HIGH:'LCUT',ECHO:'DLY',DRIVE:'DRV',VERB:'VERB'};
 const PAD_DEF={padChoke:0,padSemi:0,padVol:1,padRev:false,padFi:0,padFo:0,padDecay:100,padMode:'one',padFreeze:-1};
 function padDefaults(){const o={};for(const k in PAD_DEF)o[k]=Array(NP).fill(PAD_DEF[k]);return o;}
@@ -523,12 +523,13 @@ function initAudio(){
   verb=ctx.createConvolver();{const len=Math.floor(ctx.sampleRate*2.2),ir=ctx.createBuffer(2,len,ctx.sampleRate);for(let c=0;c<2;c++){const d=ir.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,3);}verb.buffer=ir;}
   const vret=ctx.createGain();vret.gain.value=0.8;verb.connect(vret);vret.connect(bus);
   for(let i=0;i<4;i++){
-    const g=ctx.createGain(),lo=ctx.createBiquadFilter(),hi=ctx.createBiquadFilter(),dr=ctx.createWaveShaper(),out=ctx.createGain(),es=ctx.createGain(),de=ctx.createDelay(2),ef=ctx.createGain(),vs=ctx.createGain();
+    const g=ctx.createGain(),lo=ctx.createBiquadFilter(),hi=ctx.createBiquadFilter(),lb=ctx.createBiquadFilter(),hb=ctx.createBiquadFilter(),dr=ctx.createWaveShaper(),out=ctx.createGain(),es=ctx.createGain(),de=ctx.createDelay(2),ef=ctx.createGain(),vs=ctx.createGain();
     lo.type='lowpass';lo.frequency.value=20000;lo.Q.value=3;hi.type='highpass';hi.frequency.value=10;hi.Q.value=2;
     es.gain.value=0;ef.gain.value=0.42;vs.gain.value=0;
-    g.connect(lo);lo.connect(hi);hi.connect(dr);dr.connect(out);out.connect(bus);
+    lb.type='lowshelf';lb.frequency.value=110;lb.gain.value=0;hb.type='highshelf';hb.frequency.value=6000;hb.gain.value=0;
+    g.connect(lo);lo.connect(hi);hi.connect(lb);lb.connect(hb);hb.connect(dr);dr.connect(out);out.connect(bus);
     dr.connect(es);es.connect(de);de.connect(ef);ef.connect(de);de.connect(out);dr.connect(vs);vs.connect(verb);
-    trackG.push(g);TN.push({lo,hi,dr,out,es,de,vs});
+    trackG.push(g);TN.push({lo,hi,lb,hb,dr,out,es,de,vs});
   }
   for(let i=0;i<4;i++)applyTrackFx(i);
   const b=ctx.createBuffer(1,1,22050),s=ctx.createBufferSource();s.buffer=b;s.connect(ctx.destination);s.start(0);
@@ -547,6 +548,8 @@ function applyTrackFx(t){
   n.hi.frequency.setTargetAtTime(on('LCUT')?40*Math.pow(2,a('LCUT')/100*5.3):10,now,0.02);/* low cut: 40 Hz to 1.6 kHz */
   n.lo.frequency.setTargetAtTime(on('HCUT')?20000*Math.pow(2,-a('HCUT')/100*5.3):20000,now,0.02);/* high cut: 20 kHz to 500 Hz */
   n.lo.Q.value=0.8;n.hi.Q.value=0.8;
+  n.lb.gain.setTargetAtTime(on('LBST')?a('LBST')/100*12:0,now,0.02);/* low boost: up to +12 dB below about 110 Hz */
+  n.hb.gain.setTargetAtTime(on('HBST')?a('HBST')/100*12:0,now,0.02);/* high boost: up to +12 dB above about 6 kHz */
   n.vs.gain.setTargetAtTime(on('VERB')?a('VERB')/100:0,now,0.02);
   n.de.delayTime.setValueAtTime(Math.min(1.9,stepDur()*3),now);n.es.gain.setTargetAtTime(on('DLY')?a('DLY')/100*0.8:0,now,0.02);
 }
@@ -1570,7 +1573,7 @@ function renderTfx(){
   S.trackFx[tfxEdit].forEach(k=>{const t=tfxEdit,d=TFX.find(x=>x[0]===k),row=document.createElement('div');row.className='ctl';
     row.innerHTML='<label>'+d[2]+'</label><input type="range" min="0" max="100" step="1"><output></output>';
     const inp=row.querySelector('input'),out=row.querySelector('output');inp.value=tAmt(t,k);
-    const show=()=>{const v=tAmt(t,k);out.textContent=k==='GAIN'?((v-50)*0.24>0?'+':'')+((v-50)*0.24).toFixed(1)+'dB':k==='LCUT'?Math.round(40*Math.pow(2,v/100*5.3))+'Hz':k==='HCUT'?(20000*Math.pow(2,-v/100*5.3)/1000).toFixed(1)+'k':v+'%';};
+    const show=()=>{const v=tAmt(t,k);out.textContent=k==='GAIN'?((v-50)*0.24>0?'+':'')+((v-50)*0.24).toFixed(1)+'dB':k==='LCUT'?Math.round(40*Math.pow(2,v/100*5.3))+'Hz':k==='HCUT'?(20000*Math.pow(2,-v/100*5.3)/1000).toFixed(1)+'k':(k==='LBST'||k==='HBST')?'+'+(v/100*12).toFixed(1)+'dB':v+'%';};
     inp.oninput=()=>{pushUndo('tamt'+t+k);S.trackFxAmt[t][k]=+inp.value;save();applyTrackFx(t);show();};show();box.appendChild(row);});
 }
 /* clear mode: hold the red button (or double tap it to lock) and tap banks or pads to clear them */
