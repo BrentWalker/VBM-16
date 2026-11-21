@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Loop Lock: Getting Started</title>
+<meta name="theme-color" content="#313043">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=JetBrains+Mono:wght@600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#313043;--panel:#3A3C51;--card:#424C60;--line:rgba(255,255,255,.1);--txt:#E9ECF2;--dim:#A7AEBF;
+  --coral:#DC7B78;--blue:#7EB3D2;--air:#ADCFDE;--earth:#7C5D48}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--txt);font:15px/1.55 Inter,system-ui,-apple-system,sans-serif}
+.wrap{max-width:430px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 18px) 18px calc(env(safe-area-inset-bottom) + 40px)}
+header{display:flex;align-items:center;gap:12px;margin:6px 0 4px}
+header svg{width:44px;height:44px;flex:none}
+h1{margin:0;font-size:20px;letter-spacing:.2em;font-weight:700}
+h1 b{color:var(--coral)}
+.sub{color:var(--dim);font-size:13px;margin:0 0 18px}
+.hero{border-radius:18px;padding:14px 16px;background:linear-gradient(135deg,rgba(220,123,120,.22),rgba(126,179,210,.22));border:1px solid var(--line);margin-bottom:18px}
+.hero p{margin:0}
+nav{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 20px}
+nav a{font-size:12px;font-weight:600;color:var(--air);text-decoration:none;padding:6px 11px;border:1px solid rgba(173,207,222,.35);border-radius:999px}
+section{margin:0 0 22px}
+h2{font-size:11px;letter-spacing:.18em;color:var(--dim);margin:0 0 10px;font-weight:700;text-transform:uppercase}
+.step{display:flex;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin-bottom:8px}
+.n{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--bg);background:linear-gradient(135deg,var(--coral),var(--blue))}
+.step b{display:block;margin-bottom:2px}
+.step p{margin:0;color:var(--dim);font-size:14px}
+.step p strong{color:var(--txt)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px 14px;margin-bottom:8px}
+.card b{display:block;margin-bottom:2px}
+.card p{margin:0;color:var(--dim);font-size:14px}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-width:30px;height:24px;padding:0 8px;border-radius:999px;border:1px solid var(--line);background:var(--card);font-size:11px;font-weight:700;letter-spacing:.06em;color:var(--txt);vertical-align:1px}
+.s{color:var(--coral);border-color:rgba(220,123,120,.45)}
+.l{color:var(--blue);border-color:rgba(126,179,210,.45)}
+.k{background:rgba(124,93,72,.55);border-color:var(--earth)}
+table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;font-size:14px}
+td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td:first-child{color:var(--dim);width:42%}
+td:last-child{font-weight:700}
+.mono{font-family:"JetBrains Mono",monospace;font-size:13px}
+.note{font-size:13px;color:var(--dim);margin:8px 2px 0}
+a{color:var(--air)}
+.foot{text-align:center;color:var(--dim);font-size:12px;margin-top:28px}
+.back{display:block;text-align:center;margin:18px 0 0;padding:13px;border-radius:999px;font-weight:700;letter-spacing:.08em;color:var(--bg);text-decoration:none;background:linear-gradient(90deg,var(--coral),var(--blue))}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <svg viewBox="0 0 24 24" fill="none" stroke="#ADCFDE" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9.6 11V3.8a2.4 2.4 0 0 1 4.8 0V11"/><path d="M5.5 15V13.5a2.5 2.5 0 0 1 2.5-2.5H18.5"/><path d="M16.4 8.9l2.1 2.1-2.1 2.1"/><path d="M18.5 15v1.5a2.5 2.5 0 0 1-2.5 2.5H5.5"/><path d="M7.6 16.9L5.5 19l2.1 2.1"/><circle cx="12" cy="14.2" r="1.15" fill="#ADCFDE" stroke="none"/><path d="M11.4 14.8L11 16.9H13L12.6 14.8Z" fill="#ADCFDE" stroke="none"/></svg>
+  <h1>LOOP <b>LOCK</b></h1>
+</header>
+<p class="sub">Getting started · Version 1 · BeatSmith</p>
+
+<div class="hero"><p>Loop Lock turns a clip of you making a beat into a perfect video loop, then exports it tuned for Instagram, YouTube Shorts, TikTok or Photos.</p></div>
+
+<nav>
+  <a href="#install">Install</a><a href="#loop">Make a loop</a><a href="#screen">The screen</a><a href="#export">Export</a><a href="#settings">Button settings</a><a href="#ig">Instagram</a><a href="#cal">Calibrate</a><a href="#why">Why loops pause</a><a href="#tips">Tips</a><a href="#help">Fixes</a>
+</nav>
+
+<section id="install">
+  <h2>Put it on your iPhone</h2>
+  <div class="step"><div class="n">1</div><div><b>Open the app in Safari</b><p><a href="https://brentwalker.github.io/VBM-16/looplock/">brentwalker.github.io/VBM-16/looplock</a></p></div></div>
+  <div class="step"><div class="n">2</div><div><b>Add to Home Screen</b><p>Tap <strong>Share</strong>, then <strong>Add to Home Screen</strong>, then <strong>Add</strong>.</p></div></div>
+  <div class="step"><div class="n">3</div><div><b>Open it from the icon</b><p>It runs full screen, works without signal after the first open, and reopens where you left off.</p></div></div>
+</section>
+
+<section id="loop">
+  <h2>Make your first loop</h2>
+  <div class="step"><div class="n">1</div><div><b>Import</b><p>Tap <strong>Import video</strong> and pick a clip from Photos or Files. Loop Lock finds the tempo and suggests a loop.</p></div></div>
+  <div class="step"><div class="n">2</div><div><b>Find the loop</b><p>Drag the red <span class="btn s">S</span> flag to where the loop starts and the blue <span class="btn l">L</span> flag to where it loops back. Pinch to zoom.</p></div></div>
+  <div class="step"><div class="n">3</div><div><b>Play it</b><p>Tap <span class="btn">▶</span>. It loops with no gap at all. Listen to the seam.</p></div></div>
+  <div class="step"><div class="n">4</div><div><b>Nudge</b><p>Red arrows move the start, blue arrows move the loop point. The middle button sets the step: 1 frame, 10 ms, 1 ms or 0.1 ms. Hold an arrow to keep moving. Keep going until the seam disappears.</p></div></div>
+  <div class="step"><div class="n">5</div><div><b>Check it with Bar Skip</b><p>Tap <span class="btn k">BAR SKIP</span>. It plays the first section, then the last, over and over, so you hear the seam fast. Hold it to pick 2, 4, 8 or 16 sections.</p></div></div>
+  <div class="step"><div class="n">6</div><div><b>Lock it</b><p>Tap <span class="btn l">LOCK</span>. The length is frozen. Now <span class="btn l">÷2</span> and <span class="btn l">×2</span> halve or double it, the arrows slide the whole loop, and you can press, hold and drag inside the loop to slide it.</p></div></div>
+  <div class="step"><div class="n">7</div><div><b>Export</b><p>Tap the button for where it's going. Pick the app in the share sheet.</p></div></div>
+</section>
+
+<section id="screen">
+  <h2>The screen, top to bottom</h2>
+  <div class="card"><b>Gear, top left</b><p>Settings, calibration and help.</p></div>
+  <div class="card"><b>Camera icon, bottom right of the video</b><p>Load a new video.</p></div>
+  <div class="card"><b>Video scrubber and audio scrubber</b><p>The strip under the video and the strip on top of the waveform show the whole clip and move together. Drag either to jump anywhere.</p></div>
+  <div class="card"><b>Waveform</b><p>Your loop in high resolution. Double tap to zoom all the way out, double tap again to go back.</p></div>
+  <div class="card"><b>Nudge row</b><p>Unlocked: nudge the start and loop point. Locked: ÷2, slide, step, slide, ×2.</p></div>
+  <div class="card"><b>Lock · Stop · Play · Metronome · Bar Skip</b><p>Stop <span class="btn">■</span> stops all playback and cancels an export. The metronome clicks on the section lines: tap for on, again for double time, again for off.</p></div>
+  <div class="card"><b>START · XF · END</b><p>Jump to the loop's start or end. XF is the crossfade you hear while playing. Tap to change it.</p></div>
+  <div class="card"><b>Export buttons</b><p>Export, IG, YT and TT. The small label shows each button's settings.</p></div>
+</section>
+
+<section id="export">
+  <h2>Export buttons</h2>
+  <table>
+    <tr><td>First button</td><td>Keeps the video's shape. For Photos or anywhere else.</td></tr>
+    <tr><td>IG</td><td>Instagram Reels, vertical 9:16</td></tr>
+    <tr><td>YT</td><td>YouTube Shorts, vertical 9:16</td></tr>
+    <tr><td>TT</td><td>TikTok, vertical 9:16</td></tr>
+  </table>
+  <p class="note">Tap to export. In the home screen app, tap <strong>Save or Share</strong> when the export is ready, then pick Save Video or the app.</p>
+  <p class="note">Reading the label: <span class="mono">178·4·Q·M</span> means offset 178, crossfade 4, Seam Quietest, Master on.</p>
+</section>
+
+<section id="settings">
+  <h2>Button settings (hold any export button)</h2>
+  <div class="card"><b>Offset</b><p>Shortens the file by the app's restart pause, so the beat comes back on time. The most important setting.</p></div>
+  <div class="card"><b>Seam: Quietest or Loop start</b><p>Quietest starts and ends the file at the quietest spot in your loop, so the app's pause and Instagram's start mute land where the beat is already quiet. Loop start begins the file on your downbeat.</p></div>
+  <div class="card"><b>Master</b><p>Loop Lock Master: cleans the low end, adds phone speaker presence, glues the beat, adds warmth, then sets the loudness you pick with peaks held at -1 dB. It works around the loop as a circle, so the seam doesn't pump. Choose No to export the mix untouched.</p></div>
+  <div class="card"><b>Loudness</b><p>How loud the master comes out, in LUFS. Apps turn loud uploads down to about -14, so -14 to -12 is the sweet spot.</p></div>
+  <div class="card"><b>Crossfade, attack, release</b><p>Small pop fixers. Crossfade blends the loop's end into its start. Release fades the end into the pause, attack fades back in. With Seam Quietest they barely matter.</p></div>
+  <p class="note">Every button keeps its own numbers until you change them.</p>
+</section>
+
+<section id="ig">
+  <h2>Tested Instagram settings</h2>
+  <table>
+    <tr><td>Offset</td><td class="mono">178</td></tr>
+    <tr><td>Crossfade</td><td class="mono">4</td></tr>
+    <tr><td>Seam</td><td>Quietest</td></tr>
+    <tr><td>Attack</td><td class="mono">0</td></tr>
+    <tr><td>Release</td><td class="mono">10</td></tr>
+    <tr><td>Master</td><td>Loop Lock master</td></tr>
+    <tr><td>Loudness</td><td class="mono">-13</td></tr>
+  </table>
+  <p class="note">In testing, Instagram usually paused about 180 ms at each restart and sometimes about 150 ms. At offset 178 the beat landed within a few milliseconds of on time.</p>
+</section>
+
+<section id="cal">
+  <h2>Calibrate a button</h2>
+  <div class="step"><div class="n">1</div><div><b>Pick the app and make the test clip</b><p>Gear, then pick IG, YT, TT or Photos, then <strong>Make test clip</strong>. The share sheet opens.</p></div></div>
+  <div class="step"><div class="n">2</div><div><b>Post it and record it</b><p>Post it privately (or save it to Photos), play it, and screen record at least 4 loops. Microphone off.</p></div></div>
+  <div class="step"><div class="n">3</div><div><b>Import the recording</b><p>Tap <strong>Import the recording</strong>. Loop Lock measures the pause to the millisecond and saves it to that button's offset.</p></div></div>
+</section>
+
+<section id="why">
+  <h2>Why social loops aren't perfect</h2>
+  <div class="card"><p>Inside Loop Lock the loop never stops. Instagram, YouTube, TikTok and Photos use their own players, and most of them stop, jump back to the start and begin again every time. That restart leaves a split second of silence, about 150 to 200 ms. Instagram also mutes about the first 45 ms of the file on every restart.</p></div>
+  <div class="card"><p>No file can remove that pause, because it happens inside the app's player. A file can keep your beat on time across it (offset) and put the cut in a quiet spot (Seam Quietest). That's what Loop Lock does.</p></div>
+</section>
+
+<section id="tips">
+  <h2>Tips for better loops</h2>
+  <div class="card"><b>Frame perfect tempos</b><p>At 30 fps, one bar lands on a whole number of frames at 72, 75, 80, 90, 96, 100, 120, 144, 150, 160 and 180 bpm.</p></div>
+  <div class="card"><b>Give the end a breath</b><p>A sparse last moment (hats out, 808 tail fading) makes the app's pause sound like part of the groove.</p></div>
+  <div class="card"><b>Match the picture</b><p>The picture freezes on the last frame during the pause. Hands in about the same spot at the start and end hide it.</p></div>
+  <div class="card"><b>Shoot at 30 fps</b><p>60 and 24 fps clips get converted by the apps, which adds timing errors.</p></div>
+  <div class="card"><b>Upload settings</b><p>Instagram: post as a Reel with Upload at highest quality on. TikTok: turn on Allow high quality uploads. Don't add the app's own music on top.</p></div>
+</section>
+
+<section id="help">
+  <h2>Fixes</h2>
+  <div class="card"><b>"Could not pull the audio straight from this file"</b><p>Tap <strong>Read audio by playing</strong>. If that fails, export the video from Photos as Most Compatible, or screen record it.</p></div>
+  <div class="card"><b>The beat comes back late on a platform</b><p>Raise that button's offset in 5 to 10 ms steps. Early: lower it.</p></div>
+  <div class="card"><b>A click at the seam</b><p>Use Seam Quietest and export a fresh file. Still there: raise crossfade to 10.</p></div>
+  <div class="card"><b>The update isn't showing</b><p>Close the home screen app fully and open it again.</p></div>
+</section>
+
+<a class="back" href="./">OPEN LOOP LOCK</a>
+<p class="foot">Loop Lock Version 1 · BeatSmith Media</p>
+</div>
+</body>
+</html>
