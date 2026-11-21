@@ -239,9 +239,9 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
     <button class="xt" data-x="tt" title="Export for TikTok (hold for settings)">TT<small></small></button>
   </div>
   <div id="eqrow" class="tpanel hide">
-    <div class="eqk" data-k="lo"><div class="knob" id="kn_lo"><i></i></div><div class="eqt"><b>LOW</b><span id="kv_lo">0 dB</span><em>120 Hz</em></div></div>
+    <div class="eqk" data-k="lo"><div class="knob" id="kn_lo"><i></i></div><div class="eqt"><b>LOW</b><span id="kv_lo">0 dB</span><em>150 Hz</em></div></div>
     <div class="eqk" data-k="mi"><div class="knob" id="kn_mi"><i></i></div><div class="eqt"><b>MID</b><span id="kv_mi">0 dB</span><em>2.5 kHz</em></div></div>
-    <div class="eqk" data-k="hi"><div class="knob" id="kn_hi"><i></i></div><div class="eqt"><b>HIGH</b><span id="kv_hi">0 dB</span><em>10 kHz</em></div></div>
+    <div class="eqk" data-k="hi"><div class="knob" id="kn_hi"><i></i></div><div class="eqt"><b>HIGH</b><span id="kv_hi">0 dB</span><em>8 kHz</em></div></div>
   </div>
   <div id="saverow" class="tpanel hide">
     <button id="pSave"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 3h11l3 3v15H5z"/><path d="M8 3v5h7V3"/><rect x="8" y="13" width="8" height="6"/></svg>SAVE PROJECT</button>
@@ -275,7 +275,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
   <div class="sitem"><b>XF</b>Crossfade while you listen: blends the end of the loop into the start so it doesn't click. Tap to change.</div>
   <div class="sitem"><b>Metronome</b>Clicks on the section lines. Tap for on, again for double time, again for off.</div>
   <div class="sitem"><b>Export buttons</b>Tap one to export, then pick where it goes in the share sheet. IG, YT and TT come out vertical 9:16, the first button keeps the video's shape. Hold any of them for its own settings. The small label shows them: offset·crossfade, Q for Seam Quietest, M for Master.</div>
-  <div class="sitem"><b>EQ tab</b>Low shelf 120 Hz, mid bell 2.5 kHz, high shelf 10 kHz, 12 dB either way. Drag a knob up or down, double tap to reset. You hear it while playing and it goes into every export.</div>
+  <div class="sitem"><b>EQ tab</b>Low shelf 150 Hz and high shelf 8 kHz go 18 dB either way, mid bell 2.5 kHz goes 12. Drag a knob up or down, double tap to reset. You hear it while playing and it goes into every export.</div>
   <div class="sitem"><b>Save tab</b>Save Project keeps the video and everything about the loop, EQ included. Projects lists them so you can open or delete one.</div>
   <div class="sitem"><b>Stop</b>The square stops all playback and cancels an export that's running.</div>
   <div class="sitem"><b>Picks up where you left off</b>Close the app and it reopens with your last video and loop.</div>
@@ -3081,6 +3081,7 @@ function exportAudio(pl){
   let k=0;
   eqLoop(full,sr);
   if(S.master) masterLoop(full,sr,S.masterLu!=null?S.masterLu:-14);
+  else if(S.eq&&(S.eq.lo>0||S.eq.mi>0||S.eq.hi>0)){ let pk=0; for(const c of full) for(let i=0;i<c.length;i++){ const a=Math.abs(c[i]); if(a>pk) pk=a; } if(pk>0.98){ const g=0.98/pk; for(const c of full) for(let i=0;i<c.length;i++) c[i]*=g; } }
   if(S.seamSpot==='auto'){
     // energy of the stretch just before each frame boundary; the phone fills about this much with silence
     const Gs=Math.max(Math.round(sr*0.03),Math.round((Math.max(S.gap,60)+(S.release||0))/1000*sr)), m=full[0], cs=new Float64Array(Lf+1);
@@ -3498,26 +3499,27 @@ function applySession(o){
 }catch(e){ S.pendingRestore=null; } })();
 
 /* ---------- EQ: low shelf 120 Hz, mid bell 2.5 kHz, high shelf 10 kHz, ±12 dB ---------- */
-const EQF={lo:{type:'lowshelf',f:120,q:0.7071},mi:{type:'peaking',f:2500,q:0.8},hi:{type:'highshelf',f:10000,q:0.7071}};
+const EQF={lo:{type:'lowshelf',f:150,q:0.7071,r:18},mi:{type:'peaking',f:2500,q:0.8,r:12},hi:{type:'highshelf',f:8000,q:0.7071,r:18}};
 S.eq={lo:0,mi:0,hi:0};
 let EQN=null;
 function eqIn(){ const c=ac(); if(!EQN||EQN.ctx!==c){ const n={ctx:c};
   for(const k of ['lo','mi','hi']){ const b=c.createBiquadFilter(); b.type=EQF[k].type; b.frequency.value=EQF[k].f; b.Q.value=EQF[k].q; b.gain.value=S.eq[k]; n[k]=b; }
-  n.lo.connect(n.mi); n.mi.connect(n.hi); n.hi.connect(c.destination); EQN=n; }
+  const lim=c.createDynamicsCompressor(); lim.threshold.value=-2; lim.knee.value=0; lim.ratio.value=20; lim.attack.value=0.002; lim.release.value=0.08;
+  n.lo.connect(n.mi); n.mi.connect(n.hi); n.hi.connect(lim); lim.connect(c.destination); EQN=n; }
   return EQN.lo; }
 function eqLoop(full,sr){ if(!S.eq||(!S.eq.lo&&!S.eq.mi&&!S.eq.hi)) return;
   const cs=[]; if(S.eq.lo) cs.push(bq('ls',EQF.lo.f,EQF.lo.q,S.eq.lo,sr)); if(S.eq.mi) cs.push(bq('peak',EQF.mi.f,EQF.mi.q,S.eq.mi,sr)); if(S.eq.hi) cs.push(bq('shelf',EQF.hi.f,EQF.hi.q,S.eq.hi,sr));
   for(let ch=0;ch<full.length;ch++){ let x=full[ch]; for(const c of cs) x=bqLoop(x,c); full[ch]=x; } }
-function eqSet(k,v){ v=Math.round(clamp(v,-12,12)*2)/2; if(Math.abs(v)<0.25) v=0; S.eq[k]=v;
+function eqSet(k,v){ const R=EQF[k].r; v=Math.round(clamp(v,-R,R)*2)/2; if(Math.abs(v)<0.25) v=0; S.eq[k]=v;
   if(EQN) EQN[k].gain.setTargetAtTime(v,EQN.ctx.currentTime,0.015);
   const el=document.querySelector('.eqk[data-k="'+k+'"]'); el.classList.toggle('cut',v<0); el.classList.toggle('boost',v>0);
-  $('#kv_'+k).textContent=(v>0?'+':'')+v+' dB'; $('#kn_'+k+' i').style.transform='rotate('+(v/12*135)+'deg)'; }
+  $('#kv_'+k).textContent=(v>0?'+':'')+v+' dB'; $('#kn_'+k+' i').style.transform='rotate('+(v/R*135)+'deg)'; }
 function eqAll(){ for(const k of ['lo','mi','hi']) eqSet(k,S.eq[k]||0); }
 // drag up or down on a knob: 160 px is the full range. Double tap resets to 0.
 $$('.eqk').forEach(el=>{ const k=el.dataset.k; let y0=0,v0=0,id=null,lastTap=0;
   el.addEventListener('pointerdown',e=>{ id=e.pointerId; el.setPointerCapture(id); y0=e.clientY; v0=S.eq[k];
     const now=performance.now(); if(now-lastTap<300){ eqSet(k,0); queueSession(); id=null; } lastTap=now; });
-  el.addEventListener('pointermove',e=>{ if(e.pointerId!==id) return; eqSet(k,v0+(y0-e.clientY)/160*24); });
+  el.addEventListener('pointermove',e=>{ if(e.pointerId!==id) return; eqSet(k,v0+(y0-e.clientY)/160*2*EQF[k].r); });
   const up=e=>{ if(e.pointerId!==id) return; id=null; queueSession(); };
   el.addEventListener('pointerup',up); el.addEventListener('pointercancel',up); });
 eqAll();
