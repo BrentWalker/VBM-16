@@ -158,6 +158,7 @@ button.danger{background:var(--fire);color:var(--ink);font-weight:700}
 .tab.cur{box-shadow:0 0 0 2px var(--air)}
 .addv{flex:0 0 auto;font-size:11px;padding:8px 10px;background:var(--purple)}
 .addv.rec{background:var(--fire);color:var(--ink)}
+.edKey{font-size:11px;margin-top:6px;color:var(--air);min-height:14px}
 .edVid{touch-action:pan-y;margin-top:8px;height:30vh;min-height:170px;background:#000;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative}
 .edVid video{width:100%;height:100%;object-fit:contain;display:block}
 #edEmpty{font-size:12px;opacity:.7;padding:20px;text-align:center;line-height:1.6}
@@ -286,7 +287,8 @@ header>#bExp{flex:1.7 1 0}
     <p><b>Top bar:</b> the floppy disk opens the save window (save or open a session, save or load samples, new session). The camera adds a video. Pinch either video player to zoom in, drag to look around, double tap or tap RESET to zoom back out (exports are not affected).</p>
     <p><b>Video options</b> (under the video): drag the bar to resize the video window, double tap it for small, medium, large and tall. FILL crops the picture to fill its space, FIT shows the whole frame. The layout button picks how MIX shares the screen: STACK, GRID, PIP (newest hits in small corner windows), COLLAGE (hits land at random spots) or DIAGONAL. WAVE draws the playing sound's waveform over the video. TAG puts your producer tag on the picture, type it and tap the arrow to pick a corner. Picture FX: ZOOM punches in on every hit, SHK shakes on hits, VHS adds scanlines and wobble, DUO tints each track in its own color. Everything you see here is in your exports.</p>
     <p><b>Adding video:</b> tap the camera at the top (or the pizza, then ● or + VIDEO). Pick what is in it: drums, bass, guitar, keys, vox, samples, FX or chaos. AUTO CHOP fills the next empty bank with 16 chops and never overwrites a bank. JUST UPLOAD opens the slicer so you chop it yourself.</p>
-    <p><b>Slicer:</b> each video is a tab. Drag either edge of the selection on the waveform (edges can pass each other). Hold inside the selection to slide it. Drag outside it to scroll, pinch to zoom, tap to preview a spot. The big ▶ plays the slice, LOOP repeats it. The [ and ] buttons nudge each edge, ½ and ×2 halve or double it, and the note buttons snap it to the beat. VIDEO SLIP moves the picture up to 1 second without moving the sound. Tap a pad under SEND TO PAD to drop the slice there, the next pad lights up so you can chop fast.</p>
+    <p><b>Slicer:</b> each video is a tab. Drag either edge of the selection on the waveform (edges can pass each other). Hold inside the selection to slide it. Drag outside it to scroll, pinch to zoom, tap to preview a spot. When you are zoomed in and an edge is off screen, an arrow shows at that side: slide your finger in from the left side to pull the start to you, from the right side to pull the end. The big ▶ plays the slice, LOOP repeats it. The [ and ] buttons nudge each edge, ½ and ×2 halve or double it, and the note buttons snap it to the beat. VIDEO SLIP moves the picture up to 1 second without moving the sound. Tap a pad under SEND TO PAD to drop the slice there, the next pad lights up so you can chop fast.</p>
+    <p><b>Scale reader:</b> when a video comes in, VBM-16 reads its key and shows it on the video tab, at the top of the slicer and in a message. Pads remember the key of the video they came from, and pads with a clear pitch show their note in pad edit. In KEYS mode those pads show real note names. Drums usually have no clear note.</p>
     <p><b>Banks:</b> the 8 mini blocks above the pads hold 128 chops (8 banks of 16). Tap one to put it on the pads. Hold one until it lifts, then drag to reorder. Patterns follow the sounds.</p>
     <p><b>Pads and tracks:</b> pads play on the selected track (A to D) and ring over each other. To make pads cut each other off (like an open and closed hat), put them in the same MUTE GRP in pad edit. M mutes a track.</p>
     <p><b>Sequencer:</b> tap a step to drop the selected pad, tap again to clear. A step shows bank:pad when the sound comes from another bank. LEN makes a pattern 1, 2, 4 or 8 bars, new bars start as copies. The numbers next to LEN pick which bar you edit, FOLLOW makes the view follow the playhead. With the red dot on, pad hits made while playing get recorded and snapped to the nearest step.</p>
@@ -312,6 +314,7 @@ header>#bExp{flex:1.7 1 0}
       <label class="btn addv rec">●<input type="file" accept="video/*" capture="environment" class="fIn" hidden></label>
       <label class="btn addv">+ VIDEO<input type="file" accept="video/*" class="fIn" hidden></label>
     </div>
+    <div class="edKey" id="edKey"></div>
     <div class="edVid" id="edVid"><div id="edEmpty">Add a video to start slicing.</div></div>
     <canvas id="wave"></canvas>
     <div class="edInfo"><span id="iS">[</span><span id="iL">LEN 0 ms</span><span id="iE">]</span></div>
@@ -674,7 +677,7 @@ async function makePad(src,s,len,onProg,slip){
   slip=slip||0;
   const frames=await grabFrames(src,s,len,slip,onProg);
   const P=PROF[src.type];if(P&&P.cat)cut.cat=P.cat;
-  return {...cut,srcId:src.id,srcName:src.name,start:s,len,slip,frames,fps:frames.length/len,thumb:frames[0].toDataURL('image/jpeg',0.6)};
+  return {...cut,srcId:src.id,srcName:src.name,srcKey:src.key?src.key.long:null,start:s,len,slip,frames,fps:frames.length/len,thumb:frames[0].toDataURL('image/jpeg',0.6)};
 }
 
 let pendingVid=null;
@@ -726,9 +729,52 @@ function pickType(type){
     catch(e){v.remove();estErr('Could not get the audio from this video. Try an MP4 or MOV that has sound.');}
   })();
 }
+/* ---------- scale reader ---------- */
+const NOTE=['C','C#','D','Eb','E','F','F#','G','Ab','A','Bb','B'];
+const noteName=m=>NOTE[((Math.round(m)%12)+12)%12]+(Math.floor(Math.round(m)/12)-1);
+function fft(re,im){const n=re.length;for(let i=1,j=0;i<n;i++){let b=n>>1;for(;j&b;b>>=1)j^=b;j^=b;if(i<j){[re[i],re[j]]=[re[j],re[i]];[im[i],im[j]]=[im[j],im[i]];}}
+  for(let len=2;len<=n;len<<=1){const a=-2*Math.PI/len,wr=Math.cos(a),wi=Math.sin(a);for(let i=0;i<n;i+=len){let cr=1,ci=0;for(let k=0;k<len/2;k++){const ur=re[i+k],ui=im[i+k],vr=re[i+k+len/2]*cr-im[i+k+len/2]*ci,vi=re[i+k+len/2]*ci+im[i+k+len/2]*cr;re[i+k]=ur+vr;im[i+k]=ui+vi;re[i+k+len/2]=ur-vr;im[i+k+len/2]=ui-vi;const t=cr*wr-ci*wi;ci=cr*wi+ci*wr;cr=t;}}}}
+/* Krumhansl key profiles against a chromagram of the whole clip */
+function readKey(m,sr){
+  const N=4096,hop=4096,maxF=Math.min(600,Math.floor((m.length-N)/hop));if(maxF<4)return null;
+  const step=Math.max(1,Math.floor(((m.length-N)/hop)/maxF)),chroma=new Float64Array(12),win=new Float32Array(N);
+  for(let i=0;i<N;i++)win[i]=0.5-0.5*Math.cos(2*Math.PI*i/(N-1));
+  /* harmonic summation: each note (C2 to C6) scores its own partials, so overtones do not fake extra notes */
+  const re=new Float32Array(N),im=new Float32Array(N),mag=new Float32Array(N/2),HW=[1,0.6,0.4,0.3,0.25];
+  const binOf=f=>Math.round(f*N/sr);
+  for(let fr=0;fr<maxF;fr++){const o=fr*step*hop;let e=0;for(let i=0;i<N;i++){const x=m[o+i]*win[i];re[i]=x;im[i]=0;e+=x*x;}if(e<1e-4)continue;fft(re,im);
+    for(let k=0;k<N/2;k++)mag[k]=Math.sqrt(Math.hypot(re[k],im[k]));
+    const sal=new Float32Array(49);let mx=0;
+    for(let q=0;q<49;q++){const f0=440*Math.pow(2,(36+q-69)/12);let sc=0;
+      for(let h=0;h<HW.length;h++){const kb=binOf(f0*(h+1));if(kb>=N/2-1)break;sc+=HW[h]*Math.max(mag[kb-1]||0,mag[kb],mag[kb+1]);}
+      sal[q]=sc;if(sc>mx)mx=sc;}
+    /* keep only the stronger notes in each frame (peaks), then fold into pitch classes */
+    for(let q=0;q<49;q++){const v=sal[q];if(v>0.35*mx&&v>=(sal[q-1]||0)&&v>=(sal[q+1]||0))chroma[(36+q)%12]+=v/mx;}
+  }
+  const MAJ=[6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88],MIN=[6.33,2.68,3.52,5.38,2.60,3.53,2.54,4.75,3.98,2.69,3.34,3.17];
+  const corr=(a,b)=>{const ma=a.reduce((x,y)=>x+y)/12,mb=b.reduce((x,y)=>x+y)/12;let n=0,da=0,db=0;for(let i=0;i<12;i++){n+=(a[i]-ma)*(b[i]-mb);da+=(a[i]-ma)**2;db+=(b[i]-mb)**2;}return n/Math.sqrt(da*db||1);};
+  const res=[];for(let r=0;r<12;r++){const c=[...chroma.slice(r),...chroma.slice(0,r)];res.push({root:r,mode:'major',c:corr(c,MAJ)},{root:r,mode:'minor',c:corr(c,MIN)});}
+  res.sort((a,b)=>b.c-a.c);if(!(res[0].c>0))return null;
+  const gap=res[0].c-res[1].c,conf=res[0].c>0.75&&gap>0.05?'strong':res[0].c>0.55?'likely':'weak';
+  return {root:res[0].root,mode:res[0].mode,conf,name:NOTE[res[0].root]+(res[0].mode==='minor'?'m':''),long:NOTE[res[0].root]+' '+res[0].mode,alt:NOTE[res[1].root]+' '+res[1].mode};
+}
+/* main pitch of a chop (autocorrelation); null when it is not clearly pitched, like most drums */
+function readNote(buf){
+  const sr=buf.sampleRate,d=buf.getChannelData(0),ds=Math.max(1,Math.round(sr/11025)),fs=sr/ds;
+  const a=Math.floor(0.02*sr),b=Math.min(d.length,Math.floor(0.32*sr));if(b-a<fs*0.06*ds)return null;
+  const x=[];for(let i=a;i<b;i+=ds)x.push(d[i]);const n=x.length,minL=Math.floor(fs/1000),maxL=Math.min(Math.floor(fs/40),Math.floor(n/2));
+  let e0=0;for(const v of x)e0+=v*v;if(e0<1e-4)return null;
+  const nsdf=new Float32Array(maxL+1);for(let l=minL;l<=maxL;l++){let ac=0,m=0;for(let i=0;i+l<n;i++){ac+=x[i]*x[i+l];m+=x[i]*x[i]+x[i+l]*x[i+l];}nsdf[l]=m?2*ac/m:0;}
+  let best=0;for(let l=minL+1;l<maxL;l++)if(nsdf[l]>nsdf[l-1]&&nsdf[l]>=nsdf[l+1]&&nsdf[l]>best)best=nsdf[l];
+  if(best<0.75)return null;let L=0;for(let l=minL+1;l<maxL;l++)if(nsdf[l]>nsdf[l-1]&&nsdf[l]>=nsdf[l+1]&&nsdf[l]>=0.9*best){L=l;break;}
+  if(!L)return null;const f=fs/L;return 69+12*Math.log2(f/440);
+}
+function keyMsg(src){const k=src.key;if(!k)return ' Could not read a key.';return ' Key: '+k.long+(k.conf==='strong'?'.':k.conf==='likely'?' (likely, maybe '+k.alt+').':' (rough guess).');}
+function padNote(p){if(p.note===undefined){try{p.note=readNote(p.buf);}catch(e){p.note=null;}}return p.note;}
 function finishSource(src,audio){
   src.audio=audio;src.dur=Math.min(audio.duration,src.vdur||audio.duration);
   src.mono=mono(audio);
+  try{src.key=readKey(src.mono,audio.sampleRate);}catch(e){src.key=null;}
   let pk=1e-6;for(let i=0;i<src.mono.length;i++){const a=Math.abs(src.mono[i]);if(a>pk)pk=a;}src.norm=Math.min(8,0.95/pk);
   const B=256,nb=Math.ceil(src.mono.length/B),mn=new Float32Array(nb),mx=new Float32Array(nb);
   for(let b=0;b<nb;b++){let lo=0,hi=0;for(let i=b*B,e=Math.min(src.mono.length,i+B);i<e;i++){const x=src.mono[i];if(x<lo)lo=x;if(x>hi)hi=x;}mn[b]=lo;mx[b]=hi;}
@@ -742,9 +788,10 @@ function finishSource(src,audio){
     const b=nextEmptyBank();
     if(b<0){estFlash('All 8 banks are full, so nothing was overwritten. Clear a bank or send chops by hand.',5000);return;}
     bank=b;renderBanks();
-    fillAll('auto').then(()=>{closeEditor();toast('Bank '+(b+1)+' filled with 16 '+src.type.toLowerCase()+' chops from '+src.name+'.',3000);});
+    fillAll('auto').then(()=>{closeEditor();toast('Bank '+(b+1)+' filled with 16 '+src.type.toLowerCase()+' chops from '+src.name+'.'+keyMsg(src),3600);});
     return;
   }
+  if(src.key)toast(src.name+':'+keyMsg(src).replace(/^ /,' '),3600);
   estFlash('Drag the edges to set your slice, hold it to slide it, then tap a pad below to send it. AUTO 16 chops the whole video for you.',5000);
 }
 /* Real time fallback: play the clip through the audio graph and capture the PCM */
@@ -906,6 +953,9 @@ function drawWave(){
   const hw=7*dpr,hh=22*dpr,ec=(drag&&drag.type==='slide')?COL.fire:COL.water;
   for(const x of [xs,xe]){g.fillStyle=ec;g.fillRect(x-dpr,0,2*dpr,H);g.fillRect(x-hw,0,hw*2,hh);g.fillRect(x-hw,H-hh,hw*2,hh);}
   g.fillStyle='#fff';g.fillRect(X(src.cursor),0,Math.max(1,dpr),H);
+  /* arrows when an edge is off screen: slide in from that side to pull it */
+  const arrow=(left)=>{const cx=left?2*dpr:W-2*dpr,dir=left?1:-1;g.fillStyle=COL.water;g.beginPath();g.moveTo(cx,H/2-14*dpr);g.lineTo(cx+dir*13*dpr,H/2);g.lineTo(cx,H/2+14*dpr);g.closePath();g.fill();};
+  if(xs<0)arrow(true);if(xe>W)arrow(false);
   if(src.slip){const a=X(s+src.slip),b=X(e+src.slip);g.fillStyle='rgba(220,123,120,.95)';g.fillRect(a,H-11*dpr,Math.max(2,b-a),4*dpr);}
   /* overview strip */
   g.fillStyle='rgba(255,255,255,.08)';g.fillRect(0,H-3*dpr,W,3*dpr);
@@ -921,7 +971,10 @@ wave.addEventListener('pointerdown',e=>{
   try{wave.setPointerCapture(e.pointerId);}catch(_){}
   const x=relX(e);ptrs.set(e.pointerId,x);
   if(ptrs.size===2){if(drag&&drag.timer)clearTimeout(drag.timer);const [a,b]=[...ptrs.values()];drag={type:'pinch',d0:Math.max(10,Math.abs(a-b)),mid:(a+b)/2,v0:src.view.v0,v1:src.view.v1};return;}
-  const xs=pxOf(src.sel.s),xe=pxOf(src.sel.e),ds=Math.abs(x-xs),de=Math.abs(x-xe);
+  const xs=pxOf(src.sel.s),xe=pxOf(src.sel.e),ds=Math.abs(x-xs),de=Math.abs(x-xe),cw=wave.clientWidth;
+  /* an edge off screen: slide in from that side to pull it to your finger (left side = start, right side = end) */
+  if(x<28&&xs<0){pushUndo();drag={type:setS(tAt(x))};return;}
+  if(x>cw-28&&xe>cw){pushUndo();drag={type:setE(tAt(x))};return;}
   if(Math.min(ds,de)<24){pushUndo();
     if(Math.abs(xs-xe)<10)drag={type:'se',x0:x};
     else drag={type:ds<=de?'s':'e'};
@@ -1009,9 +1062,12 @@ async function fillAll(mode){
 }
 function renderTabs(){
   const el=$('srcTabs');el.innerHTML='';
-  sources.forEach((s,i)=>{const b=document.createElement('button');b.className='tab'+(i===curSrc?' cur':'');b.style.backgroundImage=s.thumb?'url('+s.thumb+')':'';b.innerHTML='<span>'+s.name+(s.type?' '+s.type.slice(0,3):'')+'</span>';b.onclick=()=>{if(!edBusy)selectSource(i);};el.appendChild(b);});
+  sources.forEach((s,i)=>{const b=document.createElement('button');b.className='tab'+(i===curSrc?' cur':'');b.style.backgroundImage=s.thumb?'url('+s.thumb+')':'';b.innerHTML='<span>'+s.name+(s.key?' '+s.key.name:(s.type?' '+s.type.slice(0,3):''))+'</span>';b.onclick=()=>{if(!edBusy)selectSource(i);};el.appendChild(b);});
 }
-function renderEdInfo(){
+function renderEdKey(){const src=cur();const el=$('edKey');if(!el)return;
+  if(!src||!src.audio){el.textContent='';return;}const k=src.key;
+  el.textContent=src.name+' '+(src.type||'')+' · KEY '+(k?k.long.toUpperCase()+(k.conf==='strong'?'':k.conf==='likely'?' (LIKELY, OR '+k.alt.toUpperCase()+')':' (ROUGH)'):'UNKNOWN');}
+function renderEdInfo(){renderEdKey();
   const src=cur();
   if(!src||!src.sel){$('iS').textContent='[';$('iE').textContent=']';$('iL').textContent='LEN';return;}
   const {s,e}=src.sel,len=e-s;
@@ -1410,7 +1466,8 @@ function renderPads(){
     b.querySelector('.i').textContent=p&&!keys?CATS[p.cat].i:'';
     b.querySelector('.i').style.color=p?CATS[p.cat].c:'';
     const r=Math.floor(i/4),c=i%4,semi=(3-r)*4+c;
-    b.querySelector('.k').textContent=keys?('+'+semi):'';
+    const kn=keys&&p?padNote(p):null;
+    b.querySelector('.k').textContent=keys?(kn!=null?noteName(kn+S.padSemi[selPad]+semi):'+'+semi):'';
     b.classList.toggle('sel',keys?semi===lastSemi:bank*16+i===selPad);
   });
   renderBanks();
@@ -1489,7 +1546,8 @@ function renderTransport(){
 }
 function renderPadPanel(){
   const p=pads[selPad];
-  $('padName').textContent=padLabel(selPad)+(p?' · '+(p.name||p.cat)+(p.srcName?' · '+p.srcName+' @ '+p.start.toFixed(2)+'s':''):' · empty');
+  const pn=p?padNote(p):null;
+  $('padName').textContent=padLabel(selPad)+(p?' · '+(p.name||p.cat)+(pn!=null?' · '+noteName(pn+S.padSemi[selPad]):'')+(p.srcKey?' · KEY '+p.srcKey.replace(' major','').replace(' minor','m'):''):' · empty');
   $('pPitch').value=S.padSemi[selPad];$('oPitch').textContent=S.padSemi[selPad];
   $('pVol').value=Math.round(S.padVol[selPad]*100);$('oVol').textContent=Math.round(S.padVol[selPad]*100);
   $('pRev').textContent='REVERSE '+(S.padRev[selPad]?'ON':'OFF');$('pRev').style.background=S.padRev[selPad]?COL.fire:'';
@@ -1636,7 +1694,7 @@ const recCache=new WeakMap();
 async function padRecord(p){
   if(recCache.has(p))return recCache.get(p);
   const frames=[];for(const c of p.frames)frames.push(await toBlob(c));
-  const rec={meta:{name:p.name||null,cat:p.cat,len:p.len,start:p.start||0,slip:p.slip||0,srcName:p.srcName||null},wav:encodeWav(p.buf),frames};
+  const rec={meta:{name:p.name||null,cat:p.cat,len:p.len,start:p.start||0,slip:p.slip||0,srcName:p.srcName||null,srcKey:p.srcKey||null},wav:encodeWav(p.buf),frames};
   recCache.set(p,rec);return rec;
 }
 function reverseOf(buf){const rb=ctx.createBuffer(buf.numberOfChannels,buf.length,buf.sampleRate);for(let c=0;c<buf.numberOfChannels;c++){const d=buf.getChannelData(c),r=rb.getChannelData(c),n=d.length;for(let i=0;i<n;i++)r[i]=d[n-1-i];}return rb;}
@@ -1651,7 +1709,7 @@ async function padFromRecord(rec){
   for(const b of rec.frames)if(b)frames.push(await blobToCanvas(b));
   if(!frames.length)frames.push(demoFrame(rec.meta.cat in CATS?rec.meta.cat:'TONE',(rec.meta.name||'PAD').slice(0,10),0,0));
   const len=buf.duration,m=rec.meta;rec.meta.len=len;
-  const p={buf,rbuf:reverseOf(buf),cat:m.cat||'TONE',name:m.name||undefined,len,start:m.start||0,slip:m.slip||0,srcId:null,srcName:m.srcName,frames,fps:frames.length/len,thumb:frames[0].toDataURL('image/jpeg',0.6)};
+  const p={buf,rbuf:reverseOf(buf),cat:m.cat||'TONE',name:m.name||undefined,len,start:m.start||0,slip:m.slip||0,srcId:null,srcName:m.srcName,srcKey:m.srcKey||null,frames,fps:frames.length/len,thumb:frames[0].toDataURL('image/jpeg',0.6)};
   recCache.set(p,rec);return p;
 }
 function stateJSON(){return {bpm:S.bpm,swing:S.swing,format:S.format,patterns:S.patterns,patLen:S.patLen,chain:S.chain,padChoke:S.padChoke,padSemi:S.padSemi,padVol:S.padVol,padRev:S.padRev,padFi:S.padFi,padFo:S.padFo,padDecay:S.padDecay,padMode:S.padMode,padFreeze:S.padFreeze};}
