@@ -40,15 +40,14 @@ button:disabled{opacity:.35}
 .row{display:flex;gap:6px;margin-top:8px;align-items:stretch}
 .row>*{flex:1}
 .on{background:var(--water)!important;color:var(--ink)!important}
-#bRec.on{background:var(--fire)!important}
+#bRec.on{background:var(--fire)!important;color:var(--ink)}
 .bpm{display:flex;flex:1.6;background:var(--slate);border-radius:10px;align-items:center}
 .bpm button{background:transparent;flex:1;padding:8px 0}
 .bpm span{min-width:30px;text-align:center;font-size:13px;font-weight:700}
 #bSlice{background:var(--air);color:var(--ink);font-weight:700}
 .transport>button{padding:0;height:44px;position:relative}
-.transport .bpm{height:44px}
-.transport .bpm{flex:1.7}
-#bRec{color:var(--fire)}#bRec.on{color:var(--ink)}
+.transport .bpm{height:44px;flex:1.7}
+#bRec{color:var(--fire)}
 #bMet.on{background:var(--water)!important}
 #bView.focus{background:var(--purple)}
 #bView .vb{position:absolute;right:4px;bottom:3px;font-size:8px;font-weight:700;opacity:.8}
@@ -87,7 +86,7 @@ button:disabled{opacity:.35}
 .panel{margin-top:14px;background:rgba(66,76,96,.45);border-radius:14px;padding:10px}
 .panel h3{margin:0 0 6px;font-size:11px;letter-spacing:.14em;opacity:.85;font-weight:600;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px}
 .panel h3::after{content:"▾";font-size:12px;opacity:.8}
-.panel.min h3{margin:0}
+.panel.min h3{margin:0;-webkit-user-select:none;user-select:none}
 .panel.min h3::after{content:"▸"}
 .panel.min>*:not(h3){display:none!important}
 .panel.tight{margin-top:8px;padding:8px 10px}
@@ -95,7 +94,7 @@ button:disabled{opacity:.35}
 .panel.tight .steps{margin-top:6px}
 #secVid{padding:6px}
 #secVid h3{padding:2px 4px 0}
-.banks{display:grid;grid-template-columns:repeat(8,1fr);gap:5px;margin-bottom:8px}
+.banks{display:grid;grid-template-columns:repeat(8,1fr);gap:5px;margin-bottom:8px;padding-bottom:10px}
 .bank{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:1fr;gap:2px;padding:3px;background:#262535;border-radius:6px;aspect-ratio:1;cursor:pointer;position:relative;touch-action:manipulation}
 .bank.cur{box-shadow:0 0 0 2px var(--air);background:#33324a}
 .bank i{display:block;border-radius:2px;background:#3d3c55}
@@ -106,7 +105,6 @@ button:disabled{opacity:.35}
 .bank.lift{transform:scale(1.18);box-shadow:0 6px 16px rgba(0,0,0,.5),0 0 0 2px var(--fire);z-index:2}
 .bank.drop{box-shadow:-4px 0 0 0 var(--fire)}
 .bank b{position:absolute;left:0;right:0;text-align:center;bottom:-14px;font-size:9px;opacity:.6;font-weight:400}
-.banks{padding-bottom:10px}
 #bankName{opacity:.7;font-weight:400;margin-left:auto}
 .pats{display:grid;grid-template-columns:repeat(8,1fr);gap:4px}
 .pats button{height:30px;padding:0;font-size:11px;background:#3a3a50}
@@ -204,6 +202,7 @@ header>#bExp{flex:1.7 1 0}
 .vopt button{padding:9px 0;font-size:11px;background:var(--purple)}
 .vopt button.on{background:var(--air)!important;color:var(--ink)!important}
 #vLay,#vFit{background:var(--slate)}
+section.panel.lifted{transform:scale(1.02);box-shadow:0 8px 24px rgba(0,0,0,.45),0 0 0 2px var(--air);position:relative;z-index:5}
 </style>
 </head>
 <body>
@@ -227,11 +226,7 @@ header>#bExp{flex:1.7 1 0}
     </div>
   </div>
   <div class="vgrip" id="vGrip" title="Drag to resize, double tap for presets"></div>
-  <div class="row vopt"><button id="vFit">FILL</button><button id="vLay">STACK</button><button id="vWave">WAVE</button><button id="vTag">TAG</button></div>
-  <div class="row vopt" id="vfxRow"><button data-v="zoom">ZOOM</button><button data-v="shake">SHK</button><button data-v="vhs">VHS</button><button data-v="duo">DUO</button></div>
-  <div class="row vopt hidden" id="tagRow"><input id="tagText" class="txt" maxlength="24" aria-label="Producer tag text"><button id="tagPos" style="flex:0 0 56px">↘</button></div>
   </section>
-
   <div class="row transport">
     <button id="bPlay" aria-label="Play"></button>
     <button id="bRec" aria-label="Record"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="6.5" fill="currentColor" stroke="none"/></svg></button>
@@ -241,6 +236,13 @@ header>#bExp{flex:1.7 1 0}
     <button id="bKeys" aria-label="Keys"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5.5" width="20" height="13" rx="2"/><path d="M7 5.5v13M12 5.5v13M17 5.5v13"/><rect x="5.6" y="5.5" width="2.8" height="7" fill="currentColor" stroke="none"/><rect x="10.6" y="5.5" width="2.8" height="7" fill="currentColor" stroke="none"/><rect x="15.6" y="5.5" width="2.8" height="7" fill="currentColor" stroke="none"/></svg></button>
     <button id="bView" aria-label="View"></button>
   </div>
+  <div id="panels">
+  <section class="panel tight" id="secVfx"><h3>VIDEO FX</h3>
+  <div class="row vopt" style="margin-top:0"><button id="vFit">FILL</button><button id="vLay">STACK</button><button id="vWave">WAVE</button><button id="vTag">TAG</button></div>
+  <div class="row vopt" id="vfxRow"><button data-v="zoom">ZOOM</button><button data-v="shake">SHK</button><button data-v="vhs">VHS</button><button data-v="duo">DUO</button></div>
+  <div class="row vopt hidden" id="tagRow"><input id="tagText" class="txt" maxlength="24" aria-label="Producer tag text"><button id="tagPos" style="flex:0 0 56px">↘</button></div>
+  </section>
+
 
   <section class="panel tight" id="secFx"><h3>FX</h3><div class="fx" id="fx"></div>
   <div class="tfx" id="tfx"></div></section>
@@ -248,7 +250,7 @@ header>#bExp{flex:1.7 1 0}
   <div class="row" id="tracks" style="margin-top:0"></div>
   <div class="pageRow"><button id="bLen">LEN 1</button><div class="pages" id="pages"></div><button id="bFollow" class="on">FOLLOW</button></div>
   <div class="steps" id="steps"></div>
-  <div class="row slip" id="stepNudge"><button id="snM4">◀◀</button><button id="snM1">◀</button><button class="val" id="snV">HOLD A STEP TO NUDGE</button><button id="snP1">▶</button><button id="snP4">▶▶</button><button id="snAll" style="flex:0 0 46px;font-size:10px">ALL</button></div>
+  <div class="row slip"><button id="snM4">◀◀</button><button id="snM1">◀</button><button class="val" id="snV">HOLD A STEP TO NUDGE</button><button id="snP1">▶</button><button id="snP4">▶▶</button><button id="snAll" style="flex:0 0 46px;font-size:10px">ALL</button></div>
   </section>
   <section class="panel tight" id="secPads"><h3>BANKS <span id="bankName">BANK 1</span></h3>
   <div class="banks" id="banks"></div>
@@ -299,8 +301,9 @@ header>#bExp{flex:1.7 1 0}
     <h3>HOW IT WORKS</h3>
     <p><a id="tutLink" href="https://claude.ai/artifact/KqWeYPqnK9pxDATQS2VJQC" style="color:var(--air)">Open the step by step tutorial</a></p>
     <p><b>Transport:</b> ▶ play and stop. Red dot arms live recording. - BPM + sets the tempo. The metronome clicks every beat while playing (it never ends up in an export). The pizza opens the slicer. The keyboard turns on KEYS. The eye switches the video between MIX (every sound that is playing gets its own piece of the screen, from any bank), FOCUS (bigger, rounder eye: the video follows the track you have selected, A to D), 1 (only the latest hit) and 4 (one quarter per track).</p>
-    <p><b>Top bar:</b> the floppy disk opens the save window (save or open a session, save or load samples, new session). The camera adds a video. Pinch either video player to zoom in, drag to look around, double tap or tap RESET to zoom back out (exports are not affected).</p>
-    <p><b>Video options</b> (under the video): drag the bar to resize the video window, double tap it for small, medium, large and tall. FILL crops the picture to fill its space, FIT shows the whole frame. The layout button picks how MIX shares the screen: STACK, GRID, PIP (newest hits in small corner windows), COLLAGE (hits land at random spots) or DIAGONAL. WAVE draws the playing sound's waveform over the video. TAG puts your producer tag on the picture, type it and tap the arrow to pick a corner. Picture FX: ZOOM punches in on every hit, SHK shakes on hits, VHS adds scanlines and wobble, DUO tints each track in its own color. Everything you see here is in your exports.</p>
+    <p><b>Top bar:</b> the floppy disk opens the save window (save or open a session, save or load samples, INIT to clear). The camera adds a video. Pinch either video player to zoom in, drag to look around, double tap or tap RESET to zoom back out (exports are not affected).</p>
+    <p><b>Video size:</b> drag the bar under the video to resize it, double tap the bar for small, medium, large and tall.</p>
+    <p><b>VIDEO FX:</b> FILL crops the picture to fill its space, FIT shows the whole frame. The layout button picks how MIX shares the screen: STACK, GRID, PIP (newest hits in small corner windows), COLLAGE (hits land at random spots) or DIAGONAL. WAVE draws the playing sound's waveform over the video. TAG puts your producer tag on the picture, type it and tap the arrow to pick a corner. Picture FX: ZOOM punches in on every hit, SHK shakes on hits, VHS adds scanlines and wobble, DUO tints each track in its own color. Everything you see here is in your exports.</p>
     <p><b>Adding video:</b> tap the camera at the top (or the pizza, then ● or + VIDEO). Pick what is in it: drums, bass, guitar, keys, vox, samples, FX or chaos. AUTO CHOP fills the next empty bank with 16 chops and never overwrites a bank. JUST UPLOAD opens the slicer so you chop it yourself.</p>
     <p><b>Slicer:</b> each video is a tab. Drag either edge of the selection on the waveform (edges can pass each other). Hold inside the selection to slide it. Drag outside it to scroll, pinch to zoom, tap to preview a spot. When you are zoomed in and an edge is off screen, an arrow shows at that side: slide your finger in from the left side to pull the start to you, from the right side to pull the end. The big ▶ plays the slice, LOOP repeats it. The [ and ] buttons nudge each edge, ½ and ×2 halve or double it, and the note buttons snap it to the beat. VIDEO SLIP moves the picture up to 1 second without moving the sound. Tap a pad under SEND TO PAD to drop the slice there, the next pad lights up so you can chop fast.</p>
     <p><b>Scale reader:</b> when a video comes in, VBM-16 reads its key and shows it on the video tab, at the top of the slicer and in a message. Pads remember the key of the video they came from, and pads with a clear pitch show their note in pad edit. In KEYS mode those pads show real note names. Drums usually have no clear note.</p>
@@ -311,13 +314,16 @@ header>#bExp{flex:1.7 1 0}
     <p><b>Track FX</b> (the row under FX): one slot per track, A to D. Hold a slot to choose up to 2 effects for that track: GAIN (level, -12 to +12 dB), DRV (drive), LCUT (low cut), HCUT (high cut), LBST (low boost, up to +12 dB of bass), HBST (high boost, up to +12 dB of air and sparkle), VERB (reverb) and DLY (delay, in time with the beat). Each chosen effect gets a slider for how much. Tap the slot to turn that track's effects on and off.</p>
     <p><b>FX:</b> hold to punch in, double tap to latch, tap again to release. LOW and HIGH filter, ECHO repeats, ST8 and ST16 stutter in 8th and 16th notes, REV plays hits backwards. 1/2 slows the beat down by 25% while held (sounds keep their pitch). OCT↓ plays every hit an octave down, slowed like tape, so the video slows down with it.</p>
     <p><b>Pad edit:</b> pitch, level and reverse. ONE SHOT plays the whole slice, GATE stops when you let go (one step in the sequencer), LOOP repeats while held (in the sequencer it loops until that pad or its mute group plays again). MUTE GRP 1 to 4 makes pads in the same group cut each other off. FADE and DECAY shape the sound. FREEZE holds one frame. VIDEO SLIP fixes a pad's timing as long as its video is still loaded. EDIT SLICE reopens the pad in the slicer.</p>
-    <p><b>KEYS:</b> the 16 pads become 16 notes of the selected pad.</p>
+    <p><b>KEYS:</b> the 16 pads become 16 notes of the selected pad, labeled with note names when the pad has a clear pitch.</p>
     <p><b>Patterns:</b> 16 patterns. While playing, a new pattern starts when the current one ends. Turn on CHAIN and tap patterns to build a song. COPY TO NEXT copies the pattern and its length.</p>
     <p><b>INIT:</b> in the floppy disk window, INIT (CLEAR) lets you clear just the patterns, just the pads, or everything.</p>
     <p><b>Session (floppy disk):</b> SAVE SESSION keeps every pad (sound and video), patterns and settings in one .zip. SAVE SAMPLES gives you WAV files for your DAW. LOAD SAMPLES puts your own audio on pads. Work also autosaves in this browser. Full original videos are not saved, so add a video again to re-slice from it.</p>
     <p><b>Export:</b> tap EXPORT at the top. Pick the length (pattern, 1 to 8 bars or the whole chain), how many times it loops (1× to 16×) and the shape (9:16, 1:1, 16:9 or your first video), then RECORD. It starts on the downbeat and ends right on the bar.</p>
-    <p><b>Undo:</b> ↶ undoes your last change, ↷ brings it back. Tap any panel title to minimize it.</p>
+    <p><b>Undo:</b> ↶ undoes your last change, ↷ brings it back.</p>
+    <p><b>Layout:</b> tap any panel title to minimize it. When a panel is minimized, press and hold its title until it lifts, then drag it up or down to change the order. VIDEO and the transport row stay on top. Your order is remembered.</p>
+    <p style="opacity:.6">VBM-16 v1.0 · BeatSmith</p>
   </section>
+  </div>
 </div>
 
 <!-- slice editor -->
@@ -1417,7 +1423,7 @@ function makeZoomable(box,getTarget){
   box.addEventListener('pointerup',up);box.addEventListener('pointercancel',up);
   return reset;
 }
-const resetStageZoom=makeZoomable($('stage'),()=>cv);
+makeZoomable($('stage'),()=>cv);
 const resetEdZoom=makeZoomable($('edVid'),()=>$('edVid').querySelector('video'));
 
 /* ---------- main UI ---------- */
@@ -1834,7 +1840,7 @@ function applyState(st){
 async function saveFile(name,blob){
   lastBlob=blob;lastName=name;
   if(downloads){
-    try{await downloads.save({filename:name,data:blob});toast('Saved '+name);}
+    try{await downloads.save({filename:name,data:blob});$('saveWin').classList.add('hidden');toast('Saved '+name);}
     catch(e){toast(e&&e.code==='declined'?'Save cancelled.':'Could not save ('+(e&&e.code||'error')+').',3000);}
     return;
   }
@@ -2028,10 +2034,34 @@ $('mSave').onclick=async()=>{
   catch(e){$('mTxt').textContent=e&&e.code==='declined'?'Save cancelled.':'Could not save here ('+(e&&e.code||'error')+').';}
 };
 
-/* collapsible panels */
+/* collapsible panels: tap a title to minimize. When minimized, hold the title and drag to reorder (VIDEO stays on top) */
+const panelsEl=$('panels');
+if(Array.isArray(UI.order))UI.order.forEach(id=>{const el=$(id);if(el&&el.parentNode===panelsEl)panelsEl.appendChild(el);});
+let pDrag=null;
+document.addEventListener('touchmove',e=>{if(pDrag&&pDrag.lifted)e.preventDefault();},{passive:false});
 document.querySelectorAll('section.panel[id]').forEach(sec=>{
   sec.classList.toggle('min',!!UI[sec.id]);
-  sec.querySelector('h3').addEventListener('click',()=>{const m=!sec.classList.contains('min');sec.classList.toggle('min',m);UI[sec.id]=m;saveUI();});
+  const h3=sec.querySelector('h3');
+  h3.addEventListener('click',()=>{if(sec._skipClick){sec._skipClick=false;return;}const m=!sec.classList.contains('min');sec.classList.toggle('min',m);UI[sec.id]=m;saveUI();});
+  if(sec.parentNode!==panelsEl)return;/* VIDEO is locked */
+  /* window-level listeners, because moving the panel in the page would drop a pointer capture */
+  h3.addEventListener('pointerdown',e=>{
+    if(!sec.classList.contains('min'))return;
+    const st={sec,y0:e.clientY,lifted:false,moved:false};pDrag=st;
+    const move=ev=>{
+      if(pDrag!==st)return;
+      if(!st.lifted){if(Math.abs(ev.clientY-st.y0)>8){st.moved=true;clearTimeout(st.timer);}return;}
+      const others=[...panelsEl.children].filter(x=>x!==sec);
+      let before=null;for(const o of others){const r=o.getBoundingClientRect();if(ev.clientY<r.top+r.height/2){before=o;break;}}
+      if(before){if(sec.nextSibling!==before)panelsEl.insertBefore(sec,before);}else if(panelsEl.lastElementChild!==sec)panelsEl.appendChild(sec);
+    };
+    const end=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',end);window.removeEventListener('pointercancel',end);
+      clearTimeout(st.timer);if(pDrag!==st)return;
+      if(st.lifted){sec.classList.remove('lifted');sec._skipClick=true;setTimeout(()=>{sec._skipClick=false;},400);UI.order=[...panelsEl.children].map(x=>x.id);saveUI();}
+      pDrag=null;};
+    window.addEventListener('pointermove',move);window.addEventListener('pointerup',end);window.addEventListener('pointercancel',end);
+    st.timer=setTimeout(()=>{if(pDrag!==st||st.moved)return;st.lifted=true;sec.classList.add('lifted');try{navigator.vibrate&&navigator.vibrate(20);}catch(_){}},450);
+  });
 });
 /* works offline once installed (only where the page is hosted on its own) */
 if(/github\.io$|beatsmith/i.test(location.hostname))$('tutLink').href='tutorial.html';
