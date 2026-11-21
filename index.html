@@ -100,6 +100,9 @@ button:disabled{opacity:.35}
 .bank.cur{box-shadow:0 0 0 2px var(--air);background:#33324a}
 .bank i{display:block;border-radius:2px;background:#3d3c55}
 .bank i.hit{background:#fff!important}
+#secPads.clearing .bank,#secPads.clearing .pad{box-shadow:inset 0 0 0 2px var(--fire)!important}
+#bHoldClr{font-size:10px}
+#bHoldClr.on{background:#fff!important;color:var(--fire)!important}
 .bank.lift{transform:scale(1.18);box-shadow:0 6px 16px rgba(0,0,0,.5),0 0 0 2px var(--fire);z-index:2}
 .bank.drop{box-shadow:-4px 0 0 0 var(--fire)}
 .bank b{position:absolute;left:0;right:0;text-align:center;bottom:-14px;font-size:9px;opacity:.6;font-weight:400}
@@ -130,7 +133,15 @@ select{font:inherit;font-size:12px;background:var(--slate);color:var(--w);border
 .help p{margin:4px 0}
 .modal{position:fixed;inset:0;background:rgba(20,20,30,.85);display:flex;align-items:center;justify-content:center;z-index:20;padding:16px}
 .mbox{background:var(--ink);border:1px solid var(--purple);border-radius:16px;padding:14px;width:100%;max-width:420px;text-align:center}
-#saveWin,#expWin,#initWin{z-index:15}
+#saveWin,#expWin,#initWin,#tfxWin{z-index:15}
+.tfx{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:5px}
+.tfx button{height:40px;padding:0 2px;font-size:9px;line-height:1.25;background:#33324a;border-bottom:3px solid transparent;flex-direction:column;gap:1px}
+.tfx button b{font-size:11px}
+.tfx button.set{background:var(--slate)}
+.tfx button.on{background:var(--air);color:var(--ink)}
+.tfxGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0}
+.tfxGrid button{padding:13px 0;font-size:12px}
+.tfxGrid button.on{background:var(--air);color:var(--ink)}
 button.danger{background:var(--fire);color:var(--ink);font-weight:700}
 #eLoops button{padding:8px 0;font-size:11px}
 .sw{text-align:left;max-height:90vh;overflow-y:auto}
@@ -229,16 +240,18 @@ header>#bExp{flex:1.7 1 0}
     <button id="bView" aria-label="View"></button>
   </div>
 
-  <section class="panel tight" id="secFx"><h3>FX</h3><div class="fx" id="fx"></div></section>
+  <section class="panel tight" id="secFx"><h3>FX</h3><div class="fx" id="fx"></div>
+  <div class="tfx" id="tfx"></div></section>
   <section class="panel tight" id="secSeq"><h3>SEQUENCER</h3>
   <div class="row" id="tracks" style="margin-top:0"></div>
   <div class="pageRow"><button id="bLen">LEN 1</button><div class="pages" id="pages"></div><button id="bFollow" class="on">FOLLOW</button></div>
   <div class="steps" id="steps"></div>
   <div class="row slip" id="stepNudge"><button id="snM4">◀◀</button><button id="snM1">◀</button><button class="val" id="snV">HOLD A STEP TO NUDGE</button><button id="snP1">▶</button><button id="snP4">▶▶</button><button id="snAll" style="flex:0 0 46px;font-size:10px">ALL</button></div>
   </section>
-  <section class="panel tight" id="secPads"><h3>PADS <span id="bankName">BANK 1</span></h3>
+  <section class="panel tight" id="secPads"><h3>BANKS <span id="bankName">BANK 1</span></h3>
   <div class="banks" id="banks"></div>
   <div class="pads" id="pads" style="margin-top:0"></div>
+  <div class="row"><button id="bHoldClr" class="danger" style="padding:12px 0">HOLD HERE + TAP A BANK OR PAD TO CLEAR</button></div>
   </section>
   <section class="panel" id="secPad">
     <h3>PAD <span id="padName"></span></h3>
@@ -289,10 +302,11 @@ header>#bExp{flex:1.7 1 0}
     <p><b>Adding video:</b> tap the camera at the top (or the pizza, then ● or + VIDEO). Pick what is in it: drums, bass, guitar, keys, vox, samples, FX or chaos. AUTO CHOP fills the next empty bank with 16 chops and never overwrites a bank. JUST UPLOAD opens the slicer so you chop it yourself.</p>
     <p><b>Slicer:</b> each video is a tab. Drag either edge of the selection on the waveform (edges can pass each other). Hold inside the selection to slide it. Drag outside it to scroll, pinch to zoom, tap to preview a spot. When you are zoomed in and an edge is off screen, an arrow shows at that side: slide your finger in from the left side to pull the start to you, from the right side to pull the end. The big ▶ plays the slice, LOOP repeats it. The [ and ] buttons nudge each edge, ½ and ×2 halve or double it, and the note buttons snap it to the beat. VIDEO SLIP moves the picture up to 1 second without moving the sound. Tap a pad under SEND TO PAD to drop the slice there, the next pad lights up so you can chop fast.</p>
     <p><b>Scale reader:</b> when a video comes in, VBM-16 reads its key and shows it on the video tab, at the top of the slicer and in a message. Pads remember the key of the video they came from, and pads with a clear pitch show their note in pad edit. In KEYS mode those pads show real note names. Drums usually have no clear note.</p>
-    <p><b>Banks:</b> the 8 mini blocks above the pads hold 128 chops (8 banks of 16). Tap one to put it on the pads. Hold one until it lifts, then drag to reorder. Patterns follow the sounds.</p>
+    <p><b>Banks:</b> the 8 mini blocks above the pads hold 128 chops (8 banks of 16). Tap one to put it on the pads. Hold one until it lifts, then drag to reorder. Patterns follow the sounds. To clear, hold the red button at the bottom of BANKS and tap a bank block or a pad (double tap the red button to keep clear mode on). Undo brings it back.</p>
     <p><b>Pads and tracks:</b> pads play on the selected track (A to D) and ring over each other. To make pads cut each other off (like an open and closed hat), put them in the same MUTE GRP in pad edit. M mutes a track.</p>
     <p><b>Sequencer:</b> tap a step to drop the selected pad, tap again to clear. A step shows bank:pad when the sound comes from another bank. LEN makes a pattern 1, 2, 4 or 8 bars, new bars start as copies. The numbers next to LEN pick which bar you edit, FOLLOW makes the view follow the playhead. With the red dot on, pad hits made while playing get recorded and snapped to the nearest step.</p>
     <p><b>Nudge:</b> hold a step until it gets a dashed outline, then use ◀ and ▶ under the steps to push it early or late (◀◀ and ▶▶ move 4 at a time, up to half a step each way). Tap the readout to put it back on the grid. ALL nudges every step on the track at once, for a laid back or pushed feel. A nudged step shows a mark on the side it moved toward.</p>
+    <p><b>Track FX</b> (the row under FX): one slot per track, A to D. Hold a slot to choose up to 2 effects for that track: LOW, HIGH, ECHO, VERB, DRVE (drive), OCT↓, REV, ST8, ST16. Tap the slot to turn that track's effects on and off. They stay on while you play, so you can put reverb on just the vocals or drive on just the drums.</p>
     <p><b>FX:</b> hold to punch in, double tap to latch, tap again to release. LOW and HIGH filter, ECHO repeats, ST8 and ST16 stutter in 8th and 16th notes, REV plays hits backwards. 1/2 slows the beat down by 25% while held (sounds keep their pitch). OCT↓ plays every hit an octave down, slowed like tape, so the video slows down with it.</p>
     <p><b>Pad edit:</b> pitch, level and reverse. ONE SHOT plays the whole slice, GATE stops when you let go (one step in the sequencer), LOOP repeats while held (in the sequencer it loops until that pad or its mute group plays again). MUTE GRP 1 to 4 makes pads in the same group cut each other off. FADE and DECAY shape the sound. FREEZE holds one frame. VIDEO SLIP fixes a pad's timing as long as its video is still loaded. EDIT SLICE reopens the pad in the slicer.</p>
     <p><b>KEYS:</b> the 16 pads become 16 notes of the selected pad.</p>
@@ -375,6 +389,14 @@ header>#bExp{flex:1.7 1 0}
     <div class="row"><button id="initCancel">CANCEL</button></div>
   </div>
 </div>
+<div id="tfxWin" class="modal hidden">
+  <div class="mbox sw">
+    <div class="swT"><span id="tfxTitle">TRACK A FX</span></div>
+    <div class="help"><p>Pick up to 2 effects for this track. Tap the track's slot to turn them on and off.</p></div>
+    <div class="tfxGrid" id="tfxGrid"></div>
+    <div class="row"><button id="tfxClear">CLEAR</button><button id="tfxDone" class="hl">DONE</button></div>
+  </div>
+</div>
 <div id="saveWin" class="modal hidden">
   <div class="mbox sw">
     <div class="swT"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h13l3 3v13H4z"/><path d="M8 4v5h7V4"/><rect x="7.5" y="13" width="9" height="7" rx="1"/></svg><span>SESSION</span></div>
@@ -430,17 +452,20 @@ const FPS=12,MAXF=24,FRAME_M=320,MAXLISTEN=60,KEY='forge-video-sampler-v1';
 /* ---------- state ---------- */
 const MAXST=128,LENS=[1,2,4,8];
 const NP=128,NB=8;
+const TFX=[['LOW','LOW'],['HIGH','HIGH'],['ECHO','ECHO'],['VERB','VERB'],['DRIVE','DRVE'],['OCT','OCT↓'],['REV','REV'],['ST8','ST8'],['ST16','ST16']];
 const PAD_DEF={padChoke:0,padSemi:0,padVol:1,padRev:false,padFi:0,padFo:0,padDecay:100,padMode:'one',padFreeze:-1};
 function padDefaults(){const o={};for(const k in PAD_DEF)o[k]=Array(NP).fill(PAD_DEF[k]);return o;}
 const mkTrack=()=>Array(MAXST).fill(null);
 const mkPat=()=>Array.from({length:4},mkTrack);
 const mkPats=()=>Array.from({length:16},mkPat);
-const S={bpm:92,swing:0,format:'auto',patterns:mkPats(),patLen:Array(16).fill(1),chain:[],...padDefaults()};
+const S={bpm:92,swing:0,format:'auto',trackFx:[[],[],[],[]],trackFxOn:[true,true,true,true],patterns:mkPats(),patLen:Array(16).fill(1),chain:[],...padDefaults()};
 try{const j=JSON.parse(localStorage.getItem(KEY)||'null');if(j&&j.patterns)Object.assign(S,j);}catch(e){}
 S.patterns.forEach(P=>P.forEach(t=>{while(t.length<MAXST)t.push(null);}));
 if(!Array.isArray(S.patLen)||S.patLen.length!==16)S.patLen=Array(16).fill(1);
 function fixPadArrays(){for(const k in PAD_DEF){if(!Array.isArray(S[k]))S[k]=[];while(S[k].length<NP)S[k].push(PAD_DEF[k]);}}
 fixPadArrays();
+if(!Array.isArray(S.trackFx)||S.trackFx.length!==4)S.trackFx=[[],[],[],[]];
+if(!Array.isArray(S.trackFxOn)||S.trackFxOn.length!==4)S.trackFxOn=[true,true,true,true];
 const plen=p=>S.patLen[p]*16;
 let viewPage=0,follow=true,playPage=-1;
 let saveT=null;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}},400);}
@@ -464,7 +489,7 @@ let sources=[],curSrc=-1,srcSeq=0,edOpen=false,target=0,edBusy=false,loopMode=tr
 const NUDGE=[[0.001,'1 ms'],[0.01,'10 ms'],[1/30,'1 frame']];
 
 /* ---------- audio ---------- */
-let ctx,bus,lpf,hpf,dly,dlySend,fb,master,recDest,trackG=[];
+let ctx,bus,lpf,hpf,dly,dlySend,fb,master,recDest,trackG=[],TN=[],verb;
 const stepDur=()=>60/S.bpm/4;
 const playStep=()=>stepDur()*(fx.HALF?4/3:1);/* 1/2 button: tempo drops 25% while held */
 function initAudio(){
@@ -483,18 +508,40 @@ function initAudio(){
   hpf.connect(dlySend);dlySend.connect(dly);dly.connect(fb);fb.connect(dly);dly.connect(comp);
   comp.connect(master);master.connect(ctx.destination);
   try{recDest=ctx.createMediaStreamDestination();master.connect(recDest);}catch(e){recDest=null;}
-  for(let i=0;i<4;i++){const g=ctx.createGain();g.connect(bus);trackG.push(g);}
+  /* per-track chain: input -> low cut / high cut -> drive -> out, with its own echo and a shared reverb */
+  verb=ctx.createConvolver();{const len=Math.floor(ctx.sampleRate*2.2),ir=ctx.createBuffer(2,len,ctx.sampleRate);for(let c=0;c<2;c++){const d=ir.getChannelData(c);for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/len,3);}verb.buffer=ir;}
+  const vret=ctx.createGain();vret.gain.value=0.8;verb.connect(vret);vret.connect(bus);
+  for(let i=0;i<4;i++){
+    const g=ctx.createGain(),lo=ctx.createBiquadFilter(),hi=ctx.createBiquadFilter(),dr=ctx.createWaveShaper(),out=ctx.createGain(),es=ctx.createGain(),de=ctx.createDelay(2),ef=ctx.createGain(),vs=ctx.createGain();
+    lo.type='lowpass';lo.frequency.value=20000;lo.Q.value=3;hi.type='highpass';hi.frequency.value=10;hi.Q.value=2;
+    es.gain.value=0;ef.gain.value=0.42;vs.gain.value=0;
+    g.connect(lo);lo.connect(hi);hi.connect(dr);dr.connect(out);out.connect(bus);
+    dr.connect(es);es.connect(de);de.connect(ef);ef.connect(de);de.connect(out);dr.connect(vs);vs.connect(verb);
+    trackG.push(g);TN.push({lo,hi,dr,es,de,vs});
+  }
+  for(let i=0;i<4;i++)applyTrackFx(i);
   const b=ctx.createBuffer(1,1,22050),s=ctx.createBufferSource();s.buffer=b;s.connect(ctx.destination);s.start(0);
   if(ctx.state!=='running')ctx.resume();
 }
 document.addEventListener('pointerdown',initAudio,{passive:true});
 
+const tfxOn=(tr,k)=>S.trackFxOn[tr]&&S.trackFx[tr].includes(k);
+let driveC=null;
+function applyTrackFx(t){
+  if(!ctx||!TN[t])return;const n=TN[t],now=ctx.currentTime,on=k=>tfxOn(t,k);
+  n.lo.frequency.setTargetAtTime(on('LOW')?650:20000,now,0.02);
+  n.hi.frequency.setTargetAtTime(on('HIGH')?1300:10,now,0.02);
+  if(!driveC){driveC=new Float32Array(2048);for(let i=0;i<2048;i++){const x=i/2047*2-1;driveC[i]=Math.tanh(3*x)/Math.tanh(3)*0.85;}}
+  n.dr.curve=on('DRIVE')?driveC:null;
+  n.de.delayTime.setValueAtTime(Math.min(1.9,stepDur()*3),now);n.es.gain.setTargetAtTime(on('ECHO')?0.5:0,now,0.02);
+  n.vs.gain.setTargetAtTime(on('VERB')?0.55:0,now,0.02);
+}
 function trigger(tr,pi,semi,t,live){
   const p=pads[pi];if(!p||!ctx)return null;
-  const rev=fx.REV||S.padRev[pi],mode=S.padMode[pi]||'one';
+  const rev=fx.REV||tfxOn(tr,'REV')||S.padRev[pi],mode=S.padMode[pi]||'one';
   const src=ctx.createBufferSource();src.buffer=rev?p.rbuf:p.buf;
   let rate=Math.pow(2,(S.padSemi[pi]+(semi||0))/12);
-  if(fx.OCT)rate*=0.5;/* OCT↓: an octave down, tape style (sound and picture play half as fast) */
+  if(fx.OCT)rate*=0.5;if(tfxOn(tr,'OCT'))rate*=0.5;/* OCT↓: an octave down, tape style (sound and picture play half as fast) */
   src.playbackRate.setValueAtTime(rate,t);
   const vol=S.padVol[pi],fi=(S.padFi[pi]||0)/1000,fo=(S.padFo[pi]||0)/1000,dec=(S.padDecay[pi]||100)/100;
   const g=ctx.createGain();
@@ -581,7 +628,8 @@ function scheduleStep(s,t){
   const pat=S.patterns[curPat],stut=fx.STUT16?1:fx.STUT8?2:0;
   for(let tr=0;tr<4;tr++){
     if(muted[tr])continue;
-    if(stut){if(s%stut===0&&lastHit[tr])trigger(tr,lastHit[tr].pad,lastHit[tr].semi,t);continue;}
+    const ts=stut||(tfxOn(tr,'ST16')?1:tfxOn(tr,'ST8')?2:0);
+    if(ts){if(s%ts===0&&lastHit[tr])trigger(tr,lastHit[tr].pad,lastHit[tr].semi,t);else if(!lastHit[tr]){const ev=pat[tr][s];if(ev){trigger(tr,ev.pad,ev.semi,t);lastHit[tr]=ev;}}continue;}
     const ev=pat[tr][s];if(ev){trigger(tr,ev.pad,ev.semi,Math.max(ctx.currentTime,t+(ev.n||0)*playStep()));lastHit[tr]=ev;}
   }
   const e={s,t,p:curPat};uiQ.push(e);sched.push(e);if(sched.length>48)sched.shift();
@@ -1368,7 +1416,7 @@ function buildUI(){
     w.append(b,m);$('tracks').append(w);trkEls.push({b,m});
   }
   for(let s=0;s<16;s++){const b=document.createElement('button');if(s%4===0)b.classList.add('beat');stepPress(b,s);$('steps').append(b);stepEls.push(b);}
-  for(let i=0;i<16;i++){const b=document.createElement('button');b.className='pad';b.innerHTML='<span class="n"></span><span class="i"></span><span class="k"></span>';b.onpointerdown=e=>{e.preventDefault();try{b.setPointerCapture(e.pointerId);}catch(_){}tapPad(i);};
+  for(let i=0;i<16;i++){const b=document.createElement('button');b.className='pad';b.innerHTML='<span class="n"></span><span class="i"></span><span class="k"></span>';b.onpointerdown=e=>{e.preventDefault();if(clearMode){clearPad(bank*16+i);return;}try{b.setPointerCapture(e.pointerId);}catch(_){}tapPad(i);};
     b.onpointerup=b.onpointercancel=()=>endLive(i);
     $('pads').append(b);padEls.push(b);}
   FXL.forEach(([k,l])=>{
@@ -1383,7 +1431,7 @@ function buildUI(){
   });
   for(let i=0;i<16;i++){const b=document.createElement('button');b.textContent=i+1;b.onpointerdown=e=>{e.preventDefault();tapPat(i);};$('pats').append(b);patEls.push(b);}
   buildMini();
-  buildBanks($('banks'),b=>setBank(b));buildBanks($('edBanks'),b=>setBank(b));
+  buildTfx();buildBanks($('banks'),b=>setBank(b));buildBanks($('edBanks'),b=>setBank(b));
 }
 const liveV={};
 function endLive(i){const v=liveV[i];if(v&&ctx){release(v,ctx.currentTime);delete liveV[i];}}
@@ -1483,10 +1531,50 @@ function buildBanks(el,onPick){
     d.addEventListener('pointerdown',e=>bankDown(e,d,el,onPick));
   }
 }
+/* track FX slots: tap to turn a track's effects on or off, hold to choose up to 2 */
+const tfxEls=[];let tfxEdit=0;
+function buildTfx(){
+  for(let t=0;t<4;t++){const b=document.createElement('button');b.style.borderBottomColor=TCOL[t];let tm=null,held=false;
+    b.onpointerdown=e=>{e.preventDefault();held=false;clearTimeout(tm);tm=setTimeout(()=>{held=true;openTfx(t);},450);};
+    b.onpointerup=()=>{clearTimeout(tm);if(held)return;if(!S.trackFx[t].length){openTfx(t);return;}pushUndo('tfx');S.trackFxOn[t]=!S.trackFxOn[t];save();applyTrackFx(t);renderTfx();};
+    b.onpointercancel=b.onpointerleave=()=>clearTimeout(tm);
+    $('tfx').appendChild(b);tfxEls.push(b);}
+  TFX.forEach(([k,l])=>{const b=document.createElement('button');b.textContent=l;b.dataset.k=k;b.onclick=()=>{
+    const a=S.trackFx[tfxEdit],i=a.indexOf(k);pushUndo('tfxpick');
+    if(i>=0)a.splice(i,1);else{if(a.length>=2){toast('Up to 2 per track. Tap one to remove it first.',1600);return;}a.push(k);S.trackFxOn[tfxEdit]=true;}
+    save();applyTrackFx(tfxEdit);renderTfx();};$('tfxGrid').appendChild(b);});
+  $('tfxDone').onclick=()=>$('tfxWin').classList.add('hidden');
+  $('tfxClear').onclick=()=>{pushUndo();S.trackFx[tfxEdit]=[];save();applyTrackFx(tfxEdit);renderTfx();};
+  $('tfxWin').addEventListener('click',e=>{if(e.target.id==='tfxWin')$('tfxWin').classList.add('hidden');});
+}
+function openTfx(t){tfxEdit=t;$('tfxTitle').textContent='TRACK '+TL[t]+' FX';renderTfx();$('tfxWin').classList.remove('hidden');}
+function renderTfx(){
+  tfxEls.forEach((b,t)=>{const a=S.trackFx[t],lab=a.map(k=>TFX.find(x=>x[0]===k)[1]);
+    b.innerHTML='<b>'+TL[t]+'</b><span>'+(lab.length?lab.join(' + '):'HOLD')+'</span>';
+    b.classList.toggle('set',a.length>0);b.classList.toggle('on',a.length>0&&S.trackFxOn[t]);});
+  [...$('tfxGrid').children].forEach(b=>b.classList.toggle('on',S.trackFx[tfxEdit].includes(b.dataset.k)));
+}
+/* clear mode: hold the red button (or double tap it to lock) and tap banks or pads to clear them */
+let clearMode=false,clearLatch=false,clrTap=0;
+function setClear(on){clearMode=on;$('secPads').classList.toggle('clearing',on);$('bHoldClr').classList.toggle('on',on);
+  $('bHoldClr').textContent=clearLatch?'CLEAR MODE ON · TAP HERE TO STOP':on?'NOW TAP A BANK OR PAD TO CLEAR IT':'HOLD HERE + TAP A BANK OR PAD TO CLEAR';}
+function clearPad(g){if(!pads[g]){toast('Pad '+padLabel(g)+' is already empty.',1200);return;}
+  pushUndo();pads[g]=null;for(const k in PAD_DEF)S[k][g]=PAD_DEF[k];save();padsChanged();renderAll();renderMini();toast('Cleared pad '+padLabel(g)+'.',1200);}
+function clearBank(b){if(!pads.slice(b*16,b*16+16).some(Boolean)){toast('Bank '+(b+1)+' is already empty.',1200);return;}
+  pushUndo();for(let g=b*16;g<b*16+16;g++){pads[g]=null;for(const k in PAD_DEF)S[k][g]=PAD_DEF[k];}save();padsChanged();renderAll();renderMini();toast('Cleared bank '+(b+1)+'. Undo brings it back.',1600);}
+(()=>{const b=$('bHoldClr');
+  b.addEventListener('pointerdown',e=>{e.preventDefault();const n=performance.now();
+    if(clearLatch){clearLatch=false;setClear(false);return;}
+    if(n-clrTap<320){clearLatch=true;setClear(true);return;}clrTap=n;setClear(true);});
+  const up=()=>{if(!clearLatch)setClear(false);};
+  b.addEventListener('pointerup',up);b.addEventListener('pointercancel',up);b.addEventListener('pointerleave',up);
+})();
 /* hold a bank to pick it up, drag to reorder */
 let bDrag=null;
 function bankDown(e,d,strip,onPick){
-  e.preventDefault();try{d.setPointerCapture(e.pointerId);}catch(_){}
+  e.preventDefault();
+  if(clearMode&&strip.id==='banks'){clearBank(d._b);return;}
+  try{d.setPointerCapture(e.pointerId);}catch(_){}
   const st={d,strip,from:d._b,over:d._b,lifted:false,x0:e.clientX,y0:e.clientY,moved:false};bDrag=st;
   st.timer=setTimeout(()=>{if(bDrag!==st)return;st.lifted=true;d.classList.add('lift');try{navigator.vibrate&&navigator.vibrate(20);}catch(_){}},450);
   const move=ev=>{
@@ -1562,7 +1650,7 @@ function renderPadPanel(){
   $('pSlV').textContent=slipTxt(p?(p.slipTarget!=null?p.slipTarget:p.slip||0):0);
   if(!slipBusy)$('pSlNote').textContent=!p?'':p.srcId==null?'Slip works on pads cut from your own videos.':has?'':'Slip needs this pad\'s video loaded. Reload it in SLICE to adjust.';
 }
-function renderAll(){renderTracks();renderSteps();renderPads();renderFx();renderPats();renderChain();renderTransport();renderPadPanel();}
+function renderAll(){if(tfxEls.length)renderTfx();renderTracks();renderSteps();renderPads();renderFx();renderPats();renderChain();renderTransport();renderPadPanel();}
 
 /* ---------- controls ---------- */
 $('bPlay').onclick=()=>{playing?stop():start();};
@@ -1574,7 +1662,7 @@ $('bKeys').onclick=()=>{keys=!keys;renderPads();renderTransport();};
 $('bView').onclick=()=>{view=view==='mix'?'focus':view==='focus'?1:view===1?4:'mix';UI.view=view;saveUI();renderTransport();
   toast(view==='mix'?'MIX: every sound that is playing gets its own piece of the screen.':view==='focus'?'FOCUS: video follows the selected track ('+TL[selTrack]+').':view===1?'LATEST: only the most recent hit.':'TRACKS: one quarter per track.',1800);};
 $('bSlice').onclick=()=>openEditor(curSrc);
-const setBpm=v=>{S.bpm=Math.max(60,Math.min(180,v));save();renderTransport();renderEdInfo();waveDirty=true;if(ctx&&fx.ECHO)dly.delayTime.setValueAtTime(Math.min(1.9,stepDur()*3),ctx.currentTime);};
+const setBpm=v=>{S.bpm=Math.max(60,Math.min(180,v));save();for(let t=0;t<4;t++)applyTrackFx(t);renderTransport();renderEdInfo();waveDirty=true;if(ctx&&fx.ECHO)dly.delayTime.setValueAtTime(Math.min(1.9,stepDur()*3),ctx.currentTime);};
 $('bpmDn').onclick=()=>setBpm(S.bpm-1);$('bpmUp').onclick=()=>setBpm(S.bpm+1);
 $('gBpm').oninput=e=>setBpm(+e.target.value);
 $('gSw').oninput=e=>{S.swing=e.target.value/100;save();renderTransport();};
@@ -1620,7 +1708,7 @@ $('aRemove').onclick=removeSource;
 /* ---------- undo ---------- */
 const undoS=[],redoS=[];let lastPush={k:null,t:0};
 function snap(){return {pat:JSON.stringify(S.patterns),len:[...S.patLen],chain:[...S.chain],
-  pp:JSON.stringify({padChoke:S.padChoke,padSemi:S.padSemi,padVol:S.padVol,padRev:S.padRev,padFi:S.padFi,padFo:S.padFo,padDecay:S.padDecay,padMode:S.padMode,padFreeze:S.padFreeze}),
+  pp:JSON.stringify({trackFx:S.trackFx,trackFxOn:S.trackFxOn,padChoke:S.padChoke,padSemi:S.padSemi,padVol:S.padVol,padRev:S.padRev,padFi:S.padFi,padFo:S.padFo,padDecay:S.padDecay,padMode:S.padMode,padFreeze:S.padFreeze}),
   pads:[...pads],srcs:sources.map(x=>({id:x.id,s:x.sel?x.sel.s:null,e:x.sel?x.sel.e:null,slip:x.slip||0}))};}
 function pushUndo(k){
   const n=performance.now();
@@ -1628,7 +1716,7 @@ function pushUndo(k){
   lastPush={k,t:n};undoS.push(snap());if(undoS.length>60)undoS.shift();redoS.length=0;renderUndo();
 }
 function restore(x){
-  S.patterns=JSON.parse(x.pat);S.patLen=[...x.len];S.chain=[...x.chain];Object.assign(S,JSON.parse(x.pp));
+  S.patterns=JSON.parse(x.pat);S.patLen=[...x.len];S.chain=[...x.chain];Object.assign(S,JSON.parse(x.pp));for(let t=0;t<4;t++)applyTrackFx(t);
   pads=[...x.pads];pads.forEach(p=>{if(p)p.slipTarget=null;});
   x.srcs.forEach(o=>{const sc=sources.find(y=>y.id===o.id);if(sc&&o.s!=null){sc.sel={s:o.s,e:o.e};sc.slip=o.slip;}});
   if(viewPage>=S.patLen[editPat])viewPage=0;
@@ -1712,13 +1800,14 @@ async function padFromRecord(rec){
   const p={buf,rbuf:reverseOf(buf),cat:m.cat||'TONE',name:m.name||undefined,len,start:m.start||0,slip:m.slip||0,srcId:null,srcName:m.srcName,srcKey:m.srcKey||null,frames,fps:frames.length/len,thumb:frames[0].toDataURL('image/jpeg',0.6)};
   recCache.set(p,rec);return p;
 }
-function stateJSON(){return {bpm:S.bpm,swing:S.swing,format:S.format,patterns:S.patterns,patLen:S.patLen,chain:S.chain,padChoke:S.padChoke,padSemi:S.padSemi,padVol:S.padVol,padRev:S.padRev,padFi:S.padFi,padFo:S.padFo,padDecay:S.padDecay,padMode:S.padMode,padFreeze:S.padFreeze};}
+function stateJSON(){return {bpm:S.bpm,swing:S.swing,format:S.format,trackFx:S.trackFx,trackFxOn:S.trackFxOn,patterns:S.patterns,patLen:S.patLen,chain:S.chain,padChoke:S.padChoke,padSemi:S.padSemi,padVol:S.padVol,padRev:S.padRev,padFi:S.padFi,padFo:S.padFo,padDecay:S.padDecay,padMode:S.padMode,padFreeze:S.padFreeze};}
 function applyState(st){
-  const keys=['bpm','swing','format','patterns','patLen','chain','padChoke','padSemi','padVol','padRev','padFi','padFo','padDecay','padMode','padFreeze'];
+  const keys=['bpm','swing','format','trackFx','trackFxOn','patterns','patLen','chain','padChoke','padSemi','padVol','padRev','padFi','padFo','padDecay','padMode','padFreeze'];
   keys.forEach(k=>{if(st[k]!=null)S[k]=st[k];});
   S.patterns.forEach(P=>P.forEach(t=>{while(t.length<MAXST)t.push(null);}));
   if(!Array.isArray(S.patLen)||S.patLen.length!==16)S.patLen=Array(16).fill(1);
-  fixPadArrays();viewPage=0;save();applyFormat();
+  fixPadArrays();if(!Array.isArray(S.trackFx)||S.trackFx.length!==4)S.trackFx=[[],[],[],[]];if(!Array.isArray(S.trackFxOn)||S.trackFxOn.length!==4)S.trackFxOn=[true,true,true,true];
+  for(let t=0;t<4;t++)applyTrackFx(t);viewPage=0;save();applyFormat();
 }
 async function saveFile(name,blob){
   lastBlob=blob;lastName=name;
@@ -1727,8 +1816,8 @@ async function saveFile(name,blob){
     catch(e){toast(e&&e.code==='declined'?'Save cancelled.':'Could not save ('+(e&&e.code||'error')+').',3000);}
     return;
   }
-  $('toast').classList.add('hidden');
-  modal(name+' is ready.',false,true);
+  $('toast').classList.add('hidden');$('saveWin').classList.add('hidden');
+  modal(name+' is ready.',false,true,/\.vbm16\.zip$/i.test(name)?'SAVE SESSION':/samples\.zip$/i.test(name)?'SAVE SAMPLES':'SAVE FILE');
 }
 /* outside Claude: share sheet on phones (Save to Files), plain download elsewhere. Needs a fresh tap, so it runs from the SAVE button */
 async function saveStandalone(name,blob){
@@ -1872,7 +1961,7 @@ function pickMime(){
   for(const m of list)try{if(MediaRecorder.isTypeSupported(m))return m;}catch(e){}
   return '';
 }
-function modal(txt,showVid,showSave){$('modal').classList.remove('hidden');$('mTxt').textContent=txt;$('mVid').classList.toggle('hidden',!showVid);$('mSave').classList.toggle('hidden',!showSave);}
+function modal(txt,showVid,showSave,label){$('modal').classList.remove('hidden');$('mTxt').textContent=txt;$('mVid').classList.toggle('hidden',!showVid);$('mSave').classList.toggle('hidden',!showSave);$('mSave').textContent=label||'SAVE VIDEO';}
 async function exportClip(){
   initAudio();if(!hasPads()){modal('Load a video or the demo kit first.');return;}
   const mime=pickMime();
@@ -1890,7 +1979,7 @@ async function exportClip(){
     const type=rec.mimeType||mime||'video/webm';
     lastBlob=new Blob(chunks,{type});lastName='vbm16-beat-'+S.bpm+'bpm.'+(type.includes('mp4')?'mp4':'webm');
     const v=$('mVid');v.src=URL.createObjectURL(lastBlob);v.muted=false;
-    modal('Here is your clip. Save it to your device.',true,true);
+    modal('Here is your clip. Save it to your device.',true,true,'SAVE VIDEO');
     v.play().catch(()=>{});
   };
   rec.start();
