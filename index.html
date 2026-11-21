@@ -139,8 +139,10 @@ select{font:inherit;font-size:12px;background:var(--slate);color:var(--w);border
 .tfx button b{font-size:11px}
 .tfx button.set{background:var(--slate)}
 .tfx button.on{background:var(--air);color:var(--ink)}
+#tfxAmts .ctl output{width:56px}
+#tfxAmts .ctl label{width:74px}
 .tfxGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:8px 0}
-.tfxGrid button{padding:13px 0;font-size:12px}
+.tfxGrid button{padding:10px 0;font-size:13px;flex-direction:column;gap:2px;line-height:1.1}
 .tfxGrid button.on{background:var(--air);color:var(--ink)}
 button.danger{background:var(--fire);color:var(--ink);font-weight:700}
 #eLoops button{padding:8px 0;font-size:11px}
@@ -306,7 +308,7 @@ header>#bExp{flex:1.7 1 0}
     <p><b>Pads and tracks:</b> pads play on the selected track (A to D) and ring over each other. To make pads cut each other off (like an open and closed hat), put them in the same MUTE GRP in pad edit. M mutes a track.</p>
     <p><b>Sequencer:</b> tap a step to drop the selected pad, tap again to clear. A step shows bank:pad when the sound comes from another bank. LEN makes a pattern 1, 2, 4 or 8 bars, new bars start as copies. The numbers next to LEN pick which bar you edit, FOLLOW makes the view follow the playhead. With the red dot on, pad hits made while playing get recorded and snapped to the nearest step.</p>
     <p><b>Nudge:</b> hold a step until it gets a dashed outline, then use ◀ and ▶ under the steps to push it early or late (◀◀ and ▶▶ move 4 at a time, up to half a step each way). Tap the readout to put it back on the grid. ALL nudges every step on the track at once, for a laid back or pushed feel. A nudged step shows a mark on the side it moved toward.</p>
-    <p><b>Track FX</b> (the row under FX): one slot per track, A to D. Hold a slot to choose up to 2 effects for that track: LOW, HIGH, ECHO, VERB, DRVE (drive), OCT↓, REV, ST8, ST16. Tap the slot to turn that track's effects on and off. They stay on while you play, so you can put reverb on just the vocals or drive on just the drums.</p>
+    <p><b>Track FX</b> (the row under FX): one slot per track, A to D. Hold a slot to choose up to 2 effects for that track: GAIN (level, -12 to +12 dB), DRV (drive), LCUT (low cut), HCUT (high cut), VERB (reverb) and DLY (delay, in time with the beat). Each chosen effect gets a slider for how much. Tap the slot to turn that track's effects on and off.</p>
     <p><b>FX:</b> hold to punch in, double tap to latch, tap again to release. LOW and HIGH filter, ECHO repeats, ST8 and ST16 stutter in 8th and 16th notes, REV plays hits backwards. 1/2 slows the beat down by 25% while held (sounds keep their pitch). OCT↓ plays every hit an octave down, slowed like tape, so the video slows down with it.</p>
     <p><b>Pad edit:</b> pitch, level and reverse. ONE SHOT plays the whole slice, GATE stops when you let go (one step in the sequencer), LOOP repeats while held (in the sequencer it loops until that pad or its mute group plays again). MUTE GRP 1 to 4 makes pads in the same group cut each other off. FADE and DECAY shape the sound. FREEZE holds one frame. VIDEO SLIP fixes a pad's timing as long as its video is still loaded. EDIT SLICE reopens the pad in the slicer.</p>
     <p><b>KEYS:</b> the 16 pads become 16 notes of the selected pad.</p>
@@ -392,8 +394,9 @@ header>#bExp{flex:1.7 1 0}
 <div id="tfxWin" class="modal hidden">
   <div class="mbox sw">
     <div class="swT"><span id="tfxTitle">TRACK A FX</span></div>
-    <div class="help"><p>Pick up to 2 effects for this track. Tap the track's slot to turn them on and off.</p></div>
+    <div class="help"><p>Pick up to 2 effects for this track, then set how much with the sliders. Tap the track's slot to turn them on and off.</p></div>
     <div class="tfxGrid" id="tfxGrid"></div>
+    <div id="tfxAmts"></div>
     <div class="row"><button id="tfxClear">CLEAR</button><button id="tfxDone" class="hl">DONE</button></div>
   </div>
 </div>
@@ -452,7 +455,9 @@ const FPS=12,MAXF=24,FRAME_M=320,MAXLISTEN=60,KEY='forge-video-sampler-v1';
 /* ---------- state ---------- */
 const MAXST=128,LENS=[1,2,4,8];
 const NP=128,NB=8;
-const TFX=[['LOW','LOW'],['HIGH','HIGH'],['ECHO','ECHO'],['VERB','VERB'],['DRIVE','DRVE'],['OCT','OCT↓'],['REV','REV'],['ST8','ST8'],['ST16','ST16']];
+/* track FX: label, and what the amount slider does */
+const TFX=[['GAIN','GAIN','LEVEL'],['DRV','DRV','DRIVE'],['LCUT','LCUT','LOW CUT'],['HCUT','HCUT','HIGH CUT'],['VERB','VERB','REVERB'],['DLY','DLY','DELAY']];
+const TFX_OLD={LOW:'HCUT',HIGH:'LCUT',ECHO:'DLY',DRIVE:'DRV',VERB:'VERB'};
 const PAD_DEF={padChoke:0,padSemi:0,padVol:1,padRev:false,padFi:0,padFo:0,padDecay:100,padMode:'one',padFreeze:-1};
 function padDefaults(){const o={};for(const k in PAD_DEF)o[k]=Array(NP).fill(PAD_DEF[k]);return o;}
 const mkTrack=()=>Array(MAXST).fill(null);
@@ -466,6 +471,12 @@ function fixPadArrays(){for(const k in PAD_DEF){if(!Array.isArray(S[k]))S[k]=[];
 fixPadArrays();
 if(!Array.isArray(S.trackFx)||S.trackFx.length!==4)S.trackFx=[[],[],[],[]];
 if(!Array.isArray(S.trackFxOn)||S.trackFxOn.length!==4)S.trackFxOn=[true,true,true,true];
+function fixTrackFx(){
+  S.trackFx=S.trackFx.map(a=>[...new Set((a||[]).map(k=>TFX.some(x=>x[0]===k)?k:TFX_OLD[k]).filter(Boolean))].slice(0,2));
+  if(!Array.isArray(S.trackFxAmt)||S.trackFxAmt.length!==4)S.trackFxAmt=[{},{},{},{}];
+}
+fixTrackFx();
+const tAmt=(t,k)=>{const v=S.trackFxAmt[t][k];return v==null?50:v;};
 const plen=p=>S.patLen[p]*16;
 let viewPage=0,follow=true,playPage=-1;
 let saveT=null;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}},400);}
@@ -517,7 +528,7 @@ function initAudio(){
     es.gain.value=0;ef.gain.value=0.42;vs.gain.value=0;
     g.connect(lo);lo.connect(hi);hi.connect(dr);dr.connect(out);out.connect(bus);
     dr.connect(es);es.connect(de);de.connect(ef);ef.connect(de);de.connect(out);dr.connect(vs);vs.connect(verb);
-    trackG.push(g);TN.push({lo,hi,dr,es,de,vs});
+    trackG.push(g);TN.push({lo,hi,dr,out,es,de,vs});
   }
   for(let i=0;i<4;i++)applyTrackFx(i);
   const b=ctx.createBuffer(1,1,22050),s=ctx.createBufferSource();s.buffer=b;s.connect(ctx.destination);s.start(0);
@@ -526,22 +537,25 @@ function initAudio(){
 document.addEventListener('pointerdown',initAudio,{passive:true});
 
 const tfxOn=(tr,k)=>S.trackFxOn[tr]&&S.trackFx[tr].includes(k);
-let driveC=null;
+const driveCache={};
+function driveCurve(a){const k=Math.round(1+a/100*9);if(driveCache[k])return driveCache[k];const c=new Float32Array(2048);
+  for(let i=0;i<2048;i++){const x=i/2047*2-1;c[i]=Math.tanh(k*x)/Math.tanh(k)*0.85;}return driveCache[k]=c;}
 function applyTrackFx(t){
-  if(!ctx||!TN[t])return;const n=TN[t],now=ctx.currentTime,on=k=>tfxOn(t,k);
-  n.lo.frequency.setTargetAtTime(on('LOW')?650:20000,now,0.02);
-  n.hi.frequency.setTargetAtTime(on('HIGH')?1300:10,now,0.02);
-  if(!driveC){driveC=new Float32Array(2048);for(let i=0;i<2048;i++){const x=i/2047*2-1;driveC[i]=Math.tanh(3*x)/Math.tanh(3)*0.85;}}
-  n.dr.curve=on('DRIVE')?driveC:null;
-  n.de.delayTime.setValueAtTime(Math.min(1.9,stepDur()*3),now);n.es.gain.setTargetAtTime(on('ECHO')?0.5:0,now,0.02);
-  n.vs.gain.setTargetAtTime(on('VERB')?0.55:0,now,0.02);
+  if(!ctx||!TN[t])return;const n=TN[t],now=ctx.currentTime,on=k=>tfxOn(t,k),a=k=>tAmt(t,k);
+  n.out.gain.setTargetAtTime(on('GAIN')?Math.pow(10,(a('GAIN')-50)*0.24/20):1,now,0.02);/* -12 dB to +12 dB */
+  n.dr.curve=on('DRV')?driveCurve(a('DRV')):null;
+  n.hi.frequency.setTargetAtTime(on('LCUT')?40*Math.pow(2,a('LCUT')/100*5.3):10,now,0.02);/* low cut: 40 Hz to 1.6 kHz */
+  n.lo.frequency.setTargetAtTime(on('HCUT')?20000*Math.pow(2,-a('HCUT')/100*5.3):20000,now,0.02);/* high cut: 20 kHz to 500 Hz */
+  n.lo.Q.value=0.8;n.hi.Q.value=0.8;
+  n.vs.gain.setTargetAtTime(on('VERB')?a('VERB')/100:0,now,0.02);
+  n.de.delayTime.setValueAtTime(Math.min(1.9,stepDur()*3),now);n.es.gain.setTargetAtTime(on('DLY')?a('DLY')/100*0.8:0,now,0.02);
 }
 function trigger(tr,pi,semi,t,live){
   const p=pads[pi];if(!p||!ctx)return null;
-  const rev=fx.REV||tfxOn(tr,'REV')||S.padRev[pi],mode=S.padMode[pi]||'one';
+  const rev=fx.REV||S.padRev[pi],mode=S.padMode[pi]||'one';
   const src=ctx.createBufferSource();src.buffer=rev?p.rbuf:p.buf;
   let rate=Math.pow(2,(S.padSemi[pi]+(semi||0))/12);
-  if(fx.OCT)rate*=0.5;if(tfxOn(tr,'OCT'))rate*=0.5;/* OCT↓: an octave down, tape style (sound and picture play half as fast) */
+  if(fx.OCT)rate*=0.5;/* OCT↓: an octave down, tape style (sound and picture play half as fast) */
   src.playbackRate.setValueAtTime(rate,t);
   const vol=S.padVol[pi],fi=(S.padFi[pi]||0)/1000,fo=(S.padFo[pi]||0)/1000,dec=(S.padDecay[pi]||100)/100;
   const g=ctx.createGain();
@@ -628,8 +642,7 @@ function scheduleStep(s,t){
   const pat=S.patterns[curPat],stut=fx.STUT16?1:fx.STUT8?2:0;
   for(let tr=0;tr<4;tr++){
     if(muted[tr])continue;
-    const ts=stut||(tfxOn(tr,'ST16')?1:tfxOn(tr,'ST8')?2:0);
-    if(ts){if(s%ts===0&&lastHit[tr])trigger(tr,lastHit[tr].pad,lastHit[tr].semi,t);else if(!lastHit[tr]){const ev=pat[tr][s];if(ev){trigger(tr,ev.pad,ev.semi,t);lastHit[tr]=ev;}}continue;}
+    if(stut){if(s%stut===0&&lastHit[tr])trigger(tr,lastHit[tr].pad,lastHit[tr].semi,t);continue;}
     const ev=pat[tr][s];if(ev){trigger(tr,ev.pad,ev.semi,Math.max(ctx.currentTime,t+(ev.n||0)*playStep()));lastHit[tr]=ev;}
   }
   const e={s,t,p:curPat};uiQ.push(e);sched.push(e);if(sched.length>48)sched.shift();
@@ -1539,12 +1552,12 @@ function buildTfx(){
     b.onpointerup=()=>{clearTimeout(tm);if(held)return;if(!S.trackFx[t].length){openTfx(t);return;}pushUndo('tfx');S.trackFxOn[t]=!S.trackFxOn[t];save();applyTrackFx(t);renderTfx();};
     b.onpointercancel=b.onpointerleave=()=>clearTimeout(tm);
     $('tfx').appendChild(b);tfxEls.push(b);}
-  TFX.forEach(([k,l])=>{const b=document.createElement('button');b.textContent=l;b.dataset.k=k;b.onclick=()=>{
+  TFX.forEach(([k,l,full])=>{const b=document.createElement('button');b.innerHTML=l+'<small style="font-size:8px;opacity:.7">'+full+'</small>';b.dataset.k=k;b.onclick=()=>{
     const a=S.trackFx[tfxEdit],i=a.indexOf(k);pushUndo('tfxpick');
     if(i>=0)a.splice(i,1);else{if(a.length>=2){toast('Up to 2 per track. Tap one to remove it first.',1600);return;}a.push(k);S.trackFxOn[tfxEdit]=true;}
     save();applyTrackFx(tfxEdit);renderTfx();};$('tfxGrid').appendChild(b);});
   $('tfxDone').onclick=()=>$('tfxWin').classList.add('hidden');
-  $('tfxClear').onclick=()=>{pushUndo();S.trackFx[tfxEdit]=[];save();applyTrackFx(tfxEdit);renderTfx();};
+  $('tfxClear').onclick=()=>{pushUndo();S.trackFx[tfxEdit]=[];S.trackFxAmt[tfxEdit]={};save();applyTrackFx(tfxEdit);renderTfx();};
   $('tfxWin').addEventListener('click',e=>{if(e.target.id==='tfxWin')$('tfxWin').classList.add('hidden');});
 }
 function openTfx(t){tfxEdit=t;$('tfxTitle').textContent='TRACK '+TL[t]+' FX';renderTfx();$('tfxWin').classList.remove('hidden');}
@@ -1553,6 +1566,12 @@ function renderTfx(){
     b.innerHTML='<b>'+TL[t]+'</b><span>'+(lab.length?lab.join(' + '):'HOLD')+'</span>';
     b.classList.toggle('set',a.length>0);b.classList.toggle('on',a.length>0&&S.trackFxOn[t]);});
   [...$('tfxGrid').children].forEach(b=>b.classList.toggle('on',S.trackFx[tfxEdit].includes(b.dataset.k)));
+  const box=$('tfxAmts');if(!box)return;box.innerHTML='';
+  S.trackFx[tfxEdit].forEach(k=>{const t=tfxEdit,d=TFX.find(x=>x[0]===k),row=document.createElement('div');row.className='ctl';
+    row.innerHTML='<label>'+d[2]+'</label><input type="range" min="0" max="100" step="1"><output></output>';
+    const inp=row.querySelector('input'),out=row.querySelector('output');inp.value=tAmt(t,k);
+    const show=()=>{const v=tAmt(t,k);out.textContent=k==='GAIN'?((v-50)*0.24>0?'+':'')+((v-50)*0.24).toFixed(1)+'dB':k==='LCUT'?Math.round(40*Math.pow(2,v/100*5.3))+'Hz':k==='HCUT'?(20000*Math.pow(2,-v/100*5.3)/1000).toFixed(1)+'k':v+'%';};
+    inp.oninput=()=>{pushUndo('tamt'+t+k);S.trackFxAmt[t][k]=+inp.value;save();applyTrackFx(t);show();};show();box.appendChild(row);});
 }
 /* clear mode: hold the red button (or double tap it to lock) and tap banks or pads to clear them */
 let clearMode=false,clearLatch=false,clrTap=0;
@@ -1708,7 +1727,7 @@ $('aRemove').onclick=removeSource;
 /* ---------- undo ---------- */
 const undoS=[],redoS=[];let lastPush={k:null,t:0};
 function snap(){return {pat:JSON.stringify(S.patterns),len:[...S.patLen],chain:[...S.chain],
-  pp:JSON.stringify({trackFx:S.trackFx,trackFxOn:S.trackFxOn,padChoke:S.padChoke,padSemi:S.padSemi,padVol:S.padVol,padRev:S.padRev,padFi:S.padFi,padFo:S.padFo,padDecay:S.padDecay,padMode:S.padMode,padFreeze:S.padFreeze}),
+  pp:JSON.stringify({trackFx:S.trackFx,trackFxOn:S.trackFxOn,trackFxAmt:S.trackFxAmt,padChoke:S.padChoke,padSemi:S.padSemi,padVol:S.padVol,padRev:S.padRev,padFi:S.padFi,padFo:S.padFo,padDecay:S.padDecay,padMode:S.padMode,padFreeze:S.padFreeze}),
   pads:[...pads],srcs:sources.map(x=>({id:x.id,s:x.sel?x.sel.s:null,e:x.sel?x.sel.e:null,slip:x.slip||0}))};}
 function pushUndo(k){
   const n=performance.now();
@@ -1800,13 +1819,13 @@ async function padFromRecord(rec){
   const p={buf,rbuf:reverseOf(buf),cat:m.cat||'TONE',name:m.name||undefined,len,start:m.start||0,slip:m.slip||0,srcId:null,srcName:m.srcName,srcKey:m.srcKey||null,frames,fps:frames.length/len,thumb:frames[0].toDataURL('image/jpeg',0.6)};
   recCache.set(p,rec);return p;
 }
-function stateJSON(){return {bpm:S.bpm,swing:S.swing,format:S.format,trackFx:S.trackFx,trackFxOn:S.trackFxOn,patterns:S.patterns,patLen:S.patLen,chain:S.chain,padChoke:S.padChoke,padSemi:S.padSemi,padVol:S.padVol,padRev:S.padRev,padFi:S.padFi,padFo:S.padFo,padDecay:S.padDecay,padMode:S.padMode,padFreeze:S.padFreeze};}
+function stateJSON(){return {bpm:S.bpm,swing:S.swing,format:S.format,trackFx:S.trackFx,trackFxOn:S.trackFxOn,trackFxAmt:S.trackFxAmt,patterns:S.patterns,patLen:S.patLen,chain:S.chain,padChoke:S.padChoke,padSemi:S.padSemi,padVol:S.padVol,padRev:S.padRev,padFi:S.padFi,padFo:S.padFo,padDecay:S.padDecay,padMode:S.padMode,padFreeze:S.padFreeze};}
 function applyState(st){
-  const keys=['bpm','swing','format','trackFx','trackFxOn','patterns','patLen','chain','padChoke','padSemi','padVol','padRev','padFi','padFo','padDecay','padMode','padFreeze'];
+  const keys=['bpm','swing','format','trackFx','trackFxOn','trackFxAmt','patterns','patLen','chain','padChoke','padSemi','padVol','padRev','padFi','padFo','padDecay','padMode','padFreeze'];
   keys.forEach(k=>{if(st[k]!=null)S[k]=st[k];});
   S.patterns.forEach(P=>P.forEach(t=>{while(t.length<MAXST)t.push(null);}));
   if(!Array.isArray(S.patLen)||S.patLen.length!==16)S.patLen=Array(16).fill(1);
-  fixPadArrays();if(!Array.isArray(S.trackFx)||S.trackFx.length!==4)S.trackFx=[[],[],[],[]];if(!Array.isArray(S.trackFxOn)||S.trackFxOn.length!==4)S.trackFxOn=[true,true,true,true];
+  fixPadArrays();if(!Array.isArray(S.trackFx)||S.trackFx.length!==4)S.trackFx=[[],[],[],[]];if(!Array.isArray(S.trackFxOn)||S.trackFxOn.length!==4)S.trackFxOn=[true,true,true,true];fixTrackFx();
   for(let t=0;t<4;t++)applyTrackFx(t);viewPage=0;save();applyFormat();
 }
 async function saveFile(name,blob){
