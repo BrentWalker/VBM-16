@@ -130,7 +130,8 @@ select{font:inherit;font-size:12px;background:var(--slate);color:var(--w);border
 .help p{margin:4px 0}
 .modal{position:fixed;inset:0;background:rgba(20,20,30,.85);display:flex;align-items:center;justify-content:center;z-index:20;padding:16px}
 .mbox{background:var(--ink);border:1px solid var(--purple);border-radius:16px;padding:14px;width:100%;max-width:420px;text-align:center}
-#saveWin,#expWin{z-index:15}
+#saveWin,#expWin,#initWin{z-index:15}
+button.danger{background:var(--fire);color:var(--ink);font-weight:700}
 #eLoops button{padding:8px 0;font-size:11px}
 .sw{text-align:left;max-height:90vh;overflow-y:auto}
 .swT{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;letter-spacing:.12em;color:var(--air)}
@@ -294,6 +295,7 @@ header>#bExp{flex:1.7 1 0}
     <p><b>Pad edit:</b> pitch, level and reverse. ONE SHOT plays the whole slice, GATE stops when you let go (one step in the sequencer), LOOP repeats while held (in the sequencer it loops until that pad or its mute group plays again). MUTE GRP 1 to 4 makes pads in the same group cut each other off. FADE and DECAY shape the sound. FREEZE holds one frame. VIDEO SLIP fixes a pad's timing as long as its video is still loaded. EDIT SLICE reopens the pad in the slicer.</p>
     <p><b>KEYS:</b> the 16 pads become 16 notes of the selected pad.</p>
     <p><b>Patterns:</b> 16 patterns. While playing, a new pattern starts when the current one ends. Turn on CHAIN and tap patterns to build a song. COPY TO NEXT copies the pattern and its length.</p>
+    <p><b>INIT:</b> in the floppy disk window, INIT (CLEAR) lets you clear just the patterns, just the pads, or everything.</p>
     <p><b>Session (floppy disk):</b> SAVE SESSION keeps every pad (sound and video), patterns and settings in one .zip. SAVE SAMPLES gives you WAV files for your DAW. LOAD SAMPLES puts your own audio on pads. Work also autosaves in this browser. Full original videos are not saved, so add a video again to re-slice from it.</p>
     <p><b>Export:</b> tap EXPORT at the top. Pick the length (pattern, 1 to 8 bars or the whole chain), how many times it loops (1× to 16×) and the shape (9:16, 1:1, 16:9 or your first video), then RECORD. It starts on the downbeat and ends right on the bar.</p>
     <p><b>Undo:</b> ↶ undoes your last change, ↷ brings it back. Tap any panel title to minimize it.</p>
@@ -359,13 +361,24 @@ header>#bExp{flex:1.7 1 0}
     <div class="row"><button id="bExpGo" class="hl">RECORD</button><button id="expClose">CLOSE</button></div>
   </div>
 </div>
+<div id="initWin" class="modal hidden">
+  <div class="mbox sw">
+    <div class="swT"><span>INIT</span></div>
+    <div class="help"><p>What do you want to clear? Undo (↶) brings back pads and patterns.</p></div>
+    <div class="row"><button id="initPat">CLEAR PATTERNS</button></div>
+    <div class="row"><button id="initPads">CLEAR PADS</button></div>
+    <div class="row"><button id="initAll" class="danger">CLEAR EVERYTHING</button></div>
+    <div class="help"><p>Patterns: every step, pattern length and the chain. Pads: all 128 chops and their settings. Everything: both, plus the videos in the slicer and the session name. Tempo, swing and your video options stay.</p></div>
+    <div class="row"><button id="initCancel">CANCEL</button></div>
+  </div>
+</div>
 <div id="saveWin" class="modal hidden">
   <div class="mbox sw">
     <div class="swT"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h13l3 3v13H4z"/><path d="M8 4v5h7V4"/><rect x="7.5" y="13" width="9" height="7" rx="1"/></svg><span>SESSION</span></div>
     <div class="row"><input id="sessName" class="txt" value="My session" maxlength="40" aria-label="Session name"></div>
     <div class="row"><button id="bSaveSess" class="hl">SAVE SESSION</button><label class="btn">OPEN<input type="file" id="fOpen" accept=".zip,.json,application/zip,application/json" hidden></label></div>
     <div class="row"><button id="bSaveSamp">SAVE SAMPLES</button><label class="btn">LOAD SAMPLES<input type="file" id="fSamp" accept="audio/*,.wav,.mp3,.m4a,.aif,.aiff,.zip" multiple hidden></label></div>
-    <div class="row"><button id="bNewSess">NEW SESSION</button></div>
+    <div class="row"><button id="bNewSess" class="danger">INIT (CLEAR)</button></div>
     <div class="help">
       <p><b>Session:</b> one .zip with every pad's sound and video, all patterns, pad settings, BPM and swing.</p>
       <p><b>Samples:</b> a .zip of every pad sound as WAV files for any DAW.</p>
@@ -1561,6 +1574,7 @@ function restore(x){
   pads=[...x.pads];pads.forEach(p=>{if(p)p.slipTarget=null;});
   x.srcs.forEach(o=>{const sc=sources.find(y=>y.id===o.id);if(sc&&o.s!=null){sc.sel={s:o.s,e:o.e};sc.slip=o.slip;}});
   if(viewPage>=S.patLen[editPat])viewPage=0;
+  $('empty').classList.toggle('hidden',hasPads()||sources.length>0);
   save();renderAll();renderMini();renderEdInfo();renderEdSlip();waveDirty=true;padsChanged();
 }
 function undo(){if(!undoS.length)return;redoS.push(snap());restore(undoS.pop());lastPush={k:null,t:0};renderUndo();}
@@ -1732,13 +1746,34 @@ async function loadSampleList(list){
   save();$('empty').classList.add('hidden');renderAll();renderMini();padsChanged();
   toast(n?('Loaded '+n+' sample'+(n>1?'s':'')+' from pad '+padLabel(selPad)+'.'):'Could not read those audio files.',2600);
 }
-function newSession(){
-  $('saveWin').classList.add('hidden');if(playing)stop();pushUndo();
-  pads=Array(NP).fill(null);vq=[[],[],[],[]];lastHit=[null,null,null,null];bank=0;selPad=0;
-  Object.assign(S,{patterns:mkPats(),patLen:Array(16).fill(1),chain:[],...padDefaults()});
-  curPat=editPat=0;viewPage=0;save();renderAll();renderMini();padsChanged();$('sessName').value='My session';
-  toast('New session. Undo brings the old one back.',2600);
+/* INIT: clear patterns, pads, or everything (undo brings back pads and patterns) */
+function clearPatterns(quiet){
+  if(playing)stop();if(!quiet)pushUndo();
+  Object.assign(S,{patterns:mkPats(),patLen:Array(16).fill(1),chain:[]});
+  curPat=editPat=0;viewPage=0;queued=null;selStep=-1;lastHit=[null,null,null,null];chainOn=false;
+  save();renderAll();if(!quiet)toast('Patterns cleared. Undo brings them back.',2400);
 }
+function clearPads(quiet){
+  if(playing)stop();if(!quiet)pushUndo();
+  pads=Array(NP).fill(null);vq=[[],[],[],[]];lastHit=[null,null,null,null];bank=0;selPad=0;
+  Object.assign(S,padDefaults());
+  save();renderAll();renderMini();padsChanged();$('empty').classList.remove('hidden');
+  if(!quiet)toast('Pads cleared. Undo brings them back.',2400);
+}
+function clearEverything(){
+  pushUndo();clearPatterns(true);clearPads(true);
+  sources.forEach(sc=>{try{sc.video.pause();sc.video.remove();URL.revokeObjectURL(sc.url);}catch(e){}});
+  sources=[];curSrc=-1;selectSource(-1);
+  $('sessName').value='My session';
+  toast('Everything cleared. Undo brings back pads and patterns (videos need adding again).',3200);
+}
+function openInit(){$('saveWin').classList.add('hidden');$('initWin').classList.remove('hidden');}
+const closeInit=()=>$('initWin').classList.add('hidden');
+$('initPat').onclick=()=>{closeInit();clearPatterns();};
+$('initPads').onclick=()=>{closeInit();clearPads();};
+$('initAll').onclick=()=>{closeInit();clearEverything();};
+$('initCancel').onclick=closeInit;
+$('initWin').addEventListener('click',e=>{if(e.target.id==='initWin')closeInit();});
 /* autosave pads to this browser */
 const idb={db:null,
   open(){return new Promise(res=>{try{const r=indexedDB.open('vbm16',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>{this.db=r.result;res(r.result);};r.onerror=()=>res(null);}catch(e){res(null);}});},
@@ -1763,7 +1798,7 @@ async function restoreAutosave(){
 $('bDisk').onclick=()=>$('saveWin').classList.remove('hidden');
 $('swClose').onclick=()=>$('saveWin').classList.add('hidden');
 $('saveWin').addEventListener('click',e=>{if(e.target.id==='saveWin')$('saveWin').classList.add('hidden');});
-$('bSaveSess').onclick=saveSession;$('bSaveSamp').onclick=saveSamples;$('bNewSess').onclick=newSession;
+$('bSaveSess').onclick=saveSession;$('bSaveSamp').onclick=saveSamples;$('bNewSess').onclick=openInit;
 $('fOpen').onchange=e=>{const f=e.target.files[0];e.target.value='';$('saveWin').classList.add('hidden');openFile(f);};
 $('fSamp').onchange=async e=>{const fs=[...e.target.files];e.target.value='';$('saveWin').classList.add('hidden');
   const zip=fs.find(f=>/\.zip$/i.test(f.name));if(zip){openFile(zip);return;}
