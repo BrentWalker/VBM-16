@@ -372,7 +372,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
     <div class="row"><button id="initPat">CLEAR PATTERNS</button></div>
     <div class="row"><button id="initPads">CLEAR PADS</button></div>
     <div class="row"><button id="initAll" class="danger">CLEAR EVERYTHING</button></div>
-    <div class="help"><p>Patterns: every step, pattern length and the chain. Pads: all 128 chops and their settings. Everything: both, plus the videos in the slicer and the session name. Tempo, swing and your video options stay.</p></div>
+    <div class="help"><p>Patterns: every step, pattern length and the chain. Pads: all 128 chops and their settings. Everything: both, plus all track FX and FX, the videos in the slicer and the session name. Tempo, swing and your video options stay.</p></div>
     <div class="row"><button id="initCancel">CANCEL</button></div>
   </div>
 </div>
@@ -1983,6 +1983,8 @@ function clearEverything(){
   pushUndo();clearPatterns(true);clearPads(true);
   sources.forEach(sc=>{try{sc.video.pause();sc.video.remove();URL.revokeObjectURL(sc.url);}catch(e){}});
   sources=[];curSrc=-1;selectSource(-1);
+  S.trackFx=[[],[],[],[]];S.trackFxOn=[true,true,true,true];S.trackFxAmt=[{},{},{},{}];for(let t=0;t<4;t++)applyTrackFx(t);renderTfx();
+  FXL.forEach(([k])=>{latched[k]=false;if(fx[k])setFx(k,false);});renderFx();save();
   $('sessName').value='My session';
   toast('Everything cleared. Undo brings back pads and patterns (videos need adding again).',3200);
 }
