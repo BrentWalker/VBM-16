@@ -134,7 +134,10 @@ select{font:inherit;font-size:12px;background:var(--slate);color:var(--w);border
 .help p{margin:4px 0}
 .modal{position:fixed;inset:0;background:rgba(20,20,30,.85);display:flex;align-items:center;justify-content:center;z-index:20;padding:16px}
 .mbox{background:var(--ink);border:1px solid var(--purple);border-radius:16px;padding:14px;width:100%;max-width:420px;text-align:center}
-#saveWin,#expWin,#initWin,#tfxWin{z-index:15}
+#saveWin,#expWin,#initWin,#tfxWin,#padMoveWin{z-index:15}
+.pad.lift{opacity:.35;outline:2px dashed var(--air);outline-offset:-2px}
+.pad.dropT,.bank i.dropT{outline:3px solid var(--air);outline-offset:-3px}
+.padGhost{position:fixed;z-index:30;width:60px;height:48px;border-radius:10px;background:var(--slate) center/cover no-repeat;box-shadow:0 8px 20px rgba(0,0,0,.5),0 0 0 2px var(--air);pointer-events:none;font-size:11px;font-weight:700;padding:3px 5px;color:#fff}
 .tfx{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:5px}
 .tfx button{height:40px;padding:0 2px;font-size:9px;line-height:1.25;background:#33324a;border-bottom:3px solid transparent;flex-direction:column;gap:1px}
 .tfx button b{font-size:11px}
@@ -364,6 +367,14 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
     <div class="ctl"><label>FORMAT</label><select id="eFmt" style="flex:1"><option value="auto">First video</option><option value="9:16">9:16</option><option value="1:1">1:1</option><option value="16:9">16:9</option></select></div>
     <div class="help" id="eSum"></div>
     <div class="row"><button id="bExpGo" class="hl">RECORD</button><button id="expClose">CLOSE</button></div>
+  </div>
+</div>
+<div id="padMoveWin" class="modal hidden">
+  <div class="mbox sw">
+    <div class="swT"><span>MOVE PAD</span></div>
+    <div class="help"><p id="pmTxt"></p><p>SWAP trades the two places and the beat follows, so it sounds the same. REPLACE copies it over the other pad, so that pad's steps play the new sound.</p></div>
+    <div class="row"><button id="pmSwap" class="hl">SWAP</button><button id="pmRep">REPLACE</button></div>
+    <div class="row"><button id="pmCancel">CANCEL</button></div>
   </div>
 </div>
 <div id="initWin" class="modal hidden">
@@ -1448,8 +1459,10 @@ function buildUI(){
     w.append(b,m);$('tracks').append(w);trkEls.push({b,m});
   }
   for(let s=0;s<16;s++){const b=document.createElement('button');if(s%4===0)b.classList.add('beat');stepPress(b,s);$('steps').append(b);stepEls.push(b);}
-  for(let i=0;i<16;i++){const b=document.createElement('button');b.className='pad';b.innerHTML='<span class="n"></span><span class="i"></span><span class="k"></span>';b.onpointerdown=e=>{e.preventDefault();if(clearMode){clearPad(bank*16+i);return;}if(recHeld){const ep=keys?selPad:bank*16+i;b._ep=ep;eraseStart(ep);return;}try{b.setPointerCapture(e.pointerId);}catch(_){}tapPad(i);};
-    b.onpointerup=b.onpointercancel=()=>{if(b._ep!=null){eraseEnd(b._ep);b._ep=null;return;}endLive(i);};
+  for(let i=0;i<16;i++){const b=document.createElement('button');b.className='pad';b.innerHTML='<span class="n"></span><span class="i"></span><span class="k"></span>';b.onpointerdown=e=>{e.preventDefault();if(clearMode){clearPad(bank*16+i);return;}if(recHeld){const ep=keys?selPad:bank*16+i;b._ep=ep;eraseStart(ep);return;}try{b.setPointerCapture(e.pointerId);}catch(_){}tapPad(i);dragDown(e,i);};
+    b.onpointermove=e=>dragMove(e,i);
+    b.onpointerup=e=>{if(b._ep!=null){eraseEnd(b._ep);b._ep=null;return;}dragUp(e,i);endLive(i);};
+    b.onpointercancel=()=>{if(b._ep!=null){eraseEnd(b._ep);b._ep=null;return;}dragCancel();endLive(i);};
     $('pads').append(b);padEls.push(b);}
   FXL.forEach(([k,l])=>{
     const b=document.createElement('button');b.textContent=l;
@@ -1688,6 +1701,71 @@ function moveBank(from,to){
   save();padsChanged();renderAll();renderMini();
   toast('Moved bank '+(from+1)+' to spot '+(to+1)+'. Patterns moved with it.',2200);
 }
+/* hold a pad, then drag it onto another pad (or a cell in the bank strip) to SWAP or REPLACE */
+let pd=null,pdGhost=null,pdOver=null,pdBankT=null,pdBank=-1,pdMove=null;
+function dragDown(e,i){
+  dragCancel();if(keys||!pads[bank*16+i])return;
+  pd={i,src:bank*16+i,x:e.clientX,y:e.clientY,armed:false,lifted:false};
+  pd.tm=setTimeout(()=>{if(pd)pd.armed=true;},450);
+}
+function padUnder(x,y){
+  const el=document.elementFromPoint(x,y);if(!el)return {t:null,bk:-1};
+  const pb=el.closest('.pad');if(pb&&padEls.includes(pb))return {t:bank*16+padEls.indexOf(pb),el:pb,bk:-1};
+  if(el.tagName==='I'){const k=bankCells.indexOf(el);if(k>=0)return {t:k,el,bk:-1};}
+  const bk=el.closest('#banks .bank');if(bk)return {t:null,bk:bk._b};
+  return {t:null,bk:-1};
+}
+function dragMove(e,i){
+  if(!pd)return;
+  if(!pd.lifted){
+    const far=Math.hypot(e.clientX-pd.x,e.clientY-pd.y)>10;
+    if(!far)return;
+    if(!pd.armed){clearTimeout(pd.tm);pd=null;return;}
+    pd.lifted=true;endLive(i);padEls[i].classList.add('lift');try{navigator.vibrate&&navigator.vibrate(15);}catch(_){}
+    pdGhost=document.createElement('div');pdGhost.className='padGhost';const p=pads[pd.src];
+    pdGhost.style.backgroundImage=p&&p.thumb?'url('+p.thumb+')':'none';pdGhost.textContent=padLabel(pd.src);document.body.appendChild(pdGhost);
+  }
+  pdGhost.style.left=(e.clientX-30)+'px';pdGhost.style.top=(e.clientY-56)+'px';
+  const u=padUnder(e.clientX,e.clientY);
+  if(pdOver&&pdOver!==u.el)pdOver.classList.remove('dropT');
+  pdOver=u.t!=null&&u.t!==pd.src?u.el:null;if(pdOver)pdOver.classList.add('dropT');
+  pd.tgt=u.t!=null&&u.t!==pd.src?u.t:null;
+  /* rest on a bank to flip to it */
+  if(u.bk!==pdBank){clearTimeout(pdBankT);pdBank=u.bk;if(u.bk>=0&&u.bk!==bank)pdBankT=setTimeout(()=>{setBank(u.bk);padEls.forEach(x=>x.classList.remove('lift'));if(Math.floor(pd.src/16)===bank)padEls[pd.src%16].classList.add('lift');},500);}
+}
+function dragCancel(){
+  if(pd)clearTimeout(pd.tm);clearTimeout(pdBankT);pdBank=-1;
+  if(pdGhost){pdGhost.remove();pdGhost=null;}
+  if(pdOver){pdOver.classList.remove('dropT');pdOver=null;}
+  padEls.forEach(x=>x.classList.remove('lift'));pd=null;
+}
+function dragUp(e,i){
+  const d=pd;dragCancel();
+  if(!d||!d.lifted||d.tgt==null)return;
+  pdMove={a:d.src,b:d.tgt};
+  $('pmTxt').textContent='Pad '+padLabel(d.src)+' onto pad '+padLabel(d.tgt)+(pads[d.tgt]?'':' (empty)')+'.';
+  $('padMoveWin').classList.remove('hidden');
+}
+function movePad(a,b,mode){
+  pushUndo();
+  if(mode==='swap'){
+    [pads[a],pads[b]]=[pads[b],pads[a]];
+    for(const k in PAD_DEF)[S[k][a],S[k][b]]=[S[k][b],S[k][a]];
+    S.patterns.forEach(pat=>pat.forEach(row=>row.forEach((c,st)=>{if(!c)return;const ev=cellEvs(c).map(x=>x.pad===a?{...x,pad:b}:x.pad===b?{...x,pad:a}:x);row[st]=packCell(ev);})));
+    if(selPad===a)selPad=b;else if(selPad===b)selPad=a;
+  }else{
+    pads[b]=pads[a]?{...pads[a]}:null;
+    for(const k in PAD_DEF)S[k][b]=S[k][a];
+    selPad=b;
+  }
+  save();renderAll();renderMini();padsChanged();
+  toast(mode==='swap'?'Swapped pads '+padLabel(a)+' and '+padLabel(b)+'. The beat follows.':'Pad '+padLabel(b)+' is now a copy of '+padLabel(a)+'.',2000);
+}
+const closePM=()=>{$('padMoveWin').classList.add('hidden');pdMove=null;};
+$('pmSwap').onclick=()=>{const m=pdMove;closePM();if(m)movePad(m.a,m.b,'swap');};
+$('pmRep').onclick=()=>{const m=pdMove;closePM();if(m)movePad(m.a,m.b,'replace');};
+$('pmCancel').onclick=closePM;
+$('padMoveWin').addEventListener('click',e=>{if(e.target.id==='padMoveWin')closePM();});
 function setBank(b){bank=b;target=firstEmpty();renderPads();renderMini();renderSteps();}
 function renderBanks(){
   bankEls.forEach(d=>{const b=d._b;d.classList.toggle('cur',b===bank);
@@ -2111,7 +2189,7 @@ $('mSave').onclick=async()=>{
 const panelsEl=$('panels');
 if(Array.isArray(UI.order))UI.order.forEach(id=>{const el=$(id);if(el&&el.parentNode===panelsEl)panelsEl.appendChild(el);});
 let pDrag=null;
-document.addEventListener('touchmove',e=>{if(pDrag&&pDrag.lifted)e.preventDefault();},{passive:false});
+document.addEventListener('touchmove',e=>{if((pDrag&&pDrag.lifted)||(pd&&pd.armed))e.preventDefault();},{passive:false});
 document.querySelectorAll('section.panel[id]').forEach(sec=>{
   sec.classList.toggle('min',!!UI[sec.id]);
   const h3=sec.querySelector('h3');
