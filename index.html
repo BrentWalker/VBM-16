@@ -2067,19 +2067,26 @@ async function exportClip(){
   const stream=new MediaStream([...cv.captureStream(30).getVideoTracks(),...recDest.stream.getAudioTracks()]);
   let rec;try{rec=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:6e6}:{});}catch(e){try{rec=new MediaRecorder(stream);}catch(e2){modal('Could not start the recorder in this browser.');return;}}
   const chunks=[];rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
-  exporting=true;modal('Recording '+bars+(bars>1?' bars':' bar')+'. Keep this screen open.',false,false);
+  exporting=true;expHidden=false;holdAwake(true);modal('Recording '+bars+(bars>1?' bars':' bar')+'. Keep this screen open.',false,false);
   rec.onstop=()=>{
-    exporting=false;
+    exporting=false;holdAwake(false);
     const type=rec.mimeType||mime||'video/webm';
     lastBlob=new Blob(chunks,{type});lastName='vbm16-beat-'+S.bpm+'bpm.'+(type.includes('mp4')?'mp4':'webm');
     const v=$('mVid');v.src=URL.createObjectURL(lastBlob);v.muted=false;
-    modal('Here is your clip. Save it to your device.',true,true,'SAVE VIDEO');
+    modal(expHidden?'The screen locked or VBM-16 left the screen while recording, so the picture may freeze partway. Keep the screen on and record again, or save this one.':'Here is your clip. Save it to your device.',true,true,'SAVE VIDEO');
     v.play().catch(()=>{});
   };
-  rec.start();
+  rec.start(1000);
   start(ctx.currentTime+0.06);
   setTimeout(()=>{stop();setTimeout(()=>{try{rec.stop();}catch(e){}},40);},(durS+0.06)*1000);
 }
+/* keep the screen awake while exporting: a locked or dimmed screen stops drawing the video while the audio keeps going */
+let wakeLock=null,expHidden=false;
+async function holdAwake(on){
+  if(on){try{if(navigator.wakeLock&&!wakeLock){wakeLock=await navigator.wakeLock.request('screen');wakeLock.addEventListener('release',()=>{wakeLock=null;});}}catch(e){}}
+  else{try{wakeLock&&wakeLock.release();}catch(e){}wakeLock=null;}
+}
+document.addEventListener('visibilitychange',()=>{if(!exporting)return;if(document.hidden)expHidden=true;else holdAwake(true);});
 let expLoops=1;
 function expBars(){const v=$('eLen').value;return v==='chain'?(S.chain.length?S.chain.reduce((a,p)=>a+S.patLen[p],0):S.patLen[curPat]):v==='pat'?S.patLen[queued!=null?queued:curPat]:+v;}
 function renderExp(){
