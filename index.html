@@ -1536,10 +1536,15 @@ function renderNudge(){
   else $('snV').textContent='HOLD A STEP TO NUDGE';
 }
 function nudgeTxt(n){const t=Math.round(n/NUD),ms=Math.round(n*stepDur()*1000);return (t>0?'+':'')+t+'/24 '+(ms>0?'+':'')+ms+'ms';}
+let lastStepTap={gi:-1,t:0};
 function tapStep(s){
   initAudio();if(!hasPads())return;
-  pushUndo();
-  const row=S.patterns[editPat][selTrack],gi=viewPage*16+s,evs=cellEvs(row[gi]).map(e=>({...e}));
+  const row=S.patterns[editPat][selTrack],gi=viewPage*16+s,evs=cellEvs(row[gi]).map(e=>({...e})),now=performance.now();
+  pushUndo('st'+editPat+'.'+selTrack+'.'+gi);
+  /* double tap a step: clear every sound on it */
+  if(lastStepTap.gi===gi&&now-lastStepTap.t<380){lastStepTap={gi:-1,t:0};
+    row[gi]=null;if(selStep===gi)selStep=-1;save();renderSteps();renderPats();return;}
+  lastStepTap={gi,t:now};
   const n0=evs.length?evs[0].n:undefined,mk=sm=>{const e={pad:selPad,semi:sm};if(n0)e.n=n0;return e;};
   const add=keys&&chord!=='off'?chordSemis(lastSemi).map(mk):[mk(keys?lastSemi:0)];
   const has=e=>evs.some(x=>x.pad===e.pad&&x.semi===e.semi);
