@@ -94,7 +94,9 @@ body.wide #panelsL:empty{min-height:40px}
 .pad{position:relative;aspect-ratio:1.25;border-radius:12px;background:var(--slate) center/cover no-repeat;padding:0;overflow:hidden;transition:transform .05s}
 .pad::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(49,48,67,.15),rgba(49,48,67,.55))}
 .pad .n{position:absolute;left:6px;top:4px;font-size:11px;font-weight:700;z-index:1}
-.pad .i{position:absolute;right:6px;top:3px;font-size:12px;z-index:1}
+.pad .i{position:absolute;right:4px;top:4px;width:19px;height:19px;border-radius:5px;z-index:1;display:flex;align-items:center;justify-content:center;color:#fff;box-shadow:0 0 0 1px rgba(244,243,238,.25)}
+.pad .i svg{width:14px;height:14px}
+.tpGrid button i svg{width:18px;height:18px}
 .pad .k{position:absolute;left:0;right:0;bottom:4px;font-size:10px;z-index:1;opacity:.9}
 .pad.sel{box-shadow:inset 0 0 0 2px var(--w)}
 .pad.hit{transform:scale(.94);filter:brightness(1.6)}
@@ -181,7 +183,7 @@ button.danger{background:var(--fire);color:var(--ink);font-weight:700}
 .tpSub{font-size:11px;opacity:.75;margin-bottom:10px;line-height:1.5}
 .tpGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:10px}
 .tpGrid button{padding:14px 6px;font-size:13px;font-weight:700;border-radius:12px;gap:8px;justify-content:flex-start;padding-left:14px}
-.tpGrid button i{font-style:normal;display:inline-flex;width:26px;height:26px;border-radius:8px;align-items:center;justify-content:center;color:var(--ink);font-size:13px}
+.tpGrid button i{font-style:normal;display:inline-flex;width:30px;height:30px;border-radius:8px;align-items:center;justify-content:center;color:#fff;font-size:13px;box-shadow:0 0 0 1px rgba(244,243,238,.22)}
 /* slice editor */
 .sheet{position:fixed;inset:0;background:var(--ink);z-index:10;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .edTop{display:flex;gap:6px;align-items:center}
@@ -466,11 +468,14 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
 const $=id=>document.getElementById(id);
 const AC=window.AudioContext||window.webkitAudioContext;
 const COL={ink:'#313043',slate:'#424C60',purple:'#57556F',earth:'#7C5D48',air:'#ADCFDE',fire:'#DC7B78',water:'#7EB3D2'};
-const CATS={KICK:{c:COL.earth,i:'●'},SNARE:{c:COL.fire,i:'✱'},HAT:{c:COL.air,i:'▲'},TONE:{c:COL.water,i:'∿'}};
+const CICON={'DRUMS':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="15.5" r="5.5"/><circle cx="11" cy="15.5" r="1.6"/><rect x="2.5" y="6.5" width="6.5" height="4" rx="1.5"/><path d="M15.5 5.5h6M18.5 5.5V21M16 21h5"/></svg>', 'BASS':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 12L20.5 3.5"/><path d="M19.2 2.2l2.6 2.6"/><path d="M12 12c-1.5-1.5-4.3-1-5.2.8-1.7.1-3.6 1.2-3.6 3.6 0 2.6 2.3 4.6 4.6 4.3 2.4 0 3.6-1.8 3.6-3.5 1.8-.9 2.2-3.8.6-5.2z"/><path d="M6.6 15.4l2 2"/></svg>', 'GUITAR':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13.5 10.5L19 5"/><path d="M17.8 3.6l2.6 2.6"/><path d="M13.5 10.5c-1.6-1.6-4.6-1-5.6.9-1.8.1-3.9 1.3-3.9 3.9 0 2.9 2.5 5 5 4.7 2.6 0 3.9-2 3.9-3.8 1.9-1 2.4-4.1.6-5.7z"/><circle cx="9.3" cy="14.7" r="1.5"/></svg>', 'KEYS':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5.5" width="19" height="13" rx="1.5"/><path d="M7.3 12.5v6M12 12.5v6M16.7 12.5v6"/><path d="M5.8 5.5v7h3v-7M10.5 5.5v7h3v-7M15.2 5.5v7h3v-7"/></svg>', 'VOX':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="11.5" r="8.5"/><circle cx="9" cy="9" r=".9" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r=".9" fill="currentColor" stroke="none"/><ellipse cx="12" cy="14.8" rx="2.3" ry="2.8"/></svg>', 'SAMPLES':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r=".8" fill="currentColor" stroke="none"/><path d="M12 5.5a6.5 6.5 0 0 1 6.5 6.5"/></svg>', 'TRANSIENT':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 12h1.5M6 8.5v7M9 4v16M12 7v10M15 9.5v5M18 11v2M21 12h.5"/></svg>', 'EQUAL':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="8" width="19" height="8" rx="1.5"/><path d="M6 8v3M9.5 8v4.5M13 8v3M16.5 8v4.5"/></svg>', 'KICK':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="11.5" r="8.5"/><circle cx="12" cy="11.5" r="3.8"/><path d="M5.8 18L4.3 21.5M18.2 18l1.5 3.5"/></svg>', 'SNARE':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="11" rx="8" ry="2.5"/><path d="M4 11v6c0 1.4 3.6 2.5 8 2.5s8-1.1 8-2.5v-6"/><path d="M8 13.3v5.4M12 13.5v6M16 13.3v5.4"/><path d="M6 2.5l5 5M18 2.5l-5 5"/></svg>', 'HAT':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9.5c2-1.6 5.5-2.5 9-2.5s7 .9 9 2.5z"/><path d="M3 12.5c2 1.4 5.5 2.1 9 2.1s7-.7 9-2.1z"/><path d="M12 7V3M12 14.6V21M9 21h6"/></svg>', 'TONE':'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12c1.7-5.3 3.3-8 5-8s3.3 2.7 5 8 3.3 8 5 8 3.3-2.7 5-8"/></svg>'};
+const CATS={KICK:{c:COL.ink,i:CICON.KICK},SNARE:{c:COL.fire,i:CICON.SNARE},HAT:{c:COL.air,i:CICON.HAT},TONE:{c:COL.water,i:CICON.TONE}};
 const CAT_ORDER=['KICK','SNARE','HAT','TONE'];
-Object.assign(CATS,{SAMPLES:{c:COL.air,i:'◎'},FX:{c:COL.fire,i:'✦'},BASS:{c:COL.earth,i:'▬'},GUITAR:{c:COL.water,i:'♪'},KEYS:{c:COL.air,i:'▦'},VOX:{c:COL.fire,i:'◡'},CHAOS:{c:COL.fire,i:'✸'},TRANSIENT:{c:COL.fire,i:'⚡'},EQUAL:{c:COL.purple,i:'▥'}});
+Object.assign(CATS,{SAMPLES:{c:COL.ink,i:CICON.SAMPLES},FX:{c:COL.fire,i:CICON.TRANSIENT},BASS:{c:COL.purple,i:CICON.BASS},GUITAR:{c:COL.water,i:CICON.GUITAR},KEYS:{c:COL.fire,i:CICON.KEYS},VOX:{c:COL.earth,i:CICON.VOX},CHAOS:{c:COL.fire,i:CICON.TRANSIENT},TRANSIENT:{c:COL.ink,i:CICON.TRANSIENT},EQUAL:{c:COL.purple,i:CICON.EQUAL}});
+/* light colors take ink text, dark ones white */
+const lightCol=c=>[COL.air,COL.fire,COL.water].includes(c);
 const TYPES=[
-  ['DRUMS',{th:0.2,gap:0.08,max:1.0,sort:true,def:2,fi:0,fo:0,c:COL.earth,i:'●'}],
+  ['DRUMS',{th:0.2,gap:0.08,max:1.0,sort:true,def:2,fi:0,fo:0,c:COL.ink,i:CICON.DRUMS}],
   ['BASS',{th:0.15,gap:0.15,max:2.0,def:4,fi:2,fo:10,cat:'BASS'}],
   ['GUITAR',{th:0.15,gap:0.12,max:2.0,def:4,fi:2,fo:15,cat:'GUITAR'}],
   ['KEYS',{th:0.15,gap:0.12,max:2.0,def:4,fi:2,fo:15,cat:'KEYS'}],
@@ -1276,7 +1281,7 @@ function demoKit(){
 function demoFrame(cat,name,i,p){
   const c=document.createElement('canvas');c.width=c.height=320;const g=c.getContext('2d');
   const gr=g.createLinearGradient(0,0,320,320);gr.addColorStop(0,COL.ink);gr.addColorStop(1,COL.purple);g.fillStyle=gr;g.fillRect(0,0,320,320);
-  const col=CATS[cat].c,s=1.2-0.55*p;g.save();g.translate(160,145);g.globalAlpha=1-0.45*p;g.fillStyle=col;g.strokeStyle=col;g.lineWidth=12;
+  const col=CATS[cat].c===COL.ink?'#8F8CA8':CATS[cat].c,s=1.2-0.55*p;g.save();g.translate(160,145);g.globalAlpha=1-0.45*p;g.fillStyle=col;g.strokeStyle=col;g.lineWidth=12;
   if(cat==='KICK'){g.beginPath();g.arc(0,0,80*s,0,Math.PI*2);g.fill();}
   else if(cat==='SNARE'){g.rotate(p*0.8);for(let k=0;k<2;k++){g.rotate(Math.PI/4);g.fillRect(-62*s,-62*s,124*s,124*s);}}
   else if(cat==='HAT'){g.beginPath();g.moveTo(0,-85*s);g.lineTo(76*s,54*s);g.lineTo(-76*s,54*s);g.closePath();g.fill();}
@@ -1657,9 +1662,9 @@ function renderSteps(){
   if(viewPage>=S.patLen[editPat])viewPage=0;
   const row=S.patterns[editPat][selTrack],off=viewPage*16;
   stepEls.forEach((b,s)=>{const evs=cellEvs(row[off+s]),ev=evs[0];
-    if(ev){const p=pads[ev.pad];b.style.background=p?CATS[p.cat].c:COL.purple;b.style.color=COL.ink;
+    if(ev){const p=pads[ev.pad],sc=p?CATS[p.cat].c:COL.purple;b.style.background=sc;b.style.color=lightCol(sc)?COL.ink:'#fff';b.style.border=sc===COL.ink?'1.5px solid rgba(244,243,238,.55)':'';
       b.innerHTML=evs.length>1?(Math.floor(ev.pad/16)===bank?String(ev.pad%16+1):padLabel(ev.pad))+'<sup class="stk">'+evs.length+'</sup>':(Math.floor(ev.pad/16)===bank?String(ev.pad%16+1):padLabel(ev.pad))+(ev.semi?'·'+ev.semi:'');}
-    else{b.style.background='';b.style.color='';b.textContent='';}
+    else{b.style.background='';b.style.color='';b.style.border='';b.textContent='';}
     b.classList.toggle('sel',!nudgeAll&&off+s===selStep&&!!ev);
     b.classList.toggle('nl',!!(ev&&ev.n<0));b.classList.toggle('nr',!!(ev&&ev.n>0));
     const sk=isSkip(editPat,off+s);b.classList.toggle('skip',sk&&skipEdit<0);b.classList.toggle('skOn',skipEdit>=0&&!sk);b.classList.toggle('skOff',skipEdit>=0&&sk);});
@@ -1672,8 +1677,7 @@ function renderPads(){
     b.style.backgroundImage=p?'url('+p.thumb+')':'none';
     b.classList.toggle('erasing',eraseHeld.has(keys?selPad:bank*16+i));
     b.querySelector('.n').textContent=keys?'':(i+1);
-    b.querySelector('.i').textContent=p&&!keys?CATS[p.cat].i:'';
-    b.querySelector('.i').style.color=p?CATS[p.cat].c:'';
+    const ic=b.querySelector('.i'),ck=p&&!keys?CATS[p.cat]:null;ic.innerHTML=ck?ck.i:'';ic.style.background=ck?ck.c:'';ic.style.display=ck?'':'none';
     const r=Math.floor(i/4),c=i%4,semi=(3-r)*4+c;
     const kn=keys&&p?padNote(p):null;
     b.querySelector('.k').textContent=keys?(kn!=null?noteName(kn+S.padSemi[selPad]+semi).replace(/-?\d+$/,m=>chord==='off'?m:'')+(chord==='off'?'':chordTag(semi)):'+'+semi):'';
@@ -1843,7 +1847,7 @@ function setBank(b){bank=b;target=firstEmpty();renderPads();renderMini();renderS
 function renderBanks(){
   bankEls.forEach(d=>{const b=d._b;d.classList.toggle('cur',b===bank);
     const cells=d._cells||bankCells.slice(b*16,b*16+16);
-    cells.forEach((c,k)=>{const p=pads[b*16+k];c.style.background=p?CATS[p.cat].c:'';c.style.opacity=p?(b*16+k===selPad?1:.8):'';});});
+    cells.forEach((c,k)=>{const p=pads[b*16+k];c.style.background=p?CATS[p.cat].c:'';c.style.boxShadow=p&&CATS[p.cat].c===COL.ink?'inset 0 0 0 1px rgba(244,243,238,.5)':'';c.style.opacity=p?(b*16+k===selPad?1:.8):'';});});
   const n=pads.slice(bank*16,bank*16+16).filter(Boolean).length;
   $('bankName').textContent='BANK '+(bank+1)+' · '+n+'/16';
 }
