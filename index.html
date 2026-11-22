@@ -436,7 +436,7 @@ const TYPES=[
   ['CHAOS',{chaos:true,def:2,fi:0,fo:5,cat:'CHAOS'}],
 ];
 const PROF=Object.fromEntries(TYPES);
-const TL=['A','B','C','D'],TCOL=[COL.water,COL.fire,COL.air,COL.earth];
+const TL=['A','B','C','D'],TCOL=[COL.earth,COL.air,COL.fire,COL.water];
 const FXL=[['LPF','LOW'],['HPF','HIGH'],['HALF','1/2'],['ECHO','ECHO'],['STUT8','ST8'],['STUT16','ST16'],['REV','REV'],['OCT','OCT↓']];
 const FPS=12,MAXF=24,FRAME_M=320,MAXLISTEN=60,KEY='forge-video-sampler-v1';
 
@@ -1365,7 +1365,7 @@ function loop(){
   if(VO.tag)tagOverlay(W,H);
   if(view===4){
     g2.fillStyle=COL.ink;g2.fillRect(W/2-1,0,2,H);g2.fillRect(0,H/2-1,W,2);
-    if(!exporting){for(let t=0;t<4;t++){const x=(t%2)*W/2+8,y=Math.floor(t/2)*H/2+8;g2.fillStyle=TCOL[t];g2.fillRect(x,y,22,22);g2.fillStyle=COL.ink;g2.font='bold 15px ui-monospace,Menlo,monospace';g2.fillText(TL[t],x+6,y+16);}}
+    if(!exporting){for(let t=0;t<4;t++){const x=(t%2)*W/2+8,y=Math.floor(t/2)*H/2+8;g2.fillStyle=TCOL[t];g2.fillRect(x,y,22,22);g2.fillStyle=t===0?'#fff':COL.ink;g2.font='bold 15px ui-monospace,Menlo,monospace';g2.fillText(TL[t],x+6,y+16);}}
   }
 }
 requestAnimationFrame(loop);
