@@ -72,6 +72,8 @@ body.wide #panelsL:empty{min-height:40px}
 .pageRow{display:flex;gap:6px;margin-top:8px;align-items:center}
 .pageRow>button{flex:0 0 auto;font-size:10px;padding:7px 9px}
 #bLen,#bFollow{background:var(--purple);font-weight:700}
+#bInclV{font-weight:700}
+#bInclV.on{background:var(--air);color:var(--ink)}
 #bFollow.on{background:var(--air);color:var(--ink)}
 .pages{display:flex;gap:4px;flex:1}
 .pages button{flex:1;padding:7px 0;font-size:11px;background:#3a3a50;position:relative}
@@ -439,10 +441,11 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
     <p class="help" style="margin:-6px 0 10px"><a id="tutLink" href="https://claude.ai/artifact/KqWeYPqnK9pxDATQS2VJQC" style="color:var(--air)">Quick swipe tutorial</a> · VBM-16 v1.1</p>
     <div class="row"><input id="sessName" class="txt" value="My session" maxlength="40" aria-label="Session name"></div>
     <div class="row"><button id="bSaveSess" class="hl">SAVE SESSION</button><label class="btn">OPEN<input type="file" id="fOpen" accept=".zip,.json,application/zip,application/json" hidden></label></div>
+    <div class="row"><button id="bInclV">INCLUDE VIDEOS: ON</button></div>
     <div class="row"><button id="bSaveSamp">SAVE SAMPLES</button><label class="btn">LOAD SAMPLES<input type="file" id="fSamp" accept="audio/*,.wav,.mp3,.m4a,.aif,.aiff,.zip" multiple hidden></label></div>
     <div class="row"><button id="bNewSess" class="danger">INIT (CLEAR)</button></div>
     <div class="help">
-      <p><b>Session:</b> one .zip with every pad's sound and video, all patterns, pad settings, BPM and swing.</p>
+      <p><b>Session:</b> one .zip with every pad's sound and video, all patterns, pad settings, BPM and swing. With INCLUDE VIDEOS on, it also keeps the full videos so EDIT SLICE and VIDEO SLIP still work when you open it again. Turn it off for a much smaller file.</p>
       <p><b>Samples:</b> a .zip of every pad sound as WAV files for any DAW.</p>
       <p><b>Load samples:</b> pick WAV or MP3 files (or a .zip of them). They fill pads starting from the selected pad.</p>
       <p>Your work also autosaves in this browser and comes back when you reopen the page. The full original videos are not saved, so add a video again if you want to re-slice or slip pads from it.</p>
@@ -869,7 +872,7 @@ function pickType(type){
   const pv=pendingVid;pendingVid=null;if(!pv)return;
   audioReady();
   const {file,url,v}=pv,id=++srcSeq;
-  const src={id,name:'V'+id,type,url,video:v,vdur:v.duration||0,aspect:v.videoWidth/v.videoHeight,slip:0,autoChop:UI.autoChop!==false};
+  const src={id,name:'V'+id,type,url,file,video:v,vdur:v.duration||0,aspect:v.videoWidth/v.videoHeight,slip:0,autoChop:UI.autoChop!==false};
   const secs=Math.min(MAXLISTEN,src.vdur||MAXLISTEN);
   let showProg=false;
   const L=listenAudio(url,secs,f=>{if(showProg)est('Listening to the '+type.toLowerCase()+(src.vdur>MAXLISTEN?' (first '+MAXLISTEN+' seconds)':''),f);});
@@ -2146,9 +2149,16 @@ async function saveSession(){
   for(let i=0;i<NP;i++){const p=pads[i];if(!p){meta.push(null);continue;}
     const r=await padRecord(p),f='samples/'+nn(i)+'-'+safe(p.name||p.cat)+'.wav';
     z.file(f,r.wav);r.frames.forEach((b,k)=>{if(b)z.file('frames/'+nn(i)+'/'+String(k).padStart(3,'0')+'.jpg',b,{compression:'STORE'});});
-    meta.push({...r.meta,wav:f,frames:r.frames.length,fdir:'frames/'+nn(i)});
+    meta.push({...r.meta,srcRef:p.srcId,wav:f,frames:r.frames.length,fdir:'frames/'+nn(i)});
   }
-  z.file('session.json',JSON.stringify({app:'VBM-16',kind:'session',version:1,name:$('sessName').value,saved:new Date().toISOString(),state:stateJSON(),pads:meta}));
+  /* full videos (on by default): the original file plus its sound as WAV, so it opens again on any phone without re-listening */
+  const vids=[];
+  if(UI.inclVids!==false)for(const src of sources){if(!src.file||!src.audio)continue;
+    toast('Packing session… video '+src.name,0);
+    const ext=((src.file.name||'').match(/\.(\w+)$/)||[,'mp4'])[1].toLowerCase(),vf='videos/'+src.id+'.'+ext,af='videos/'+src.id+'-audio.wav';
+    z.file(vf,src.file,{compression:'STORE'});z.file(af,encodeWav(src.audio));
+    vids.push({id:src.id,name:src.name,type:src.type,slip:src.slip||0,video:vf,audio:af,mime:src.file.type||''});}
+  z.file('session.json',JSON.stringify({app:'VBM-16',kind:'session',version:2,name:$('sessName').value,saved:new Date().toISOString(),state:stateJSON(),pads:meta,videos:vids}));
   const blob=await z.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:3}});
   await saveFile(safe($('sessName').value)+'.vbm16.zip',blob);
 }
@@ -2158,6 +2168,21 @@ async function saveSamples(){
   toast('Packing samples…',0);const z=new JSZip();
   for(let i=0;i<NP;i++){const p=pads[i];if(!p)continue;const r=await padRecord(p);z.file(nn(i)+'-'+safe(p.name||p.cat)+'.wav',r.wav);}
   await saveFile(safe($('sessName').value)+'-samples.zip',await z.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:3}}));
+}
+async function restoreSource(file,wavAB,vm){
+  const url=URL.createObjectURL(file),v=document.createElement('video');
+  v.playsInline=true;v.setAttribute('playsinline','');v.muted=true;v.preload='auto';v.src=url;$('vHold').appendChild(v);
+  await waitMeta(v);if(!v.videoWidth){v.remove();URL.revokeObjectURL(url);return null;}
+  const audio=await decode(wavAB),id=++srcSeq;
+  const src={id,name:vm.name||('V'+id),type:vm.type||'DRUMS',url,file,video:v,vdur:v.duration||0,aspect:v.videoWidth/v.videoHeight,slip:vm.slip||0,autoChop:false,quiet:true};
+  src.audio=audio;src.dur=Math.min(audio.duration,src.vdur||audio.duration);src.mono=mono(audio);
+  try{src.key=readKey(src.mono,audio.sampleRate);}catch(e){src.key=null;}
+  let pk=1e-6;for(let i=0;i<src.mono.length;i++){const a=Math.abs(src.mono[i]);if(a>pk)pk=a;}src.norm=Math.min(8,0.95/pk);
+  const B=256,nb=Math.ceil(src.mono.length/B),mn=new Float32Array(nb),mx=new Float32Array(nb);
+  for(let b=0;b<nb;b++){let lo=0,hi=0;for(let i=b*B,e=Math.min(src.mono.length,i+B);i<e;i++){const x=src.mono[i];if(x<lo)lo=x;if(x>hi)hi=x;}mn[b]=lo;mx[b]=hi;}
+  src.peaks={B,min:mn,max:mx};src.sel={s:0,e:Math.min(src.dur,2*stepDur())};src.view={v0:0,v1:src.dur};src.cursor=0;
+  try{const c=document.createElement('canvas');c.width=96;c.height=Math.max(2,Math.round(96/src.aspect));c.getContext('2d').drawImage(v,0,0,c.width,c.height);src.thumb=c.toDataURL('image/jpeg',0.6);}catch(e){src.thumb='';}
+  sources.push(src);srcSeq=Math.max(srcSeq,id);return src;
 }
 async function openFile(file){
   if(!file)return;initAudio();if(playing)stop();
@@ -2181,6 +2206,19 @@ async function openFile(file){
         toast('Opening… pad '+padLabel(i),0);
       }
       pads=np;vq=[[],[],[],[]];lastHit=[null,null,null,null];applyState(d.state||{});fixPadArrays();bank=0;if(d.name)$('sessName').value=d.name;
+      if(Array.isArray(d.videos)&&d.videos.length){
+        sources.forEach(x=>{try{x.video.remove();URL.revokeObjectURL(x.url);}catch(e){}});sources.length=0;curSrc=-1;
+        for(const vm of d.videos){
+          const vz=z.file(vm.video),az=z.file(vm.audio);if(!vz||!az)continue;
+          toast('Opening… video '+vm.name,0);
+          try{
+            const vb=await vz.async('blob'),file=new File([vb],vm.video.split('/').pop(),{type:vm.mime||'video/mp4'});
+            const ns=await restoreSource(file,await az.async('arraybuffer'),vm);
+            if(ns)pads.forEach((p,i)=>{const m=d.pads[i];if(p&&m&&m.srcRef===vm.id)p.srcId=ns.id;});
+          }catch(e){}
+        }
+        if(sources.length){curSrc=-1;selectSource(0);}
+      }
       $('empty').classList.add('hidden');renderAll();renderMini();padsChanged();toast('Session loaded.');
     }else{
       const files=[];z.forEach((path,f)=>{if(!f.dir&&/\.(wav|mp3|m4a|aif|aiff)$/i.test(path))files.push(f);});
@@ -2258,6 +2296,8 @@ async function restoreAutosave(){
 $('bDisk').onclick=()=>$('saveWin').classList.remove('hidden');
 $('swClose').onclick=()=>$('saveWin').classList.add('hidden');
 $('saveWin').addEventListener('click',e=>{if(e.target.id==='saveWin')$('saveWin').classList.add('hidden');});
+const renderInclV=()=>{const on=UI.inclVids!==false;$('bInclV').textContent='INCLUDE VIDEOS: '+(on?'ON':'OFF');$('bInclV').classList.toggle('on',on);};
+$('bInclV').onclick=()=>{UI.inclVids=UI.inclVids===false;saveUI();renderInclV();};renderInclV();
 $('bSaveSess').onclick=saveSession;$('bSaveSamp').onclick=saveSamples;$('bNewSess').onclick=openInit;
 $('fOpen').onchange=e=>{const f=e.target.files[0];e.target.value='';$('saveWin').classList.add('hidden');openFile(f);};
 $('fSamp').onchange=async e=>{const fs=[...e.target.files];e.target.value='';$('saveWin').classList.add('hidden');
