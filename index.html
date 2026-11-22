@@ -74,6 +74,10 @@ body.wide #panelsL:empty{min-height:40px}
 .pages{display:flex;gap:4px;flex:1}
 .pages button{flex:1;padding:7px 0;font-size:11px;background:#3a3a50;position:relative}
 .pages button.view{background:var(--air);color:var(--ink);font-weight:700}
+.pages button.skipEd{background:var(--air);color:var(--ink);font-weight:700;flex:2.2;box-shadow:0 0 0 2px var(--w)}
+.steps button.skip{opacity:.18;background-image:repeating-linear-gradient(135deg,transparent 0 5px,rgba(255,255,255,.12) 5px 7px)!important}
+.steps button.skOn{outline:3px solid var(--air)!important;outline-offset:-3px}
+.steps button.skOff{opacity:.25}
 .pages button.play::after{content:"";position:absolute;left:50%;bottom:2px;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:var(--fire)}
 .steps{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;margin-top:8px}
 .steps button{height:30px;padding:0;font-size:10px;background:#28273a;border-radius:6px}
@@ -490,6 +494,7 @@ const S={bpm:92,swing:0,format:'auto',trackFx:[[],[],[],[]],trackFxOn:[true,true
 try{const j=JSON.parse(localStorage.getItem(KEY)||'null');if(j&&j.patterns)Object.assign(S,j);}catch(e){}
 S.patterns.forEach(P=>P.forEach(t=>{while(t.length<MAXST)t.push(null);}));
 if(!Array.isArray(S.patLen)||S.patLen.length!==16)S.patLen=Array(16).fill(1);
+if(!Array.isArray(S.skip)||S.skip.length!==16)S.skip=Array.from({length:16},()=>[]);
 function fixPadArrays(){for(const k in PAD_DEF){if(!Array.isArray(S[k]))S[k]=[];while(S[k].length<NP)S[k].push(PAD_DEF[k]);}}
 fixPadArrays();
 if(!Array.isArray(S.trackFx)||S.trackFx.length!==4)S.trackFx=[[],[],[],[]];
@@ -501,6 +506,10 @@ function fixTrackFx(){
 fixTrackFx();
 const tAmt=(t,k)=>{const v=S.trackFxAmt[t][k];return v==null?50:v;};
 const plen=p=>S.patLen[p]*16;
+/* skipped steps: grayed out per pattern, the playhead jumps over them so the bar gets shorter */
+const isSkip=(p,s)=>!!(S.skip&&S.skip[p]&&S.skip[p].includes(s));
+const actSteps=p=>{let n=0;for(let i=0;i<plen(p);i++)if(!isSkip(p,i))n++;return n||plen(p);};
+function nextLive(p,s){while(s<plen(p)&&isSkip(p,s))s++;return s;}
 /* a step is empty, one sound {pad,semi,n}, or a stack (array) of up to 4 */
 const MAXSTACK=4;
 const cellEvs=c=>!c?[]:Array.isArray(c)?c:[c];
@@ -670,6 +679,7 @@ function start(at){
   playing=true;step=0;
   if(chainOn&&S.chain.length){chainPos=0;curPat=S.chain[0];}
   else if(queued!==null){curPat=queued;queued=null;}
+  step=nextLive(curPat,0);if(step>=plen(curPat))step=0;
   nextTime=at||ctx.currentTime+0.06;
   clearInterval(timer);timer=setInterval(tick,25);tick();renderTransport();
 }
@@ -683,8 +693,8 @@ function tick(){
   while(nextTime<ctx.currentTime+0.12+playStep()*0.5){
     const t=nextTime+(step%2?S.swing*playStep()*0.5:0);
     scheduleStep(step,t);
-    nextTime+=playStep();step++;
-    if(step>=plen(curPat)){step=0;advance();}
+    nextTime+=playStep();step=nextLive(curPat,step+1);
+    if(step>=plen(curPat)){advance();step=nextLive(curPat,0);if(step>=plen(curPat))step=0;}
   }
 }
 function advance(){
@@ -1565,7 +1575,7 @@ const NUD=1/24;let selStep=-1,nudgeAll=false;
 function stepPress(b,s){
   let tm=null,held=false;
   b.onpointerdown=e=>{e.preventDefault();held=false;clearTimeout(tm);
-    tm=setTimeout(()=>{held=true;const gi=viewPage*16+s;if(S.patterns[editPat][selTrack][gi]){selStep=gi;try{navigator.vibrate&&navigator.vibrate(15);}catch(_){}renderSteps();}},420);};
+    tm=setTimeout(()=>{if(skipEdit>=0)return;held=true;const gi=viewPage*16+s;if(S.patterns[editPat][selTrack][gi]){selStep=gi;try{navigator.vibrate&&navigator.vibrate(15);}catch(_){}renderSteps();}},420);};
   b.onpointerup=()=>{clearTimeout(tm);if(!held)tapStep(s);};
   b.onpointercancel=b.onpointerleave=()=>clearTimeout(tm);
 }
@@ -1588,6 +1598,7 @@ function renderNudge(){
 function nudgeTxt(n){const t=Math.round(n/NUD),ms=Math.round(n*stepDur()*1000);return (t>0?'+':'')+t+'/24 '+(ms>0?'+':'')+ms+'ms';}
 let lastStepTap={gi:-1,t:0};
 function tapStep(s){
+  if(skipEdit>=0){toggleSkip(s);return;}
   initAudio();if(!hasPads())return;
   const row=S.patterns[editPat][selTrack],gi=viewPage*16+s,evs=cellEvs(row[gi]).map(e=>({...e})),now=performance.now();
   pushUndo('st'+editPat+'.'+selTrack+'.'+gi);
@@ -1627,7 +1638,8 @@ function renderSteps(){
       b.innerHTML=evs.length>1?(Math.floor(ev.pad/16)===bank?String(ev.pad%16+1):padLabel(ev.pad))+'<sup class="stk">'+evs.length+'</sup>':(Math.floor(ev.pad/16)===bank?String(ev.pad%16+1):padLabel(ev.pad))+(ev.semi?'·'+ev.semi:'');}
     else{b.style.background='';b.style.color='';b.textContent='';}
     b.classList.toggle('sel',!nudgeAll&&off+s===selStep&&!!ev);
-    b.classList.toggle('nl',!!(ev&&ev.n<0));b.classList.toggle('nr',!!(ev&&ev.n>0));});
+    b.classList.toggle('nl',!!(ev&&ev.n<0));b.classList.toggle('nr',!!(ev&&ev.n>0));
+    const sk=isSkip(editPat,off+s);b.classList.toggle('skip',sk&&skipEdit<0);b.classList.toggle('skOn',skipEdit>=0&&!sk);b.classList.toggle('skOff',skipEdit>=0&&sk);});
   renderNudge();
   renderPages();
 }
@@ -1814,10 +1826,27 @@ function renderBanks(){
 }
 function renderFx(){FXL.forEach(([k])=>{fxEls[k].classList.toggle('fon',fx[k]&&!latched[k]);fxEls[k].classList.toggle('latch',latched[k]);});}
 function renderPats(){patEls.forEach((b,i)=>{b.classList.toggle('cur',i===editPat);b.classList.toggle('q',i===queued);b.classList.toggle('has',S.patterns[i].some(t=>t.slice(0,plen(i)).some(s=>s)));});}
+let skipEdit=-1,pgT=null;
+function pageDown(i){
+  clearTimeout(pgT);
+  if(skipEdit>=0){skipEdit=-1;renderSteps();return;}/* tap the box again to finish */
+  viewPage=i;renderSteps();setPlayhead(playing&&playPage===i?curStep:-1);
+  pgT=setTimeout(()=>{skipEdit=i;viewPage=i;pushUndo();try{navigator.vibrate&&navigator.vibrate(20);}catch(_){}renderSteps();},450);
+}
+function pageUp(i){clearTimeout(pgT);}
+function toggleSkip(s){
+  const p=editPat,g=viewPage*16+s,a=S.skip[p],k=a.indexOf(g);
+  if(k>=0)a.splice(k,1);
+  else{if(a.length>=plen(p)-1){toast('Keep at least 1 step on.',1200);return;}a.push(g);a.sort((x,y)=>x-y);}
+  save();renderSteps();
+}
 function renderPages(){
   const n=S.patLen[editPat],el=$('pages');$('bLen').textContent='LEN '+n;
-  if(el.childElementCount!==n){el.innerHTML='';for(let i=0;i<n;i++){const b=document.createElement('button');b.textContent=i+1;b.onpointerdown=e=>{e.preventDefault();viewPage=i;renderSteps();setPlayhead(playing&&playPage===i?curStep:-1);};el.appendChild(b);}}
-  [...el.children].forEach((b,i)=>{b.classList.toggle('view',i===viewPage);b.classList.toggle('play',playing&&i===playPage&&curPat===editPat);});
+  if(el.childElementCount!==n){el.innerHTML='';for(let i=0;i<n;i++){const b=document.createElement('button');b.textContent=i+1;b.onpointerdown=e=>{e.preventDefault();pageDown(i);};b.onpointerup=b.onpointercancel=()=>pageUp(i);el.appendChild(b);}}
+  [...el.children].forEach((b,i)=>{
+    const sk=S.skip[editPat].filter(x=>Math.floor(x/16)===i).length;
+    b.textContent=skipEdit===i?(16-sk)+' STEPS':sk?(i+1)+' · '+(16-sk):String(i+1);
+    b.classList.toggle('skipEd',skipEdit===i);b.classList.toggle('view',i===viewPage);b.classList.toggle('play',playing&&i===playPage&&curPat===editPat);});
   $('bFollow').classList.toggle('on',follow);
 }
 function renderChain(){
@@ -1883,13 +1912,13 @@ $('pEdit').onclick=()=>{const p=pads[selPad];let idx=-1;if(p&&p.srcId!=null)idx=
 $('pClr').onclick=()=>{pushUndo();padsChanged();pads[selPad]=null;renderAll();};
 $('bChain').onclick=()=>{chainOn=!chainOn;renderChain();};
 $('bChainClr').onclick=()=>{pushUndo();S.chain=[];save();renderChain();};
-$('bCopy').onclick=()=>{pushUndo();const n=(editPat+1)%16;S.patterns[n]=JSON.parse(JSON.stringify(S.patterns[editPat]));S.patLen[n]=S.patLen[editPat];save();if(!playing){curPat=editPat=n;}renderPats();renderSteps();};
+$('bCopy').onclick=()=>{pushUndo();const n=(editPat+1)%16;S.patterns[n]=JSON.parse(JSON.stringify(S.patterns[editPat]));S.patLen[n]=S.patLen[editPat];S.skip[n]=[...S.skip[editPat]];save();if(!playing){curPat=editPat=n;}renderPats();renderSteps();};
 $('bClrTrk').onclick=()=>{pushUndo();S.patterns[editPat][selTrack]=mkTrack();save();renderSteps();renderPats();};
-$('bClrPat').onclick=()=>{pushUndo();S.patterns[editPat]=mkPat();save();renderSteps();renderPats();};
+$('bClrPat').onclick=()=>{pushUndo();S.patterns[editPat]=mkPat();S.skip[editPat]=[];save();renderSteps();renderPats();};
 $('bLen').onclick=()=>{pushUndo('len');
   const p=editPat,old=S.patLen[p],nx=LENS[(LENS.indexOf(old)+1)%LENS.length];
   if(nx>old){S.patterns[p].forEach(t=>{for(let b=old;b<nx;b++)for(let k=0;k<16;k++){const src=t[(b%old)*16+k];t[b*16+k]=src?JSON.parse(JSON.stringify(src)):null;}});}
-  S.patLen[p]=nx;if(viewPage>=nx)viewPage=0;save();renderSteps();renderPats();
+  S.patLen[p]=nx;S.skip[p]=S.skip[p].filter(i=>i<nx*16);if(viewPage>=nx)viewPage=0;save();renderSteps();renderPats();
 };
 $('bFollow').onclick=()=>{follow=!follow;renderPages();};
 $('eFmt').onchange=e=>{S.format=e.target.value;save();applyFormat();renderExp();};
@@ -1916,7 +1945,7 @@ $('aRemove').onclick=removeSource;
 
 /* ---------- undo ---------- */
 const undoS=[],redoS=[];let lastPush={k:null,t:0};
-function snap(){return {pat:JSON.stringify(S.patterns),len:[...S.patLen],chain:[...S.chain],
+function snap(){return {pat:JSON.stringify(S.patterns),len:[...S.patLen],skip:JSON.stringify(S.skip),chain:[...S.chain],
   pp:JSON.stringify({trackFx:S.trackFx,trackFxOn:S.trackFxOn,trackFxAmt:S.trackFxAmt,padChoke:S.padChoke,padSemi:S.padSemi,padVol:S.padVol,padRev:S.padRev,padFi:S.padFi,padFo:S.padFo,padDecay:S.padDecay,padMode:S.padMode,padFreeze:S.padFreeze}),
   pads:[...pads],srcs:sources.map(x=>({id:x.id,s:x.sel?x.sel.s:null,e:x.sel?x.sel.e:null,slip:x.slip||0}))};}
 function pushUndo(k){
@@ -1925,7 +1954,7 @@ function pushUndo(k){
   lastPush={k,t:n};undoS.push(snap());if(undoS.length>60)undoS.shift();redoS.length=0;renderUndo();
 }
 function restore(x){
-  S.patterns=JSON.parse(x.pat);S.patLen=[...x.len];S.chain=[...x.chain];Object.assign(S,JSON.parse(x.pp));for(let t=0;t<4;t++)applyTrackFx(t);
+  S.patterns=JSON.parse(x.pat);S.patLen=[...x.len];S.skip=x.skip?JSON.parse(x.skip):Array.from({length:16},()=>[]);S.chain=[...x.chain];Object.assign(S,JSON.parse(x.pp));for(let t=0;t<4;t++)applyTrackFx(t);
   pads=[...x.pads];pads.forEach(p=>{if(p)p.slipTarget=null;});
   x.srcs.forEach(o=>{const sc=sources.find(y=>y.id===o.id);if(sc&&o.s!=null){sc.sel={s:o.s,e:o.e};sc.slip=o.slip;}});
   if(viewPage>=S.patLen[editPat])viewPage=0;
@@ -2020,12 +2049,13 @@ async function padFromRecord(rec){
   const p={buf,rbuf:reverseOf(buf),cat:m.cat||'TONE',name:m.name||undefined,len,start:m.start||0,slip:m.slip||0,srcId:null,srcName:m.srcName,srcKey:m.srcKey||null,frames,fps:frames.length/len,thumb:frames[0].toDataURL('image/jpeg',0.6)};
   recCache.set(p,rec);return p;
 }
-function stateJSON(){return {bpm:S.bpm,swing:S.swing,format:S.format,trackFx:S.trackFx,trackFxOn:S.trackFxOn,trackFxAmt:S.trackFxAmt,patterns:S.patterns,patLen:S.patLen,chain:S.chain,padChoke:S.padChoke,padSemi:S.padSemi,padVol:S.padVol,padRev:S.padRev,padFi:S.padFi,padFo:S.padFo,padDecay:S.padDecay,padMode:S.padMode,padFreeze:S.padFreeze};}
+function stateJSON(){return {bpm:S.bpm,swing:S.swing,format:S.format,trackFx:S.trackFx,trackFxOn:S.trackFxOn,trackFxAmt:S.trackFxAmt,patterns:S.patterns,patLen:S.patLen,skip:S.skip,chain:S.chain,padChoke:S.padChoke,padSemi:S.padSemi,padVol:S.padVol,padRev:S.padRev,padFi:S.padFi,padFo:S.padFo,padDecay:S.padDecay,padMode:S.padMode,padFreeze:S.padFreeze};}
 function applyState(st){
-  const keys=['bpm','swing','format','trackFx','trackFxOn','trackFxAmt','patterns','patLen','chain','padChoke','padSemi','padVol','padRev','padFi','padFo','padDecay','padMode','padFreeze'];
+  const keys=['bpm','swing','format','trackFx','trackFxOn','trackFxAmt','patterns','patLen','skip','chain','padChoke','padSemi','padVol','padRev','padFi','padFo','padDecay','padMode','padFreeze'];
   keys.forEach(k=>{if(st[k]!=null)S[k]=st[k];});
   S.patterns.forEach(P=>P.forEach(t=>{while(t.length<MAXST)t.push(null);}));
   if(!Array.isArray(S.patLen)||S.patLen.length!==16)S.patLen=Array(16).fill(1);
+  if(!Array.isArray(S.skip)||S.skip.length!==16)S.skip=Array.from({length:16},()=>[]);
   fixPadArrays();if(!Array.isArray(S.trackFx)||S.trackFx.length!==4)S.trackFx=[[],[],[],[]];if(!Array.isArray(S.trackFxOn)||S.trackFxOn.length!==4)S.trackFxOn=[true,true,true,true];fixTrackFx();
   for(let t=0;t<4;t++)applyTrackFx(t);viewPage=0;save();applyFormat();
 }
@@ -2116,7 +2146,7 @@ async function loadSampleList(list){
 /* INIT: clear patterns, pads, or everything (undo brings back pads and patterns) */
 function clearPatterns(quiet){
   if(playing)stop();if(!quiet)pushUndo();
-  Object.assign(S,{patterns:mkPats(),patLen:Array(16).fill(1),chain:[]});
+  Object.assign(S,{patterns:mkPats(),patLen:Array(16).fill(1),skip:Array.from({length:16},()=>[]),chain:[]});
   curPat=editPat=0;viewPage=0;queued=null;selStep=-1;lastHit=[null,null,null,null];chainOn=false;
   save();renderAll();if(!quiet)toast('Patterns cleared. Undo brings them back.',2400);
 }
@@ -2191,7 +2221,7 @@ async function exportClip(){
   if(playing)stop();
   const lenSel=$('eLen').value,bars=expBars()*expLoops;
   if(lenSel==='chain'&&!chainOn&&S.chain.length){chainOn=true;renderChain();}
-  const durS=bars*16*stepDur();
+  const durS=expSteps()*expLoops*stepDur();
   const stream=new MediaStream([...cv.captureStream(30).getVideoTracks(),...recDest.stream.getAudioTracks()]);
   let rec;try{rec=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:6e6}:{});}catch(e){try{rec=new MediaRecorder(stream);}catch(e2){modal('Could not start the recorder in this browser.');return;}}
   const chunks=[];rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
@@ -2216,11 +2246,12 @@ async function holdAwake(on){
 }
 document.addEventListener('visibilitychange',()=>{if(!exporting)return;if(document.hidden)expHidden=true;else holdAwake(true);});
 let expLoops=1;
+function expSteps(){const v=$('eLen').value;return v==='chain'?(S.chain.length?S.chain.reduce((a,p)=>a+actSteps(p),0):actSteps(curPat)):v==='pat'?actSteps(queued!=null?queued:curPat):+v*16;}
 function expBars(){const v=$('eLen').value;return v==='chain'?(S.chain.length?S.chain.reduce((a,p)=>a+S.patLen[p],0):S.patLen[curPat]):v==='pat'?S.patLen[queued!=null?queued:curPat]:+v;}
 function renderExp(){
   document.querySelectorAll('#eLoops button').forEach(b=>b.classList.toggle('on',+b.dataset.l===expLoops));
-  const b=expBars(),tot=b*expLoops,sec=tot*16*stepDur();
-  $('eSum').innerHTML='<p>'+b+(b>1?' bars':' bar')+' × '+expLoops+' = <b>'+tot+' bars</b>, about '+(sec<60?sec.toFixed(1)+' seconds':Math.floor(sec/60)+' min '+Math.round(sec%60)+' s')+' at '+S.bpm+' BPM. It starts on the downbeat and ends right on the bar, so it loops clean.</p>';
+  const b=expBars(),tot=b*expLoops,sec=expSteps()*expLoops*stepDur(),sk=expSteps()!==b*16;
+  $('eSum').innerHTML='<p>'+(sk?expSteps()+' steps':b+(b>1?' bars':' bar'))+' × '+expLoops+' = <b>'+(sk?expSteps()*expLoops+' steps':tot+' bars')+'</b>, about '+(sec<60?sec.toFixed(1)+' seconds':Math.floor(sec/60)+' min '+Math.round(sec%60)+' s')+' at '+S.bpm+' BPM. It starts on the downbeat and ends right on the bar, so it loops clean.</p>';
 }
 document.querySelectorAll('#eLoops button').forEach(b=>b.onclick=()=>{expLoops=+b.dataset.l;renderExp();});
 $('eLen').onchange=renderExp;
