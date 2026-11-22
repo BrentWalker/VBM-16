@@ -48,6 +48,7 @@ button:disabled{opacity:.35}
 .transport>button{padding:0;height:44px;position:relative}
 .transport .bpm{height:44px;flex:1.7}
 #bRec{color:var(--fire)}
+.pad.erasing{outline:3px solid var(--fire);outline-offset:-3px;filter:saturate(.3) brightness(.7)}
 #bMet.on{background:var(--water)!important}
 #bView.focus{background:var(--purple)}
 #bView .vb{position:absolute;right:4px;bottom:3px;font-size:8px;font-weight:700;opacity:.8}
@@ -644,14 +645,17 @@ function advance(){
   if(chainOn&&S.chain.length){chainPos=(chainPos+1)%S.chain.length;curPat=S.chain[chainPos];}
   else if(queued!==null){curPat=queued;queued=null;}
 }
+let eraseDirty=false;
 function scheduleStep(s,t){
   if(UI.metro&&!exporting&&s%4===0)click(t,s%16===0);
   const pat=S.patterns[curPat],stut=fx.STUT16?1:fx.STUT8?2:0;
   for(let tr=0;tr<4;tr++){
     if(muted[tr])continue;
     if(stut){if(s%stut===0&&lastHit[tr])trigger(tr,lastHit[tr].pad,lastHit[tr].semi,t);continue;}
+    if(eraseHeld.size&&recHeld&&!exporting){const c=cellEvs(pat[tr][s]),k=c.filter(x=>!eraseHeld.has(x.pad));if(k.length!==c.length){pat[tr][s]=packCell(k);eraseDirty=true;}}
     const evs=cellEvs(pat[tr][s]);evs.forEach(ev=>{trigger(tr,ev.pad,ev.semi,Math.max(ctx.currentTime,t+(ev.n||0)*playStep()));lastHit[tr]=ev;});
   }
+  if(eraseDirty){eraseDirty=false;save();if(curPat===editPat)renderSteps();renderPats();}
   const e={s,t,p:curPat};uiQ.push(e);sched.push(e);if(sched.length>48)sched.shift();
 }
 
@@ -1444,8 +1448,8 @@ function buildUI(){
     w.append(b,m);$('tracks').append(w);trkEls.push({b,m});
   }
   for(let s=0;s<16;s++){const b=document.createElement('button');if(s%4===0)b.classList.add('beat');stepPress(b,s);$('steps').append(b);stepEls.push(b);}
-  for(let i=0;i<16;i++){const b=document.createElement('button');b.className='pad';b.innerHTML='<span class="n"></span><span class="i"></span><span class="k"></span>';b.onpointerdown=e=>{e.preventDefault();if(clearMode){clearPad(bank*16+i);return;}if(recHeld){erasePad(keys?selPad:bank*16+i);return;}try{b.setPointerCapture(e.pointerId);}catch(_){}tapPad(i);};
-    b.onpointerup=b.onpointercancel=()=>endLive(i);
+  for(let i=0;i<16;i++){const b=document.createElement('button');b.className='pad';b.innerHTML='<span class="n"></span><span class="i"></span><span class="k"></span>';b.onpointerdown=e=>{e.preventDefault();if(clearMode){clearPad(bank*16+i);return;}if(recHeld){const ep=keys?selPad:bank*16+i;b._ep=ep;eraseStart(ep);return;}try{b.setPointerCapture(e.pointerId);}catch(_){}tapPad(i);};
+    b.onpointerup=b.onpointercancel=()=>{if(b._ep!=null){eraseEnd(b._ep);b._ep=null;return;}endLive(i);};
     $('pads').append(b);padEls.push(b);}
   FXL.forEach(([k,l])=>{
     const b=document.createElement('button');b.textContent=l;
@@ -1576,6 +1580,7 @@ function renderPads(){
   padEls.forEach((b,i)=>{
     const p=keys?pads[selPad]:pads[bank*16+i];
     b.style.backgroundImage=p?'url('+p.thumb+')':'none';
+    b.classList.toggle('erasing',eraseHeld.has(keys?selPad:bank*16+i));
     b.querySelector('.n').textContent=keys?'':(i+1);
     b.querySelector('.i').textContent=p&&!keys?CATS[p.cat].i:'';
     b.querySelector('.i').style.color=p?CATS[p.cat].c:'';
@@ -1729,20 +1734,17 @@ $('bPlay').onclick=()=>{playing?stop():start();};
 $('snM4').onclick=()=>nudge(-4);$('snM1').onclick=()=>nudge(-1);$('snP1').onclick=()=>nudge(1);$('snP4').onclick=()=>nudge(4);$('snV').onclick=()=>nudge(0);
 $('snAll').onclick=()=>{nudgeAll=!nudgeAll;renderSteps();};
 $('bMet').onclick=()=>{initAudio();UI.metro=!UI.metro;saveUI();renderTransport();};
-/* Hold REC + tap a pad: erase that pad from the pattern (every track). A tap on REC still arms recording. */
-let recHeld=false,recUsed=false;
+/* Hold REC + hold a pad while playing: erase that pad from each step as the playhead passes. A tap on REC still arms recording. */
+let recHeld=false,recUsed=false;const eraseHeld=new Set();
 $('bRec').onpointerdown=e=>{e.preventDefault();recHeld=true;recUsed=false;try{$('bRec').setPointerCapture(e.pointerId);}catch(_){}};
-$('bRec').onpointerup=()=>{if(recHeld&&!recUsed){recArm=!recArm;renderTransport();}recHeld=false;};
-$('bRec').onpointercancel=()=>{recHeld=false;};
-function erasePad(pi){
-  recUsed=true;if(!pads[pi]){toast('That pad is empty.',1200);return;}
-  const pat=S.patterns[playing?curPat:editPat];let n=0;
-  if(!pat.some(row=>row.some(c=>cellEvs(c).some(x=>x.pad===pi)))){toast('Pad '+padLabel(pi)+' is not in this pattern.',1400);return;}
-  pushUndo();
-  pat.forEach((row,t)=>row.forEach((c,s)=>{const evs=cellEvs(c),keep=evs.filter(x=>x.pad!==pi);if(keep.length!==evs.length){n+=evs.length-keep.length;row[s]=packCell(keep);}}));
-  try{navigator.vibrate&&navigator.vibrate(20);}catch(_){}
-  save();renderSteps();renderPats();toast('Erased pad '+padLabel(pi)+' from pattern '+((playing?curPat:editPat)+1)+'.',1600);
+$('bRec').onpointerup=()=>{if(recHeld&&!recUsed){recArm=!recArm;renderTransport();}recHeld=false;eraseHeld.clear();renderPads();};
+$('bRec').onpointercancel=()=>{recHeld=false;eraseHeld.clear();renderPads();};
+function eraseStart(pi){
+  recUsed=true;if(!pads[pi])return;
+  if(!playing){toast('Press play, then hold REC and the pad to erase it.',1800);return;}
+  pushUndo();eraseHeld.add(pi);try{navigator.vibrate&&navigator.vibrate(15);}catch(_){}renderPads();
 }
+function eraseEnd(pi){if(eraseHeld.delete(pi))renderPads();}
 $('bKeys').onclick=()=>{keys=!keys;renderPads();renderTransport();renderChords();};
 $('bView').onclick=()=>{view=view==='mix'?'focus':view==='focus'?1:view===1?4:'mix';UI.view=view;saveUI();renderTransport();
   toast(view==='mix'?'MIX: every sound that is playing gets its own piece of the screen.':view==='focus'?'FOCUS: video follows the selected track ('+TL[selTrack]+').':view===1?'LATEST: only the most recent hit.':'TRACKS: one quarter per track.',1800);};
