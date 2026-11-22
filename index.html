@@ -520,6 +520,19 @@ function initAudio(){
   if(ctx.state!=='running')ctx.resume();
 }
 document.addEventListener('pointerdown',initAudio,{passive:true});
+/* iPhone: recording from the camera turns on the mic and interrupts the audio engine. Wake it (or rebuild it) when we come back */
+function wakeAudio(){
+  try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}
+  if(ctx&&ctx.state!=='running'){try{ctx.resume().catch(()=>{});}catch(e){}}
+}
+function resetAudio(){
+  try{ctx&&ctx.close();}catch(e){}
+  ctx=null;trackG=[];TN=[];voices=[[],[],[],[]];vq=[[],[],[],[]];
+  initAudio();FXL.forEach(([k])=>{if(fx[k])setFx(k,true);});
+}
+function audioReady(){if(!ctx){initAudio();return;}if(ctx.state==='interrupted'||ctx.state==='closed')resetAudio();else wakeAudio();}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)wakeAudio();});
+window.addEventListener('focus',wakeAudio);window.addEventListener('pageshow',wakeAudio);
 
 const tfxOn=(tr,k)=>S.trackFxOn[tr]&&S.trackFx[tr].includes(k);
 const driveCache={};
@@ -756,11 +769,17 @@ function buildTypePick(){
   });
   $('tpCancel').onclick=()=>{$('typePick').classList.add('hidden');if(pendingVid){pendingVid.v.remove();try{URL.revokeObjectURL(pendingVid.url);}catch(e){}pendingVid=null;}edBusy=false;estDone();};
 }
+function isSilent(buf){let pk=0;for(let c=0;c<buf.numberOfChannels;c++){const d=buf.getChannelData(c);for(let i=0;i<d.length;i+=7){const a=Math.abs(d[i]);if(a>pk)pk=a;}}return pk<0.0005;}
+function silentRetry(pv,type){
+  edBusy=false;est('This clip came in with no sound. That can happen right after recording with the camera. Tap TRY AGAIN.');
+  const b=$('estBtn');b.textContent='TRY AGAIN';b.classList.remove('hidden');
+  b.onclick=()=>{b.classList.add('hidden');resetAudio();pendingVid=pv;pickType(type);};
+}
 /* runs inside the tap, so the silent listen is allowed to start right away */
 function pickType(type){
   $('typePick').classList.add('hidden');
   const pv=pendingVid;pendingVid=null;if(!pv)return;
-  initAudio();
+  audioReady();
   const {file,url,v}=pv,id=++srcSeq;
   const src={id,name:'V'+id,type,url,video:v,vdur:v.duration||0,aspect:v.videoWidth/v.videoHeight,slip:0,autoChop:UI.autoChop!==false};
   const secs=Math.min(MAXLISTEN,src.vdur||MAXLISTEN);
@@ -771,9 +790,11 @@ function pickType(type){
   (async()=>{
     let audio=null;
     try{const ab=await file.arrayBuffer();audio=await Promise.race([decode(ab),new Promise((_,rej)=>setTimeout(()=>rej('t'),8000))]);}catch(e){audio=null;}
-    if(audio){L.cancel();finishSource(src,audio);return;}
+    if(audio&&!isSilent(audio)){L.cancel();finishSource(src,audio);return;}
     showProg=true;
-    try{const a=await L.promise;finishSource(src,a);}
+    try{const a=await L.promise;
+      if(isSilent(a)){silentRetry(pv,type);return;}
+      finishSource(src,a);}
     catch(e){v.remove();estErr('Could not get the audio from this video. Try an MP4 or MOV that has sound.');}
   })();
 }
