@@ -67,6 +67,8 @@ button:disabled{opacity:.35}
 .steps{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;margin-top:8px}
 .steps button{height:30px;padding:0;font-size:10px;background:#28273a;border-radius:6px}
 .steps button.beat{box-shadow:inset 0 0 0 1px rgba(173,207,222,.35)}
+.chordRow button{padding:8px 0;font-size:10px}
+.steps button sup.stk{font-size:8px;font-weight:800;background:var(--ink);color:var(--w);border-radius:6px;padding:0 3px;margin-left:2px;vertical-align:4px}
 .steps button.sel{outline:2px dashed var(--fire);outline-offset:-3px}
 .steps button.nl{box-shadow:inset 3px 0 0 var(--ink)}
 .steps button.nr{box-shadow:inset -3px 0 0 var(--ink)}
@@ -255,6 +257,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
   <div class="row slip"><button id="snM4">◀◀</button><button id="snM1">◀</button><button class="val" id="snV">HOLD A STEP TO NUDGE</button><button id="snP1">▶</button><button id="snP4">▶▶</button><button id="snAll" style="flex:0 0 46px;font-size:10px">ALL</button></div>
   </section>
   <section class="panel tight" id="secPads"><h3>BANKS <span id="bankName">BANK 1</span></h3>
+  <div class="row seg chordRow hidden" id="chordRow" style="margin:0 0 8px"></div>
   <div class="banks" id="banks"></div>
   <div class="pads" id="pads" style="margin-top:0"></div>
   <div class="row"><button id="bHoldClr" class="danger" style="padding:12px 0">HOLD HERE + TAP A BANK OR PAD TO CLEAR</button></div>
@@ -462,6 +465,10 @@ function fixTrackFx(){
 fixTrackFx();
 const tAmt=(t,k)=>{const v=S.trackFxAmt[t][k];return v==null?50:v;};
 const plen=p=>S.patLen[p]*16;
+/* a step is empty, one sound {pad,semi,n}, or a stack (array) of up to 4 */
+const MAXSTACK=4;
+const cellEvs=c=>!c?[]:Array.isArray(c)?c:[c];
+const packCell=a=>!a.length?null:a.length===1?a[0]:a;
 let viewPage=0,follow=true,playPage=-1;
 let saveT=null;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}},400);}
 
@@ -574,7 +581,7 @@ function trigger(tr,pi,semi,t,live){
   /* polyphonic by default: only pads in the same mute group cut each other, and a looping pad stops when it plays again */
   const grp=S.padChoke[pi]||0;
   voices.forEach(list=>{for(let k=list.length-1;k>=0;k--){const o=list[k];
-    if(o.start<=t&&((grp&&o.grp===grp)||(o.pad===pi&&o.vis&&o.vis.loop))){release(o,t,0.006);list.splice(k,1);}}});
+    if(o.start<=t&&Math.abs(o.start-t)>0.002&&((grp&&o.grp===grp)||(o.pad===pi&&o.vis&&o.vis.loop))){release(o,t,0.006);list.splice(k,1);}}});
   const vs=voices[tr];
   const vis={pad:pi,tr,start:t,rate,rev,loop:mode==='loop',end};
   const v={src,g,start:t,vis,fo,pad:pi,grp};vs.push(v);src.onended=()=>{const i=vs.indexOf(v);if(i>=0)vs.splice(i,1);};
@@ -643,7 +650,7 @@ function scheduleStep(s,t){
   for(let tr=0;tr<4;tr++){
     if(muted[tr])continue;
     if(stut){if(s%stut===0&&lastHit[tr])trigger(tr,lastHit[tr].pad,lastHit[tr].semi,t);continue;}
-    const ev=pat[tr][s];if(ev){trigger(tr,ev.pad,ev.semi,Math.max(ctx.currentTime,t+(ev.n||0)*playStep()));lastHit[tr]=ev;}
+    const evs=cellEvs(pat[tr][s]);evs.forEach(ev=>{trigger(tr,ev.pad,ev.semi,Math.max(ctx.currentTime,t+(ev.n||0)*playStep()));lastHit[tr]=ev;});
   }
   const e={s,t,p:curPat};uiQ.push(e);sched.push(e);if(sched.length>48)sched.shift();
 }
@@ -1455,21 +1462,49 @@ function buildUI(){
   buildTfx();buildBanks($('banks'),b=>setBank(b));buildBanks($('edBanks'),b=>setBank(b));
 }
 const liveV={};
-function endLive(i){const v=liveV[i];if(v&&ctx){release(v,ctx.currentTime);delete liveV[i];}}
+function endLive(i){const v=liveV[i];if(v&&ctx){(Array.isArray(v)?v:[v]).forEach(x=>release(x,ctx.currentTime));delete liveV[i];}}
 function tapPad(i){
   initAudio();
   let pi,semi;
   if(keys){pi=selPad;const r=Math.floor(i/4),c=i%4;semi=(3-r)*4+c;lastSemi=semi;}
   else{pi=bank*16+i;semi=0;if(selPad!==pi){selPad=pi;renderPadPanel();}}
   if(!pads[pi]){renderPads();return;}
-  const lv=trigger(selTrack,pi,semi,ctx.currentTime,true);
-  if(lv&&S.padMode[pi]!=='one')liveV[i]=lv;
+  const played=keys&&chord!=='off'?chordSemis(semi):[semi],now0=ctx.currentTime;
+  const lvs=played.map(sm=>trigger(selTrack,pi,sm,now0,true)).filter(Boolean);
+  if(lvs.length&&S.padMode[pi]!=='one')liveV[i]=lvs;
   lastHit[selTrack]={pad:pi,semi};
   if(playing&&recArm&&sched.length){
     const now=ctx.currentTime;let best=sched[0];for(const e of sched)if(Math.abs(e.t-now)<Math.abs(best.t-now))best=e;
-    pushUndo('rec');S.patterns[best.p][selTrack][best.s]={pad:pi,semi};save();if(best.p===editPat)renderSteps();renderPats();
+    pushUndo('rec');const row=S.patterns[best.p][selTrack],evs=cellEvs(row[best.s]).map(e=>({...e}));
+    played.forEach(sm=>{if(!evs.some(x=>x.pad===pi&&x.semi===sm)&&evs.length<MAXSTACK)evs.push({pad:pi,semi:sm});});
+    row[best.s]=packCell(evs);save();if(best.p===editPat)renderSteps();renderPats();
   }
   renderPads();
+}
+/* KEYS chord mode: one key plays a chord built on that note */
+const CHORDS=[['off','OFF'],['maj','MAJ'],['min','MIN'],['7','7'],['m7','m7'],['sus','SUS'],['auto','KEY']];
+const CH_IV={maj:[0,4,7],min:[0,3,7],'7':[0,4,7,10],m7:[0,3,7,10],sus:[0,5,7]};
+let chord=UI.chord||'off';
+const MAJ_SC=[0,2,4,5,7,9,11],MIN_SC=[0,2,3,5,7,8,10];
+function chordSemis(semi){
+  if(chord==='off')return [semi];
+  if(chord!=='auto')return CH_IV[chord].map(x=>semi+x);
+  /* KEY: build the chord from the scale the scale reader found for this pad's video */
+  const p=pads[selPad],kn=p?padNote(p):null,k=p&&p.srcKey;
+  if(kn==null||!k)return CH_IV.maj.map(x=>semi+x);
+  const root=NOTE.indexOf(k.split(' ')[0]),sc=(k.indexOf('minor')>=0?MIN_SC:MAJ_SC).map(x=>(x+root)%12);
+  const m=Math.round(kn+S.padSemi[selPad]+semi),pc=((m%12)+12)%12,deg=sc.indexOf(pc);
+  if(deg<0)return CH_IV.maj.map(x=>semi+x);
+  const up=d=>{let iv=((sc[(deg+d)%7]-pc)%12+12)%12;return iv;};
+  return [semi,semi+up(2),semi+up(4)];
+}
+function chordTag(semi){if(chord==='off')return '';if(chord!=='auto')return chord==='maj'?'':chord==='min'?'m':chord==='sus'?'sus':chord;
+  const c=chordSemis(semi);if(c.length<3)return '';const a=c[1]-c[0],b=c[2]-c[0];return a===3&&b===6?'°':a===3?'m':'';}
+function renderChords(){
+  const row=$('chordRow');row.classList.toggle('hidden',!keys);
+  if(!row.childElementCount){CHORDS.forEach(([k,l])=>{const b=document.createElement('button');b.textContent=l;b.dataset.c=k;
+    b.onclick=()=>{chord=k;UI.chord=k;saveUI();renderChords();renderPads();};row.appendChild(b);});}
+  [...row.children].forEach(b=>b.classList.toggle('on',b.dataset.c===chord));
 }
 /* tap a step to place or clear it, hold it to pick it for nudging */
 const NUD=1/24;let selStep=-1,nudgeAll=false;
@@ -1485,23 +1520,32 @@ function nudge(d){
   const targets=nudgeAll?row.map((ev,i)=>ev?i:-1).filter(i=>i>=0&&i<plen(editPat)):(selStep>=0&&row[selStep]?[selStep]:[]);
   if(!targets.length){$('snV').textContent='HOLD A STEP TO NUDGE';return;}
   pushUndo('nudgeStep');
-  targets.forEach(i=>{const ev=row[i];ev.n=d===0?0:Math.max(-12,Math.min(12,Math.round((ev.n||0)/NUD)+d))*NUD;if(!ev.n)delete ev.n;});
+  targets.forEach(i=>{const evs=cellEvs(row[i]),cur=evs[0].n||0,nn=d===0?0:Math.max(-12,Math.min(12,Math.round(cur/NUD)+d))*NUD;
+    evs.forEach(ev=>{if(nn)ev.n=nn;else delete ev.n;});});
   save();renderSteps();
 }
 function renderNudge(){
   const row=S.patterns[editPat][selTrack];$('snAll').classList.toggle('on',nudgeAll);
   let n=null;
-  if(nudgeAll){const evs=row.slice(0,plen(editPat)).filter(Boolean);n=evs.length?(evs[0].n||0):0;$('snV').textContent=evs.length?'ALL '+TL[selTrack]+' '+nudgeTxt(n):'NO STEPS ON '+TL[selTrack];return;}
-  if(selStep>=0&&row[selStep]){n=row[selStep].n||0;$('snV').textContent='STEP '+(selStep%16+1)+(S.patLen[editPat]>1?' BAR '+(Math.floor(selStep/16)+1):'')+' '+nudgeTxt(n);}
+  if(nudgeAll){const evs=row.slice(0,plen(editPat)).filter(Boolean).map(c=>cellEvs(c)[0]);n=evs.length?(evs[0].n||0):0;$('snV').textContent=evs.length?'ALL '+TL[selTrack]+' '+nudgeTxt(n):'NO STEPS ON '+TL[selTrack];return;}
+  if(selStep>=0&&row[selStep]){n=cellEvs(row[selStep])[0].n||0;$('snV').textContent='STEP '+(selStep%16+1)+(S.patLen[editPat]>1?' BAR '+(Math.floor(selStep/16)+1):'')+' '+nudgeTxt(n);}
   else $('snV').textContent='HOLD A STEP TO NUDGE';
 }
 function nudgeTxt(n){const t=Math.round(n/NUD),ms=Math.round(n*stepDur()*1000);return (t>0?'+':'')+t+'/24 '+(ms>0?'+':'')+ms+'ms';}
 function tapStep(s){
   initAudio();if(!hasPads())return;
   pushUndo();
-  const row=S.patterns[editPat][selTrack],gi=viewPage*16+s,ev=row[gi],semi=keys?lastSemi:0;
-  if(ev&&ev.pad===selPad&&ev.semi===semi)row[gi]=null;
-  else{row[gi]={pad:selPad,semi};selStep=gi;if(!playing)trigger(selTrack,selPad,semi,ctx.currentTime);}
+  const row=S.patterns[editPat][selTrack],gi=viewPage*16+s,evs=cellEvs(row[gi]).map(e=>({...e}));
+  const n0=evs.length?evs[0].n:undefined,mk=sm=>{const e={pad:selPad,semi:sm};if(n0)e.n=n0;return e;};
+  const add=keys&&chord!=='off'?chordSemis(lastSemi).map(mk):[mk(keys?lastSemi:0)];
+  const has=e=>evs.some(x=>x.pad===e.pad&&x.semi===e.semi);
+  if(add.every(has)){row[gi]=packCell(evs.filter(x=>!add.some(a=>a.pad===x.pad&&a.semi===x.semi)));}
+  else{
+    const next=evs.concat(add.filter(a=>!has(a)));
+    if(next.length>MAXSTACK)toast('A step holds up to '+MAXSTACK+' sounds. Kept the first '+MAXSTACK+'.',1800);
+    row[gi]=packCell(next.slice(0,MAXSTACK));selStep=gi;
+    if(!playing)add.forEach(a=>trigger(selTrack,a.pad,a.semi,ctx.currentTime));
+  }
   save();renderSteps();renderPats();
 }
 function tapPat(i){
@@ -1519,8 +1563,9 @@ function renderTracks(){trkEls.forEach(({b,m},t)=>{b.classList.toggle('sel',t===
 function renderSteps(){
   if(viewPage>=S.patLen[editPat])viewPage=0;
   const row=S.patterns[editPat][selTrack],off=viewPage*16;
-  stepEls.forEach((b,s)=>{const ev=row[off+s];
-    if(ev){const p=pads[ev.pad];b.style.background=p?CATS[p.cat].c:COL.purple;b.style.color=COL.ink;b.textContent=(Math.floor(ev.pad/16)===bank?String(ev.pad%16+1):padLabel(ev.pad))+(ev.semi?'·'+ev.semi:'');}
+  stepEls.forEach((b,s)=>{const evs=cellEvs(row[off+s]),ev=evs[0];
+    if(ev){const p=pads[ev.pad];b.style.background=p?CATS[p.cat].c:COL.purple;b.style.color=COL.ink;
+      b.innerHTML=evs.length>1?(Math.floor(ev.pad/16)===bank?String(ev.pad%16+1):padLabel(ev.pad))+'<sup class="stk">'+evs.length+'</sup>':(Math.floor(ev.pad/16)===bank?String(ev.pad%16+1):padLabel(ev.pad))+(ev.semi?'·'+ev.semi:'');}
     else{b.style.background='';b.style.color='';b.textContent='';}
     b.classList.toggle('sel',!nudgeAll&&off+s===selStep&&!!ev);
     b.classList.toggle('nl',!!(ev&&ev.n<0));b.classList.toggle('nr',!!(ev&&ev.n>0));});
@@ -1536,7 +1581,7 @@ function renderPads(){
     b.querySelector('.i').style.color=p?CATS[p.cat].c:'';
     const r=Math.floor(i/4),c=i%4,semi=(3-r)*4+c;
     const kn=keys&&p?padNote(p):null;
-    b.querySelector('.k').textContent=keys?(kn!=null?noteName(kn+S.padSemi[selPad]+semi):'+'+semi):'';
+    b.querySelector('.k').textContent=keys?(kn!=null?noteName(kn+S.padSemi[selPad]+semi).replace(/-?\d+$/,m=>chord==='off'?m:'')+(chord==='off'?'':chordTag(semi)):'+'+semi):'';
     b.classList.toggle('sel',keys?semi===lastSemi:bank*16+i===selPad);
   });
   renderBanks();
@@ -1627,7 +1672,7 @@ function moveBank(from,to){
   const mapPad=g=>newPos[Math.floor(g/16)]*16+g%16;
   const np=Array(NP).fill(null);for(let g=0;g<NP;g++)np[mapPad(g)]=pads[g];pads=np;
   for(const k in PAD_DEF){const a=S[k],na=a.slice();for(let g=0;g<NP;g++)na[mapPad(g)]=a[g];S[k]=na;}
-  S.patterns.forEach(P=>P.forEach(t=>t.forEach(ev=>{if(ev)ev.pad=mapPad(ev.pad);})));
+  S.patterns.forEach(P=>P.forEach(t=>t.forEach(c=>cellEvs(c).forEach(ev=>{ev.pad=mapPad(ev.pad);}))));
   lastHit=lastHit.map(h=>h?{...h,pad:mapPad(h.pad)}:h);vq=[[],[],[],[]];
   selPad=mapPad(selPad);bank=newPos[bank];
   save();padsChanged();renderAll();renderMini();
@@ -1685,7 +1730,7 @@ $('snM4').onclick=()=>nudge(-4);$('snM1').onclick=()=>nudge(-1);$('snP1').onclic
 $('snAll').onclick=()=>{nudgeAll=!nudgeAll;renderSteps();};
 $('bMet').onclick=()=>{initAudio();UI.metro=!UI.metro;saveUI();renderTransport();};
 $('bRec').onclick=()=>{recArm=!recArm;renderTransport();};
-$('bKeys').onclick=()=>{keys=!keys;renderPads();renderTransport();};
+$('bKeys').onclick=()=>{keys=!keys;renderPads();renderTransport();renderChords();};
 $('bView').onclick=()=>{view=view==='mix'?'focus':view==='focus'?1:view===1?4:'mix';UI.view=view;saveUI();renderTransport();
   toast(view==='mix'?'MIX: every sound that is playing gets its own piece of the screen.':view==='focus'?'FOCUS: video follows the selected track ('+TL[selTrack]+').':view===1?'LATEST: only the most recent hit.':'TRACKS: one quarter per track.',1800);};
 $('bSlice').onclick=()=>openEditor(curSrc);
@@ -1707,7 +1752,7 @@ $('bClrTrk').onclick=()=>{pushUndo();S.patterns[editPat][selTrack]=mkTrack();sav
 $('bClrPat').onclick=()=>{pushUndo();S.patterns[editPat]=mkPat();save();renderSteps();renderPats();};
 $('bLen').onclick=()=>{pushUndo('len');
   const p=editPat,old=S.patLen[p],nx=LENS[(LENS.indexOf(old)+1)%LENS.length];
-  if(nx>old){S.patterns[p].forEach(t=>{for(let b=old;b<nx;b++)for(let k=0;k<16;k++){const src=t[(b%old)*16+k];t[b*16+k]=src?{...src}:null;}});}
+  if(nx>old){S.patterns[p].forEach(t=>{for(let b=old;b<nx;b++)for(let k=0;k<16;k++){const src=t[(b%old)*16+k];t[b*16+k]=src?JSON.parse(JSON.stringify(src)):null;}});}
   S.patLen[p]=nx;if(viewPage>=nx)viewPage=0;save();renderSteps();renderPats();
 };
 $('bFollow').onclick=()=>{follow=!follow;renderPages();};
