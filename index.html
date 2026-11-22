@@ -1930,8 +1930,16 @@ const setBpm=v=>{S.bpm=Math.max(60,Math.min(180,v));save();for(let t=0;t<4;t++)a
 $('bpmDn').onclick=()=>setBpm(S.bpm-1);$('bpmUp').onclick=()=>setBpm(S.bpm+1);
 $('gBpm').oninput=e=>setBpm(+e.target.value);
 $('gSw').oninput=e=>{S.swing=e.target.value/100;save();renderTransport();};
-$('pPitch').oninput=e=>{pushUndo('pitch'+selPad);S.padSemi[selPad]=+e.target.value;save();renderPadPanel();};
-$('pVol').oninput=e=>{pushUndo('vol'+selPad);S.padVol[selPad]=e.target.value/100;save();renderPadPanel();};
+/* hold a bank block while moving PITCH or LEVEL: every pad in that bank gets the same value */
+const heldBank=()=>bDrag&&bDrag.strip.id==='banks'?(bDrag.used=true,bDrag.from):-1;
+$('pPitch').oninput=e=>{const v=+e.target.value,bk=heldBank();
+  if(bk>=0){pushUndo('bpitch'+bk);for(let k=0;k<16;k++)S.padSemi[bk*16+k]=v;toast('Bank '+(bk+1)+': all 16 pads pitch '+(v>0?'+':'')+v+'.',900);}
+  else{pushUndo('pitch'+selPad);S.padSemi[selPad]=v;}
+  save();renderPadPanel();if(bk>=0)renderPads();};
+$('pVol').oninput=e=>{const v=e.target.value/100,bk=heldBank();
+  if(bk>=0){pushUndo('bvol'+bk);for(let k=0;k<16;k++)S.padVol[bk*16+k]=v;toast('Bank '+(bk+1)+': all 16 pads level '+e.target.value+'.',900);}
+  else{pushUndo('vol'+selPad);S.padVol[selPad]=v;}
+  save();renderPadPanel();};
 $('pRev').onclick=()=>{pushUndo();S.padRev[selPad]=!S.padRev[selPad];save();renderPadPanel();};
 $('pAud').onclick=()=>{initAudio();trigger(selTrack,selPad,0,ctx.currentTime);};
 $('pEdit').onclick=()=>{const p=pads[selPad];let idx=-1;if(p&&p.srcId!=null)idx=sources.findIndex(x=>x.id===p.srcId);
