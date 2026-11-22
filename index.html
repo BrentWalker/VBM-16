@@ -27,8 +27,8 @@ button:disabled{opacity:.35}
 .zbadge{position:absolute;right:8px;top:8px;z-index:3;font-size:11px;padding:5px 8px;background:rgba(49,48,67,.8);color:var(--air);border-radius:8px}
 /* iPad and other wide screens held sideways: two columns. Left: title bar, video, transport and its panels. Right: the rest. */
 body.wide .wrap{max-width:1500px}
-body.wide .cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
-body.wide #colL,body.wide #colR{position:sticky;top:0;max-height:100vh;max-height:100dvh;overflow-y:auto;overscroll-behavior:contain;padding:calc(8px + env(safe-area-inset-top)) 0 40px;margin-top:calc(-8px - env(safe-area-inset-top));scrollbar-width:none}
+body.wide .cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:16px;align-items:start}
+body.wide #colL,body.wide #colR{position:sticky;top:0;max-height:100vh;max-height:100dvh;overflow-y:auto;overscroll-behavior:contain;padding:calc(10px + env(safe-area-inset-top)) 10px 40px;margin:calc(-10px - env(safe-area-inset-top)) -10px 0;scrollbar-width:none}
 body.wide #colL::-webkit-scrollbar,body.wide #colR::-webkit-scrollbar{display:none}
 body.wide #vidBlock.lifted{opacity:.6;outline:2px dashed var(--air);outline-offset:4px;border-radius:14px}
 body.wide #panelsL:empty{min-height:40px}
