@@ -28,8 +28,9 @@ button:disabled{opacity:.35}
 /* iPad and other wide screens held sideways: two columns. Left: title bar, video, transport and its panels. Right: the rest. */
 body.wide .wrap{max-width:1500px}
 body.wide .cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
-body.wide #colL{position:sticky;top:0;max-height:100vh;overflow-y:auto;overscroll-behavior:contain;padding-top:calc(8px + env(safe-area-inset-top));margin-top:calc(-8px - env(safe-area-inset-top));scrollbar-width:none}
-body.wide #colL::-webkit-scrollbar{display:none}
+body.wide #colL,body.wide #colR{position:sticky;top:0;max-height:100vh;max-height:100dvh;overflow-y:auto;overscroll-behavior:contain;padding:calc(8px + env(safe-area-inset-top)) 0 40px;margin-top:calc(-8px - env(safe-area-inset-top));scrollbar-width:none}
+body.wide #colL::-webkit-scrollbar,body.wide #colR::-webkit-scrollbar{display:none}
+body.wide #vidBlock.lifted{opacity:.6;outline:2px dashed var(--air);outline-offset:4px;border-radius:14px}
 body.wide #panelsL:empty{min-height:40px}
 #stage{touch-action:pan-y;position:relative;height:36vh;min-height:200px;background:#000;border-radius:14px;overflow:hidden;display:flex;align-items:center;justify-content:center}
 #cv{display:block;max-width:100%;max-height:100%;width:auto;height:auto}
@@ -222,6 +223,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
 <body>
 <div class="wrap">
 <div class="cols"><div id="colL">
+<div id="vidBlock">
   <header>
     <span class="forge">VBM-16</span><button class="hic" id="bDisk" aria-label="Save and open"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h13l3 3v13H4z"/><path d="M8 4v5h7V4"/><rect x="7.5" y="13" width="9" height="7" rx="1"/></svg></button><label class="btn hic" aria-label="Add video"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="13" height="12" rx="2"/><path d="M15.5 10.2l5-3v9.6l-5-3"/><path d="M9 9.5v5M6.5 12h5"/></svg><input type="file" accept="video/*" class="fIn" hidden></label>
     <button class="ur" id="bUndo">↶</button><button class="ur" id="bRedo">↷</button><button id="bExp">EXPORT</button>
@@ -251,6 +253,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
     <button id="bKeys" aria-label="Keys"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5.5" width="20" height="13" rx="2"/><path d="M7 5.5v13M12 5.5v13M17 5.5v13"/><rect x="5.6" y="5.5" width="2.8" height="7" fill="currentColor" stroke="none"/><rect x="10.6" y="5.5" width="2.8" height="7" fill="currentColor" stroke="none"/><rect x="15.6" y="5.5" width="2.8" height="7" fill="currentColor" stroke="none"/></svg></button>
     <button id="bView" aria-label="View"></button>
   </div>
+</div>
   <div id="panelsL"></div>
 </div><div id="colR">
   <div id="panels">
@@ -2218,10 +2221,26 @@ document.querySelectorAll('section.panel[id]').forEach(sec=>{
   sec.classList.toggle('min',!!UI[sec.id]);
   const h3=sec.querySelector('h3');
   h3.addEventListener('click',()=>{if(sec._skipClick){sec._skipClick=false;return;}const m=!sec.classList.contains('min');sec.classList.toggle('min',m);UI[sec.id]=m;saveUI();});
-  if(sec.id==='secVid')return;/* VIDEO is locked */
+  if(sec.id==='secVid'){
+    /* VIDEO stays on top with the title bar and transport. Sideways on a wide screen, hold its title and drag left or right to switch columns. */
+    h3.addEventListener('pointerdown',e=>{
+      if(!wideOn)return;const vb=$('vidBlock');const st={x0:e.clientX,y0:e.clientY,lifted:false,moved:false};pDrag=st;
+      const move=ev=>{if(pDrag!==st)return;
+        if(!st.lifted){if(Math.hypot(ev.clientX-st.x0,ev.clientY-st.y0)>8){st.moved=true;clearTimeout(st.timer);}return;}
+        const side=ev.clientX<$('colR').getBoundingClientRect().left?'L':'R',col=$(side==='L'?'colL':'colR');
+        if(vb.parentNode!==col){col.insertBefore(vb,col.firstElementChild);UI.vidSide=side;waveDirty=true;}};
+      const end=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',end);window.removeEventListener('pointercancel',end);
+        clearTimeout(st.timer);if(pDrag!==st)return;
+        if(st.lifted){vb.classList.remove('lifted');sec._skipClick=true;setTimeout(()=>{sec._skipClick=false;},400);saveUI();try{window.dispatchEvent(new Event('resize'));}catch(_){}}
+        pDrag=null;};
+      window.addEventListener('pointermove',move);window.addEventListener('pointerup',end);window.addEventListener('pointercancel',end);
+      st.timer=setTimeout(()=>{if(pDrag!==st||st.moved)return;st.lifted=true;vb.classList.add('lifted');try{navigator.vibrate&&navigator.vibrate(20);}catch(_){}},450);
+    });
+    return;
+  }
   /* window-level listeners, because moving the panel in the page would drop a pointer capture */
   h3.addEventListener('pointerdown',e=>{
-    if(!sec.classList.contains('min'))return;
+    if(!sec.classList.contains('min')&&!wideOn)return;
     const st={sec,y0:e.clientY,lifted:false,moved:false};pDrag=st;
     const move=ev=>{
       if(pDrag!==st)return;
@@ -2257,6 +2276,7 @@ function layoutCols(){
     O.forEach(id=>{const el=$(id);if(el)panelsEl.appendChild(el);});
     [...panelsL.children].forEach(el=>panelsEl.appendChild(el));
   }
+  const vb=$('vidBlock'),col=w&&UI.vidSide==='R'?$('colR'):$('colL');if(vb.parentNode!==col||col.firstElementChild!==vb)col.insertBefore(vb,col.firstElementChild);
   if(window.applyStageH)applyStageH();waveDirty=true;try{window.dispatchEvent(new Event('resize'));}catch(_){}
 }
 wideMQ.addEventListener?wideMQ.addEventListener('change',layoutCols):wideMQ.addListener(layoutCols);
