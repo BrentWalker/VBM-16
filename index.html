@@ -55,6 +55,9 @@ body.wide #panelsL:empty{min-height:40px}
 .transport>button{padding:0;height:44px;position:relative}
 .transport .bpm{height:44px;flex:1.7}
 #bRec{color:var(--fire)}
+.kill{color:var(--fire)}
+.kill:active{background:var(--fire)!important;color:var(--ink)}
+.edTop .kill{padding:0 10px;height:38px}
 .pad.erasing{outline:3px solid var(--fire);outline-offset:-3px;filter:saturate(.3) brightness(.7)}
 #bMet.on{background:var(--water)!important}
 #bView.focus{background:var(--purple)}
@@ -183,6 +186,10 @@ button.danger{background:var(--fire);color:var(--ink);font-weight:700}
 .addv{flex:0 0 auto;font-size:11px;padding:8px 10px;background:var(--purple)}
 .addv.rec{background:var(--fire);color:var(--ink)}
 .edKey{font-size:11px;margin-top:6px;color:var(--air);min-height:14px}
+body.wide #ed .wrap{max-width:1500px}
+body.wide .edCols{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);column-gap:16px;align-items:start}
+body.wide .edVid{height:42vh}
+body.wide .edR .edH{margin-top:8px}
 .edVid{touch-action:pan-y;margin-top:8px;height:30vh;min-height:170px;background:#000;border-radius:12px;overflow:hidden;display:flex;align-items:center;justify-content:center;position:relative}
 .edVid video{width:100%;height:100%;object-fit:contain;display:block}
 #edEmpty{font-size:12px;opacity:.7;padding:20px;text-align:center;line-height:1.6}
@@ -252,6 +259,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
     <button id="bSlice" aria-label="Slice"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 6.2c5.4-2.9 11.6-2.9 17 0L12 21z"/><path d="M3.5 6.2c5.4-2.9 11.6-2.9 17 0" stroke-width="3.2"/><circle cx="10" cy="10" r="1.5" fill="currentColor" stroke="none"/><circle cx="14.6" cy="11.4" r="1.3" fill="currentColor" stroke="none"/><circle cx="11.8" cy="15" r="1.1" fill="currentColor" stroke="none"/></svg></button>
     <button id="bKeys" aria-label="Keys"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5.5" width="20" height="13" rx="2"/><path d="M7 5.5v13M12 5.5v13M17 5.5v13"/><rect x="5.6" y="5.5" width="2.8" height="7" fill="currentColor" stroke="none"/><rect x="10.6" y="5.5" width="2.8" height="7" fill="currentColor" stroke="none"/><rect x="15.6" y="5.5" width="2.8" height="7" fill="currentColor" stroke="none"/></svg></button>
     <button id="bView" aria-label="View"></button>
+    <button id="bKill" class="kill" aria-label="Stop all sounds"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg></button>
   </div>
 </div>
   <div id="panelsL"></div>
@@ -330,8 +338,10 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
       <button class="ur" id="eUndo">↶</button>
       <div class="tabs" id="srcTabs"></div>
       <label class="btn addv rec">●<input type="file" accept="video/*" capture="environment" class="fIn" hidden></label>
+      <button id="eKill" class="kill" aria-label="Stop all sounds"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg></button>
       <label class="btn addv">+ VIDEO<input type="file" accept="video/*" class="fIn" hidden></label>
     </div>
+    <div class="edCols"><div class="edL">
     <div class="edKey" id="edKey"></div>
     <div class="edVid" id="edVid"><div id="edEmpty">Add a video to start slicing.</div></div>
     <canvas id="wave"></canvas>
@@ -351,6 +361,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
       <button id="lHalf">½</button><button id="lDbl">×2</button><button data-st="1">1/16</button><button data-st="2">1/8</button><button data-st="4">1/4</button><button data-st="16">1 BAR</button>
     </div>
     <div id="est" class="est hidden"><span id="estTxt"></span><div class="bar" id="estBarW"><div id="estBar"></div></div><button id="estBtn" class="hidden">OK</button></div>
+    </div><div class="edR">
     <div class="edH"><span>SEND TO PAD</span><span>tap a pad</span></div>
     <div class="banks" id="edBanks" style="margin-top:6px"></div>
     <div class="mini" id="mini"></div>
@@ -362,6 +373,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
       <p>Drag outside the selection to scroll, pinch to zoom, tap to preview a spot. ½ and ×2 halve or double the length. The length buttons snap it to the beat grid at your BPM.</p>
       <p>VIDEO SLIP moves the picture earlier or later while the sound stays put, up to 1 second each way. The red bar on the waveform shows where the video now comes from. Tap the readout to reset. Slip stays set for this video, so every slice you send from it gets the same fix.</p>
     </div>
+    </div></div>
   </div>
 </div>
 
@@ -556,6 +568,17 @@ document.addEventListener('pointerdown',initAudio,{passive:true});
 function wakeAudio(){
   try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}
   if(ctx&&ctx.state!=='running'){try{ctx.resume().catch(()=>{});}catch(e){}}
+}
+/* stop every sound right now: the sequence, held pads, loops, slicer preview and FX tails (echo and reverb) */
+function stopAll(){
+  if(exporting)return;
+  if(playing)stop();
+  try{if(selPlay)stopSel();}catch(e){}
+  for(const k in liveV)delete liveV[k];
+  if(ctx){resetAudio();}
+  try{renderPads();}catch(e){}
+  try{navigator.vibrate&&navigator.vibrate(30);}catch(e){}
+  toast('All sounds stopped.',1000);
 }
 function resetAudio(){
   try{ctx&&ctx.close();}catch(e){}
@@ -1884,6 +1907,7 @@ $('nEp').onclick=()=>{if(cur())setE(cur().sel.e+nd());};
 $('lHalf').onclick=()=>{const s=cur();if(s)pushUndo();if(s)setLen((s.sel.e-s.sel.s)/2);};
 $('lDbl').onclick=()=>{const s=cur();if(s){pushUndo();setLen((s.sel.e-s.sel.s)*2);if(pxOf(s.sel.e)>wave.clientWidth)fitSel(true);}};
 $('nStep').onclick=()=>{nudgeIdx=(nudgeIdx+1)%NUDGE.length;renderEdBtns();};
+$('bKill').onclick=stopAll;$('eKill').onclick=stopAll;
 $('aPlay').onclick=()=>{selPlay?stopSel():playSel();};
 $('aLoop').onclick=()=>{loopMode=!loopMode;renderEdBtns();if(selPlay)playSel();};
 $('aZi').onclick=()=>zoomBy(0.5);$('aZo').onclick=()=>zoomBy(2);$('aFit').onclick=()=>fitSel(false);
