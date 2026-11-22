@@ -1683,6 +1683,7 @@ function bankDown(e,d,strip,onPick){
     d.removeEventListener('pointermove',move);d.removeEventListener('pointerup',up);d.removeEventListener('pointercancel',up);
     clearTimeout(st.timer);[...strip.children].forEach(x=>x.classList.remove('drop','lift'));
     if(bDrag!==st)return;bDrag=null;
+    if(st.used)return;
     if(st.lifted){if(st.over!==st.from)moveBank(st.from,st.over);}
     else if(!st.moved)onPick(st.from);
   };
@@ -1925,7 +1926,18 @@ async function runSlip(){
 }
 $('pSlM5').onclick=()=>padSlip(-5*FR);$('pSlM1').onclick=()=>padSlip(-FR);$('pSlP1').onclick=()=>padSlip(FR);$('pSlP5').onclick=()=>padSlip(5*FR);$('pSlV').onclick=()=>padSlip(0);
 /* pad shaping */
-document.querySelectorAll('#pChoke button').forEach(b=>b.onclick=()=>{pushUndo();S.padChoke[selPad]=+b.dataset.g;save();renderPadPanel();});
+/* hold a bank block + tap a MUTE GRP button: set every pad in that bank to that group */
+let chokeSwallow=false;
+document.querySelectorAll('#pChoke button').forEach(b=>{
+  b.addEventListener('pointerdown',e=>{
+    if(!bDrag||bDrag.strip.id!=='banks')return;
+    e.preventDefault();chokeSwallow=true;const bk=bDrag.from,g=+b.dataset.g;bDrag.used=true;
+    pushUndo();for(let k=0;k<16;k++)S.padChoke[bk*16+k]=g;save();renderPadPanel();
+    try{navigator.vibrate&&navigator.vibrate(20);}catch(_){}
+    toast('Bank '+(bk+1)+': all 16 pads '+(g?'in mute group '+g:'out of mute groups')+'.',1800);
+  });
+  b.onclick=()=>{if(chokeSwallow){chokeSwallow=false;return;}pushUndo();S.padChoke[selPad]=+b.dataset.g;save();renderPadPanel();};
+});
 document.querySelectorAll('#pMode button').forEach(b=>b.onclick=()=>{pushUndo();S.padMode[selPad]=b.dataset.m;save();renderPadPanel();});
 $('pFi').oninput=e=>{pushUndo('fi'+selPad);S.padFi[selPad]=+e.target.value;save();renderPadPanel();};
 $('pFo').oninput=e=>{pushUndo('fo'+selPad);S.padFo[selPad]=+e.target.value;save();renderPadPanel();};
