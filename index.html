@@ -468,7 +468,7 @@ const AC=window.AudioContext||window.webkitAudioContext;
 const COL={ink:'#313043',slate:'#424C60',purple:'#57556F',earth:'#7C5D48',air:'#ADCFDE',fire:'#DC7B78',water:'#7EB3D2'};
 const CATS={KICK:{c:COL.earth,i:'●'},SNARE:{c:COL.fire,i:'✱'},HAT:{c:COL.air,i:'▲'},TONE:{c:COL.water,i:'∿'}};
 const CAT_ORDER=['KICK','SNARE','HAT','TONE'];
-Object.assign(CATS,{SAMPLES:{c:COL.air,i:'◎'},FX:{c:COL.fire,i:'✦'},BASS:{c:COL.earth,i:'▬'},GUITAR:{c:COL.water,i:'♪'},KEYS:{c:COL.air,i:'▦'},VOX:{c:COL.fire,i:'◡'},CHAOS:{c:COL.fire,i:'✸'}});
+Object.assign(CATS,{SAMPLES:{c:COL.air,i:'◎'},FX:{c:COL.fire,i:'✦'},BASS:{c:COL.earth,i:'▬'},GUITAR:{c:COL.water,i:'♪'},KEYS:{c:COL.air,i:'▦'},VOX:{c:COL.fire,i:'◡'},CHAOS:{c:COL.fire,i:'✸'},TRANSIENT:{c:COL.fire,i:'⚡'},EQUAL:{c:COL.purple,i:'▥'}});
 const TYPES=[
   ['DRUMS',{th:0.2,gap:0.08,max:1.0,sort:true,def:2,fi:0,fo:0,c:COL.earth,i:'●'}],
   ['BASS',{th:0.15,gap:0.15,max:2.0,def:4,fi:2,fo:10,cat:'BASS'}],
@@ -476,8 +476,8 @@ const TYPES=[
   ['KEYS',{th:0.15,gap:0.12,max:2.0,def:4,fi:2,fo:15,cat:'KEYS'}],
   ['VOX',{th:0.3,gap:0.3,max:3.0,def:8,fi:5,fo:25,cat:'VOX'}],
   ['SAMPLES',{th:0.2,gap:0.2,max:2.0,def:8,fi:2,fo:12,cat:'SAMPLES'}],
-  ['FX',{th:0.25,gap:0.3,max:3.0,def:8,fi:4,fo:30,cat:'FX'}],
-  ['CHAOS',{chaos:true,def:2,fi:0,fo:5,cat:'CHAOS'}],
+  ['TRANSIENT',{trans:true,th:0.12,gap:0.06,max:4.0,def:4,fi:0,fo:6,cat:'TRANSIENT'}],
+  ['EQUAL',{equal:true,def:4,fi:1,fo:6,cat:'EQUAL'}],
 ];
 const PROF=Object.fromEntries(TYPES);
 const TL=['A','B','C','D'],TCOL=[COL.earth,COL.air,COL.fire,COL.water];
@@ -745,6 +745,17 @@ function findOnsets(m,sr,th,gap){th=th||0.2;gap=gap||0.08;
 }
 function autoSlices(src){
   const P=PROF[src.type]||PROF.DRUMS,buf=src.audio,sr=buf.sampleRate,dur=src.dur;
+  /* EQUAL: 16 equal parts of the whole video */
+  if(P.equal)return evenSlices(src,true);
+  /* TRANSIENT: find every hit, keep 16 spread evenly through them (every Nth), each chop runs to the next one */
+  if(P.trans){
+    const all=findOnsets(src.mono,sr,P.th,P.gap).filter(o=>o.t<dur-0.05).map(o=>o.t);
+    if(all.length<2)return evenSlices(src,true);
+    let pick;
+    if(all.length>=16)pick=Array.from({length:16},(_,k)=>all[Math.floor(k*all.length/16)]);
+    else{pick=[...all];for(let k=0;pick.length<16&&k<64;k++){const t=((k*7)%16+0.5)/16*dur;if(!pick.some(p=>Math.abs(p-t)<0.1))pick.push(t);}pick.sort((a,b)=>a-b);}
+    return pick.map((t,k)=>{const st=Math.max(0,t-0.005),end=k<15?pick[k+1]-0.003:dur;return {start:st,len:Math.max(0.05,Math.min(P.max,end-st,dur-st)),t};});
+  }
   if(P.chaos){
     const L=[1,2,3,4,6,8];
     return Array.from({length:16},()=>{const len=Math.min(dur,L[Math.floor(Math.random()*L.length)]*stepDur());const st=Math.random()*Math.max(0,dur-len);return {start:st,len:Math.max(0.03,len),t:st};}).sort((a,b)=>a.t-b.t);
@@ -759,9 +770,9 @@ function autoSlices(src){
     return {start:st,len:Math.max(0.08,Math.min(P.max,end-st,dur-st)),t};
   });
 }
-function evenSlices(src){
+function evenSlices(src,full){
   const per=src.dur/16;
-  return Array.from({length:16},(_,k)=>({start:k*per,len:Math.max(0.05,Math.min(per,2)),t:k*per}));
+  return Array.from({length:16},(_,k)=>({start:k*per,len:Math.max(0.05,Math.min(per,full?4:2)),t:k*per}));
 }
 function classify(d,sr){
   const n=Math.min(d.length,Math.floor(0.12*sr));if(!n)return 'TONE';
