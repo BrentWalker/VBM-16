@@ -33,6 +33,7 @@ body.wide #colL::-webkit-scrollbar,body.wide #colR::-webkit-scrollbar{display:no
 body.wide #vidBlock.lifted{opacity:.6;outline:2px dashed var(--air);outline-offset:4px;border-radius:14px}
 body.wide #panelsL:empty{min-height:40px}
 #stage{touch-action:pan-y;position:relative;height:36vh;min-height:200px;background:#000;border-radius:14px;overflow:hidden;display:flex;align-items:center;justify-content:center}
+#ovc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 #cv{display:block;max-width:100%;max-height:100%;width:auto;height:auto}
 .overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:16px;text-align:center;background:linear-gradient(160deg,var(--ink),var(--purple))}
 .hidden{display:none!important}
@@ -245,6 +246,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
   <section class="panel tight" id="secVid"><h3>VIDEO</h3>
   <div id="stage">
     <canvas id="cv" width="720" height="720"></canvas>
+    <canvas id="ovc" aria-hidden="true"></canvas>
     <div id="empty" class="overlay">
       <div class="ov-title">Turn any video into a drum kit</div>
       <div class="ov-sub">Load one or more videos, chop your own slices on the waveform, and send each slice to a pad. Every hit plays its own piece of video.</div>
@@ -1348,13 +1350,13 @@ function vhs(W,H){
 }
 function wavePeaks(p){if(p.wpk)return p.wpk;const d=p.buf.getChannelData(0),N=160,o=new Float32Array(N),b=Math.max(1,Math.floor(d.length/N));let mx=1e-6;
   for(let i=0;i<N;i++){let m=0;for(let j=i*b,e=Math.min(d.length,j+b);j<e;j++){const a=Math.abs(d[j]);if(a>m)m=a;}o[i]=m;if(m>mx)mx=m;}for(let i=0;i<N;i++)o[i]/=mx;return p.wpk=o;}
-function waveOverlay(v,W,H,now){
+function waveOverlay(v,W,H,now,g2){
   const p=v&&pads[v.pad];if(!p)return;const pk=wavePeaks(p),N=pk.length;
   const y0=H*0.8,bh=H*0.15,bw=W/N,el=Math.max(0,(now-v.start)*v.rate),prog=v.loop?((el%p.len)/p.len):Math.min(1,el/p.len);
   for(let i=0;i<N;i++){const k=v.rev?N-1-i:i,a=pk[k],hh=Math.max(2,a*bh);const played=i/N<=prog;
     g2.fillStyle=played?'rgba(173,207,222,.95)':'rgba(255,255,255,.4)';g2.fillRect(i*bw+bw*0.15,y0+(bh-hh)/2,bw*0.7,hh);}
 }
-function tagOverlay(W,H){
+function tagOverlay(W,H,g2){
   const t=(VO.tagText||'').trim();if(!t)return;const fs=Math.round(Math.min(W,H)*0.055),m=Math.min(W,H)*0.04;
   g2.save();g2.font='800 '+fs+'px ui-monospace,SFMono-Regular,Menlo,monospace';g2.textBaseline='alphabetic';
   const tw=g2.measureText(t).width,pos=VO.tagPos,x=(pos===1||pos===3)?W-m-tw:m,y=(pos>=2)?H-m:m+fs;
@@ -1420,8 +1422,15 @@ function loop(){
   if(shook)g2.restore();
   g2.globalAlpha=1;post(W,H);
   if(VO.fx.vhs)vhs(W,H);
-  if(VO.wave)waveOverlay(shown,W,H,now);
-  if(VO.tag)tagOverlay(W,H);
+  /* WAVE and TAG sit on the screen, not the video: an overlay the size of the player (not zoomed). Exports draw them into the clip. */
+  const oc=$('ovc');
+  if(exporting){if(oc.width)oc.width=0;if(VO.wave)waveOverlay(shown,W,H,now,g2);if(VO.tag)tagOverlay(W,H,g2);}
+  else{
+    const st=$('stage'),dpr=Math.min(2,window.devicePixelRatio||1),ow=Math.round(st.clientWidth*dpr),oh=Math.round(st.clientHeight*dpr);
+    if(!VO.wave&&!VO.tag){if(oc.width)oc.width=0;}
+    else{if(oc.width!==ow||oc.height!==oh){oc.width=ow;oc.height=oh;}const og=oc.getContext('2d');og.clearRect(0,0,ow,oh);
+      if(VO.wave)waveOverlay(shown,ow,oh,now,og);if(VO.tag)tagOverlay(ow,oh,og);}
+  }
   if(view===4){
     g2.fillStyle=COL.ink;g2.fillRect(W/2-1,0,2,H);g2.fillRect(0,H/2-1,W,2);
     if(!exporting){for(let t=0;t<4;t++){const x=(t%2)*W/2+8,y=Math.floor(t/2)*H/2+8;g2.fillStyle=TCOL[t];g2.fillRect(x,y,22,22);g2.fillStyle=t===0?'#fff':COL.ink;g2.font='bold 15px ui-monospace,Menlo,monospace';g2.fillText(TL[t],x+6,y+16);}}
