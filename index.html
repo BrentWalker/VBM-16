@@ -1932,15 +1932,23 @@ $('gBpm').oninput=e=>setBpm(+e.target.value);
 $('gSw').oninput=e=>{S.swing=e.target.value/100;save();renderTransport();};
 /* hold a bank block while moving PITCH or LEVEL: every pad in that bank gets the same value */
 const heldBank=()=>bDrag&&bDrag.strip.id==='banks'?(bDrag.used=true,bDrag.from):-1;
-$('pPitch').oninput=e=>{const v=+e.target.value,bk=heldBank();
-  if(bk>=0){pushUndo('bpitch'+bk);for(let k=0;k<16;k++)S.padSemi[bk*16+k]=v;toast('Bank '+(bk+1)+': all 16 pads pitch '+(v>0?'+':'')+v+'.',900);}
-  else{pushUndo('pitch'+selPad);S.padSemi[selPad]=v;}
-  save();renderPadPanel();if(bk>=0)renderPads();};
-$('pVol').oninput=e=>{const v=e.target.value/100,bk=heldBank();
-  if(bk>=0){pushUndo('bvol'+bk);for(let k=0;k<16;k++)S.padVol[bk*16+k]=v;toast('Bank '+(bk+1)+': all 16 pads level '+e.target.value+'.',900);}
-  else{pushUndo('vol'+selPad);S.padVol[selPad]=v;}
-  save();renderPadPanel();};
-$('pRev').onclick=()=>{pushUndo();S.padRev[selPad]=!S.padRev[selPad];save();renderPadPanel();};
+/* set one pad setting on the selected pad, or on all 16 pads of a held bank */
+function setPadParam(key,v,label,undoKey){
+  const bk=heldBank();
+  if(bk>=0){pushUndo(undoKey?'b'+undoKey+bk:undefined);for(let k=0;k<16;k++)S[key][bk*16+k]=v;toast('Bank '+(bk+1)+': all 16 pads '+label+'.',900);}
+  else{pushUndo(undoKey?undoKey+selPad:undefined);S[key][selPad]=v;}
+  save();renderPadPanel();if(bk>=0)renderPads();
+}
+/* buttons pressed with a second finger while a bank is held: act on pointerdown, skip the click that follows */
+function bankBtn(el,fn){
+  let swallow=false;
+  el.addEventListener('pointerdown',e=>{if(heldBank()<0)return;e.preventDefault();swallow=true;fn();try{navigator.vibrate&&navigator.vibrate(15);}catch(_){}});
+  el.addEventListener('click',e=>{if(swallow){swallow=false;e.stopImmediatePropagation();}},true);
+}
+$('pPitch').oninput=e=>{const v=+e.target.value;setPadParam('padSemi',v,'pitch '+(v>0?'+':'')+v,'pitch');};
+$('pVol').oninput=e=>setPadParam('padVol',e.target.value/100,'level '+e.target.value,'vol');
+const revTog=()=>{const v=!S.padRev[selPad];setPadParam('padRev',v,'reverse '+(v?'on':'off'));};
+$('pRev').onclick=revTog;bankBtn($('pRev'),revTog);
 $('pAud').onclick=()=>{initAudio();trigger(selTrack,selPad,0,ctx.currentTime);};
 $('pEdit').onclick=()=>{const p=pads[selPad];let idx=-1;if(p&&p.srcId!=null)idx=sources.findIndex(x=>x.id===p.srcId);
   openEditor(idx>=0?idx:curSrc,idx>=0?{s:p.start,e:p.start+p.len,slip:p.slip||0}:null,selPad);};
@@ -2040,12 +2048,13 @@ document.querySelectorAll('#pChoke button').forEach(b=>{
   });
   b.onclick=()=>{if(chokeSwallow){chokeSwallow=false;return;}pushUndo();S.padChoke[selPad]=+b.dataset.g;save();renderPadPanel();};
 });
-document.querySelectorAll('#pMode button').forEach(b=>b.onclick=()=>{pushUndo();S.padMode[selPad]=b.dataset.m;save();renderPadPanel();});
-$('pFi').oninput=e=>{pushUndo('fi'+selPad);S.padFi[selPad]=+e.target.value;save();renderPadPanel();};
-$('pFo').oninput=e=>{pushUndo('fo'+selPad);S.padFo[selPad]=+e.target.value;save();renderPadPanel();};
-$('pDec').oninput=e=>{pushUndo('dec'+selPad);S.padDecay[selPad]=+e.target.value;save();renderPadPanel();};
-$('pFrzPos').oninput=e=>{pushUndo('frz'+selPad);S.padFreeze[selPad]=+e.target.value;save();renderPadPanel();};
-$('pFrz').onclick=()=>{pushUndo();S.padFreeze[selPad]=S.padFreeze[selPad]>=0?-1:+$('pFrzPos').value;save();renderPadPanel();};
+document.querySelectorAll('#pMode button').forEach(b=>{const f=()=>setPadParam('padMode',b.dataset.m,b.textContent.trim().toLowerCase());b.onclick=f;bankBtn(b,f);});
+$('pFi').oninput=e=>setPadParam('padFi',+e.target.value,'fade in '+e.target.value+' ms','fi');
+$('pFo').oninput=e=>setPadParam('padFo',+e.target.value,'fade out '+e.target.value+' ms','fo');
+$('pDec').oninput=e=>setPadParam('padDecay',+e.target.value,'decay '+e.target.value+'%','dec');
+$('pFrzPos').oninput=e=>setPadParam('padFreeze',+e.target.value,'freeze at '+e.target.value+'%','frz');
+const frzTog=()=>{const v=S.padFreeze[selPad]>=0?-1:+$('pFrzPos').value;setPadParam('padFreeze',v,'freeze '+(v>=0?'on':'off'));};
+$('pFrz').onclick=frzTog;bankBtn($('pFrz'),frzTog);
 
 /* ---------- session save / load ---------- */
 let toastT=null;
