@@ -927,6 +927,20 @@ function readNote(buf){
   if(!L)return null;const f=fs/L;return 69+12*Math.log2(f/440);
 }
 function keyMsg(src){const k=src.key;if(!k)return ' Could not read a key.';return ' Key: '+k.long+(k.conf==='strong'?'.':k.conf==='likely'?' (likely, maybe '+k.alt+').':' (rough guess).');}
+/* pads from a saved session keep their chops but not the full video. The video picked right after EDIT SLICE asked for it
+   links that pad, and every pad cut from the same video, back to it, so EDIT SLICE and VIDEO SLIP work again */
+let relinkPad=null;
+function relinkPads(src){
+  const want=relinkPad!=null&&pads[relinkPad]&&pads[relinkPad].srcId==null?pads[relinkPad].srcName:null;
+  let n=0;
+  pads.forEach(p=>{if(p&&p.srcId==null&&p.srcName&&want&&p.srcName===want&&(p.start||0)<src.dur){p.srcId=src.id;n++;}});
+  if(relinkPad!=null&&pads[relinkPad]&&pads[relinkPad].srcId===src.id){
+    const p=pads[relinkPad];src.sel={s:p.start||0,e:Math.min(src.dur,(p.start||0)+p.len)};if(p.slip!=null)src.slip=p.slip;
+    try{fitSel(true);previewSeek(src.sel.s);}catch(e){}bank=Math.floor(relinkPad/16);target=relinkPad%16;renderMini();
+  }
+  relinkPad=null;
+  if(n){padsChanged();setTimeout(()=>estFlash('Linked '+n+' pad'+(n>1?'s':'')+' back to '+src.name+'. EDIT SLICE and VIDEO SLIP work on them again.',4000),50);}
+}
 function padNote(p){if(p.note===undefined){try{p.note=readNote(p.buf);}catch(e){p.note=null;}}return p.note;}
 function finishSource(src,audio){
   src.audio=audio;src.dur=Math.min(audio.duration,src.vdur||audio.duration);
@@ -939,6 +953,7 @@ function finishSource(src,audio){
   src.sel={s:0,e:Math.min(src.dur,((PROF[src.type]||PROF.DRUMS).def||2)*stepDur())};src.view={v0:0,v1:src.dur};src.cursor=0;
   try{const c=document.createElement('canvas');c.width=96;c.height=Math.max(2,Math.round(96/src.aspect));c.getContext('2d').drawImage(src.video,0,0,c.width,c.height);src.thumb=c.toDataURL('image/jpeg',0.6);}catch(e){src.thumb='';}
   sources.push(src);edBusy=false;selectSource(sources.length-1);
+  relinkPads(src);
   if(S.format==='auto'&&sources.length===1)applyFormat();
   $('empty').classList.add('hidden');
   if(src.autoChop){
@@ -1951,7 +1966,9 @@ const revTog=()=>{const v=!S.padRev[selPad];setPadParam('padRev',v,'reverse '+(v
 $('pRev').onclick=revTog;bankBtn($('pRev'),revTog);
 $('pAud').onclick=()=>{initAudio();trigger(selTrack,selPad,0,ctx.currentTime);};
 $('pEdit').onclick=()=>{const p=pads[selPad];let idx=-1;if(p&&p.srcId!=null)idx=sources.findIndex(x=>x.id===p.srcId);
-  openEditor(idx>=0?idx:curSrc,idx>=0?{s:p.start,e:p.start+p.len,slip:p.slip||0}:null,selPad);};
+  openEditor(idx>=0?idx:curSrc,idx>=0?{s:p.start,e:p.start+p.len,slip:p.slip||0}:null,selPad);
+  if(p&&idx<0&&p.srcName){relinkPad=selPad;setTimeout(()=>estFlash('This pad came from '+p.srcName+', which is not loaded. Tap + VIDEO and pick it again to edit this slice.',6000),60);}
+  else if(p&&idx<0){setTimeout(()=>estFlash('This pad was not cut from a video here, so there is no slice to edit.',4000),60);}};
 $('pClr').onclick=()=>{pushUndo();padsChanged();pads[selPad]=null;renderAll();};
 $('bChain').onclick=()=>{chainOn=!chainOn;renderChain();};
 $('bChainClr').onclick=()=>{pushUndo();S.chain=[];save();renderChain();};
