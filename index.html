@@ -135,6 +135,7 @@ body.wide #panelsL:empty{min-height:40px}
 .slip{align-items:center}
 .slip button{padding:9px 0;font-size:12px}
 .slip .val{flex:2;background:var(--purple);font-size:10px}
+#snV{letter-spacing:0;line-height:1.15;padding:2px 6px;word-spacing:-1px}
 .seg button.on{background:var(--water);color:var(--ink)}
 #pChoke button{flex:1;padding:8px 0;font-size:11px}
 .sub{font-size:10px;opacity:.6;margin-top:4px}
@@ -279,18 +280,18 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
   <div class="tfx" id="tfx"></div></section>
   <section class="panel tight" id="secSeq"><h3>SEQUENCER</h3>
   <div class="row" id="tracks" style="margin-top:0"></div>
-  <div class="pageRow"><button id="bLen">LEN 1</button><div class="pages" id="pages"></div><button id="bFollow" class="on">FOLLOW</button></div>
+  <div class="pageRow"><button id="bLen">LNGTH 1</button><div class="pages" id="pages"></div><button id="bFollow" class="on">FOLLOW</button></div>
   <div class="steps" id="steps"></div>
   <div class="row slip"><button id="snM4">◀◀</button><button id="snM1">◀</button><button class="val" id="snV">HOLD A STEP TO NUDGE</button><button id="snP1">▶</button><button id="snP4">▶▶</button><button id="snAll" style="flex:0 0 46px;font-size:10px">ALL</button></div>
   </section>
-  <section class="panel tight" id="secPads"><h3>BANKS <span id="bankName">BANK 1</span></h3>
+  <section class="panel tight" id="secPads"><h3>PAD BANKS <span id="bankName">BANK 1</span></h3>
   <div class="row seg chordRow hidden" id="chordRow" style="margin:0 0 8px"></div>
   <div class="banks" id="banks"></div>
   <div class="pads" id="pads" style="margin-top:0"></div>
   <div class="row"><button id="bHoldClr" class="danger" style="padding:12px 0">HOLD HERE + TAP A BANK OR PAD TO CLEAR</button></div>
   </section>
   <section class="panel" id="secPad">
-    <h3>PAD <span id="padName"></span></h3>
+    <h3>PAD EDIT <span id="padName"></span></h3>
     <div class="ctl"><label>PITCH</label><input type="range" id="pPitch" min="-12" max="12" step="1" value="0"><output id="oPitch">0</output></div>
     <div class="ctl"><label>LEVEL</label><input type="range" id="pVol" min="0" max="150" step="1" value="100"><output id="oVol">100</output></div>
     <div class="row"><button id="pRev">REVERSE OFF</button><button id="pAud">AUDITION</button></div>
@@ -1841,7 +1842,7 @@ function toggleSkip(s){
   save();renderSteps();
 }
 function renderPages(){
-  const n=S.patLen[editPat],el=$('pages');$('bLen').textContent='LEN '+n;
+  const n=S.patLen[editPat],el=$('pages');$('bLen').textContent='LNGTH '+n;
   if(el.childElementCount!==n){el.innerHTML='';for(let i=0;i<n;i++){const b=document.createElement('button');b.textContent=i+1;b.onpointerdown=e=>{e.preventDefault();pageDown(i);};b.onpointerup=b.onpointercancel=()=>pageUp(i);el.appendChild(b);}}
   [...el.children].forEach((b,i)=>{
     const sk=S.skip[editPat].filter(x=>Math.floor(x/16)===i).length;
