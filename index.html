@@ -1444,7 +1444,7 @@ function buildUI(){
     w.append(b,m);$('tracks').append(w);trkEls.push({b,m});
   }
   for(let s=0;s<16;s++){const b=document.createElement('button');if(s%4===0)b.classList.add('beat');stepPress(b,s);$('steps').append(b);stepEls.push(b);}
-  for(let i=0;i<16;i++){const b=document.createElement('button');b.className='pad';b.innerHTML='<span class="n"></span><span class="i"></span><span class="k"></span>';b.onpointerdown=e=>{e.preventDefault();if(clearMode){clearPad(bank*16+i);return;}try{b.setPointerCapture(e.pointerId);}catch(_){}tapPad(i);};
+  for(let i=0;i<16;i++){const b=document.createElement('button');b.className='pad';b.innerHTML='<span class="n"></span><span class="i"></span><span class="k"></span>';b.onpointerdown=e=>{e.preventDefault();if(clearMode){clearPad(bank*16+i);return;}if(recHeld){erasePad(keys?selPad:bank*16+i);return;}try{b.setPointerCapture(e.pointerId);}catch(_){}tapPad(i);};
     b.onpointerup=b.onpointercancel=()=>endLive(i);
     $('pads').append(b);padEls.push(b);}
   FXL.forEach(([k,l])=>{
@@ -1729,7 +1729,20 @@ $('bPlay').onclick=()=>{playing?stop():start();};
 $('snM4').onclick=()=>nudge(-4);$('snM1').onclick=()=>nudge(-1);$('snP1').onclick=()=>nudge(1);$('snP4').onclick=()=>nudge(4);$('snV').onclick=()=>nudge(0);
 $('snAll').onclick=()=>{nudgeAll=!nudgeAll;renderSteps();};
 $('bMet').onclick=()=>{initAudio();UI.metro=!UI.metro;saveUI();renderTransport();};
-$('bRec').onclick=()=>{recArm=!recArm;renderTransport();};
+/* Hold REC + tap a pad: erase that pad from the pattern (every track). A tap on REC still arms recording. */
+let recHeld=false,recUsed=false;
+$('bRec').onpointerdown=e=>{e.preventDefault();recHeld=true;recUsed=false;try{$('bRec').setPointerCapture(e.pointerId);}catch(_){}};
+$('bRec').onpointerup=()=>{if(recHeld&&!recUsed){recArm=!recArm;renderTransport();}recHeld=false;};
+$('bRec').onpointercancel=()=>{recHeld=false;};
+function erasePad(pi){
+  recUsed=true;if(!pads[pi]){toast('That pad is empty.',1200);return;}
+  const pat=S.patterns[playing?curPat:editPat];let n=0;
+  if(!pat.some(row=>row.some(c=>cellEvs(c).some(x=>x.pad===pi)))){toast('Pad '+padLabel(pi)+' is not in this pattern.',1400);return;}
+  pushUndo();
+  pat.forEach((row,t)=>row.forEach((c,s)=>{const evs=cellEvs(c),keep=evs.filter(x=>x.pad!==pi);if(keep.length!==evs.length){n+=evs.length-keep.length;row[s]=packCell(keep);}}));
+  try{navigator.vibrate&&navigator.vibrate(20);}catch(_){}
+  save();renderSteps();renderPats();toast('Erased pad '+padLabel(pi)+' from pattern '+((playing?curPat:editPat)+1)+'.',1600);
+}
 $('bKeys').onclick=()=>{keys=!keys;renderPads();renderTransport();renderChords();};
 $('bView').onclick=()=>{view=view==='mix'?'focus':view==='focus'?1:view===1?4:'mix';UI.view=view;saveUI();renderTransport();
   toast(view==='mix'?'MIX: every sound that is playing gets its own piece of the screen.':view==='focus'?'FOCUS: video follows the selected track ('+TL[selTrack]+').':view===1?'LATEST: only the most recent hit.':'TRACKS: one quarter per track.',1800);};
