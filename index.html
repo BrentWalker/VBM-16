@@ -57,7 +57,7 @@ body.wide #panelsL:empty{min-height:40px}
 #bRec{color:var(--fire)}
 .kill{color:var(--fire)}
 .kill:active{background:var(--fire)!important;color:var(--ink)}
-.edTop .kill{padding:0 10px;height:38px}
+.edTop .edIc{flex:0 0 auto;width:48px;height:40px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:10px;background:var(--slate)}
 .pad.erasing{outline:3px solid var(--fire);outline-offset:-3px;filter:saturate(.3) brightness(.7)}
 #bMet.on{background:var(--water)!important}
 #bView.focus{background:var(--purple)}
@@ -184,7 +184,6 @@ button.danger{background:var(--fire);color:var(--ink);font-weight:700}
 .tab span{position:absolute;left:3px;bottom:2px;background:rgba(49,48,67,.75);padding:1px 4px;border-radius:4px}
 .tab.cur{box-shadow:0 0 0 2px var(--air)}
 .addv{flex:0 0 auto;font-size:11px;padding:8px 10px;background:var(--purple)}
-.addv.rec{background:var(--fire);color:var(--ink)}
 .edKey{font-size:11px;margin-top:6px;color:var(--air);min-height:14px}
 body.wide #ed .wrap{max-width:1500px}
 body.wide .edCols{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);column-gap:16px;align-items:start}
@@ -337,8 +336,8 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
       <button id="edDone">DONE</button>
       <button class="ur" id="eUndo">↶</button>
       <div class="tabs" id="srcTabs"></div>
-      <label class="btn addv rec">●<input type="file" accept="video/*" capture="environment" class="fIn" hidden></label>
-      <button id="eKill" class="kill" aria-label="Stop all sounds"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg></button>
+      <label class="btn edIc" aria-label="Record a video"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="13" height="12" rx="2"/><path d="M15.5 10.2l5-3v9.6l-5-3"/><circle cx="9" cy="12" r="2.4"/></svg><input type="file" accept="video/*" capture="environment" class="fIn" hidden></label>
+      <button id="eKill" class="kill edIc" aria-label="Stop all sounds"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg></button>
       <label class="btn addv">+ VIDEO<input type="file" accept="video/*" class="fIn" hidden></label>
     </div>
     <div class="edCols"><div class="edL">
