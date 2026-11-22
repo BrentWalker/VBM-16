@@ -14,6 +14,9 @@ html,body{margin:0;height:100%;background:#1f1e2c;color:var(--w);font-family:ui-
 .brand{font-weight:800;letter-spacing:.18em;color:var(--air);font-size:14px}
 .brand span{color:var(--w);opacity:.6;font-weight:400;font-size:10px;letter-spacing:.14em;margin-left:8px}
 .count{font-size:11px;opacity:.6}
+.tr{display:flex;align-items:center;gap:12px}
+.x{width:34px;height:34px;border-radius:50%;border:0;background:var(--slate);color:var(--w);font:inherit;font-size:16px;font-weight:700;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.x:active{background:var(--fire);color:var(--ink)}
 .track{flex:1;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .track::-webkit-scrollbar{display:none}
 .card{flex:0 0 100%;scroll-snap-align:center;padding:6px 20px 0;display:flex;flex-direction:column;overflow-y:auto}
@@ -80,7 +83,7 @@ b{color:var(--air)}
 </head>
 <body>
 <div class="phone">
-  <div class="top"><div class="brand">VBM-16<span>V1.0 · GETTING STARTED</span></div><div class="count" id="count">1 / 10</div></div>
+  <div class="top"><div class="brand">VBM-16<span>V1.0 · GETTING STARTED</span></div><div class="tr"><div class="count" id="count">1 / 10</div><button class="x" id="close" aria-label="Close tutorial">&#x2715;</button></div></div>
   <div class="track" id="track">
 
     <!-- 1 -->
@@ -313,6 +316,7 @@ b{color:var(--air)}
   track.addEventListener('scroll',()=>requestAnimationFrame(update),{passive:true});
   document.getElementById('prev').onclick=()=>go(idx-1);
   document.getElementById('next').onclick=()=>{if(idx===N-1)go(0);else go(idx+1);};
+  document.getElementById('close').onclick=()=>{if(history.length>1&&document.referrer)history.back();else location.href='./';};
   window.addEventListener('resize',()=>go(idx));
   update();
 })();
