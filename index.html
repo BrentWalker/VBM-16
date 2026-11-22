@@ -70,7 +70,8 @@ body.wide #panelsL:empty{min-height:40px}
 #tracks .tsel.hit{filter:brightness(1.5)}
 .pageRow{display:flex;gap:6px;margin-top:8px;align-items:center}
 .pageRow>button{flex:0 0 auto;font-size:10px;padding:7px 9px}
-#bLen{background:var(--purple);font-weight:700}
+#bLen,#bFollow{background:var(--purple);font-weight:700}
+#bFollow.on{background:var(--air);color:var(--ink)}
 .pages{display:flex;gap:4px;flex:1}
 .pages button{flex:1;padding:7px 0;font-size:11px;background:#3a3a50;position:relative}
 .pages button.view{background:var(--air);color:var(--ink);font-weight:700}
@@ -133,7 +134,8 @@ body.wide #panelsL:empty{min-height:40px}
 .ctl{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:11px}
 .ctl label{width:66px;opacity:.8}
 .slip{align-items:center}
-.slip button{padding:9px 0;font-size:12px}
+.slip button{padding:0;height:36px;font-size:12px}
+#secSeq .slip button{height:38px}
 .slip .val{flex:2;background:var(--purple);font-size:10px}
 #snV{letter-spacing:0;line-height:1.15;padding:2px 6px;word-spacing:-1px}
 .seg button.on{background:var(--water);color:var(--ink)}
@@ -276,9 +278,9 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
   </section>
 
 
-  <section class="panel tight" id="secFx"><h3>FX</h3><div class="fx" id="fx"></div>
+  <section class="panel tight" id="secFx"><h3>AUDIO FX</h3><div class="fx" id="fx"></div>
   <div class="tfx" id="tfx"></div></section>
-  <section class="panel tight" id="secSeq"><h3>SEQUENCER</h3>
+  <section class="panel tight" id="secSeq"><h3>STEP SEQUENCER</h3>
   <div class="row" id="tracks" style="margin-top:0"></div>
   <div class="pageRow"><button id="bLen">LNGTH 1</button><div class="pages" id="pages"></div><button id="bFollow" class="on">FOLLOW</button></div>
   <div class="steps" id="steps"></div>
