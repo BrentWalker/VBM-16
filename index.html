@@ -60,7 +60,9 @@ body.wide #panelsL:empty{min-height:40px}
 .kill:active{background:var(--fire)!important;color:var(--ink)}
 .edTop .edIc{flex:0 0 auto;width:48px;height:40px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:10px;background:var(--slate)}
 .pad.erasing{outline:3px solid var(--fire);outline-offset:-3px;filter:saturate(.3) brightness(.7)}
-#bMet.on{background:var(--water)!important}
+#bMet.on,#aMet.on{background:var(--water)!important;color:var(--ink)}
+.met{position:relative}
+.met .mdiv{position:absolute;right:3px;bottom:2px;font-size:9px;font-weight:800;line-height:1;opacity:.9}
 #bView.focus{background:var(--purple)}
 #bView .vb{position:absolute;right:4px;bottom:3px;font-size:8px;font-weight:700;opacity:.8}
 #tracks .track{display:flex;flex:1;border-radius:10px;overflow:hidden}
@@ -274,7 +276,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
     <button id="bPlay" aria-label="Play"></button>
     <button id="bRec" aria-label="Record"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="6.5" fill="currentColor" stroke="none"/></svg></button>
     <div class="bpm"><button id="bpmDn">-</button><span id="bpmV">92</span><button id="bpmUp">+</button></div>
-    <button id="bMet" aria-label="Metronome"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.2 3.5h5.6L19 20.5H5z"/><path d="M12 16.5l5.5-9.5"/><circle cx="17.5" cy="7" r="1.4" fill="currentColor"/><path d="M7.2 15.5h9.6"/></svg></button>
+    <button id="bMet" class="met" aria-label="Metronome"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.2 3.5h5.6L19 20.5H5z"/><path d="M12 16.5l5.5-9.5"/><circle cx="17.5" cy="7" r="1.4" fill="currentColor"/><path d="M7.2 15.5h9.6"/></svg><span class="mdiv"></span></button>
     <button id="bSlice" aria-label="Slice"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 6.2c5.4-2.9 11.6-2.9 17 0L12 21z"/><path d="M3.5 6.2c5.4-2.9 11.6-2.9 17 0" stroke-width="3.2"/><circle cx="10" cy="10" r="1.5" fill="currentColor" stroke="none"/><circle cx="14.6" cy="11.4" r="1.3" fill="currentColor" stroke="none"/><circle cx="11.8" cy="15" r="1.1" fill="currentColor" stroke="none"/></svg></button>
     <button id="bKeys" aria-label="Keys"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5.5" width="20" height="13" rx="2"/><path d="M7 5.5v13M12 5.5v13M17 5.5v13"/><rect x="5.6" y="5.5" width="2.8" height="7" fill="currentColor" stroke="none"/><rect x="10.6" y="5.5" width="2.8" height="7" fill="currentColor" stroke="none"/><rect x="15.6" y="5.5" width="2.8" height="7" fill="currentColor" stroke="none"/></svg></button>
     <button id="bView" aria-label="View"></button>
@@ -366,7 +368,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
     <canvas id="wave"></canvas>
     <div class="edInfo"><span id="iS">[</span><span id="iL">LEN 0 ms</span><span id="iE">]</span></div>
     <div class="row act">
-      <button id="aZo">ZOOM −</button><button id="aLoop">LOOP</button>
+      <button id="aZo">ZOOM −</button><button id="aMet" class="met" aria-label="Metronome"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.2 3.5h5.6L19 20.5H5z"/><path d="M12 16.5l5.5-9.5"/><circle cx="17.5" cy="7" r="1.4" fill="currentColor"/><path d="M7.2 15.5h9.6"/></svg><span class="mdiv"></span></button><button id="aLoop">LOOP</button>
       <button id="aPlay" class="play">▶</button>
       <button id="aFit">FIT</button><button id="aZi">ZOOM +</button>
     </div>
@@ -379,6 +381,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
     <div class="row lens">
       <button id="lHalf">½</button><button id="lDbl">×2</button><button data-st="1">1/16</button><button data-st="2">1/8</button><button data-st="4">1/4</button><button data-st="16">1 BAR</button>
     </div>
+    <div class="row lens"><button data-st="32">2 BARS</button><button data-st="64">4 BARS</button><button data-st="128">8 BARS</button><button data-st="256">16 BARS</button></div>
     <div id="est" class="est hidden"><span id="estTxt"></span><div class="bar" id="estBarW"><div id="estBar"></div></div><button id="estBtn" class="hidden">OK</button></div>
     </div><div class="edR">
     <div class="edH"><span>SEND TO PAD</span><span>tap a pad</span></div>
@@ -390,7 +393,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
       <p>Drag either edge to move it. Edges can pass each other, whichever one is on the left is the start.</p>
       <p>Hold the selection for a moment until it lights up, then drag to slide the whole slice without changing its length.</p>
       <p>Edge off screen? A blue arrow shows on that side: drag in from it to pull that edge to your finger, or tap it to see the whole slice. Bars are numbered inside the slice.</p>
-      <p>Drag outside the selection to scroll, pinch to zoom, tap to preview a spot. ½ and ×2 halve or double the length. The length buttons snap it to the beat grid at your BPM.</p>
+      <p>Drag outside the selection to scroll, pinch to zoom, tap to preview a spot. ½ and ×2 halve or double the length. The length buttons snap it to the beat grid at your BPM, from 1/16 up to 16 BARS. Metronome on (hold it) plus LOOP ticks from the slice start; tap it for more ticks a bar, and the waveform shows a line for each tick.</p>
       <p>VIDEO SLIP moves the picture earlier or later while the sound stays put, up to 1 second each way. The red bar on the waveform shows where the video now comes from. Tap the readout to reset. Slip stays set for this video, so every slice you send from it gets the same fix.</p>
     </div>
     </div></div>
@@ -689,7 +692,9 @@ const ICON_PLAY='<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="tr
 const ICON_STOP='<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1.5" fill="currentColor"/></svg>';
 const ICON_EYE_FOCUS='<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1.5 12S5.5 3.8 12 3.8 22.5 12 22.5 12 18.5 20.2 12 20.2 1.5 12 1.5 12z"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="2.3" fill="currentColor"/></svg>';
 const ICON_EYE='<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.8-6.5 10-6.5S22 12 22 12s-3.8 6.5-10 6.5S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
-/* metronome: straight to the speakers, never into exports */
+/* metronome: straight to the speakers, never into exports. Tap the button for more ticks per bar (1, 2, 4, 8, 16), hold it for on/off */
+const MDIVS=[1,2,4,8,16];
+const metDiv=()=>MDIVS.includes(UI.metDiv)?UI.metDiv:4;
 function click(t,accent){
   const o=ctx.createOscillator(),g=ctx.createGain();o.type='sine';o.frequency.value=accent?1760:1100;
   g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(accent?0.45:0.28,t+0.002);g.gain.exponentialRampToValueAtTime(0.0001,t+0.05);
@@ -725,7 +730,7 @@ function advance(){
 }
 let eraseDirty=false;
 function scheduleStep(s,t){
-  if(UI.metro&&!exporting&&s%4===0)click(t,s%16===0);
+  if(UI.metro&&!exporting&&s%(16/metDiv())===0)click(t,s%16===0);
   const pat=S.patterns[curPat],stut=fx.STUT16?1:fx.STUT8?2:0;
   for(let tr=0;tr<4;tr++){
     if(muted[tr])continue;
@@ -1091,13 +1096,21 @@ function playSel(){
   const {s,e}=src.sel,n=ctx.createBufferSource(),g=ctx.createGain();n.buffer=src.audio;n.connect(g);g.connect(ctx.destination);
   const t0=ctx.currentTime+0.03;
   if(loopMode){n.loop=true;n.loopStart=s;n.loopEnd=e;n.start(t0,s);}else n.start(t0,s,e-s);
-  selPlay={n,t0,loop:loopMode,src};
+  selPlay={n,t0,loop:loopMode,src,s,e};
+  /* metronome during the slicer preview: ticks from the slice start, so a bar loop lines up */
+  if(UI.metro){const sp=selPlay,iv=sd=>stepDur()*16/metDiv();let k=0;
+    const tick=()=>{if(selPlay!==sp)return clearInterval(sp.mt);const span=sp.src.sel.e-sp.src.sel.s,ivl=iv();
+      while(true){const off=k*ivl;let when;
+        if(sp.loop){const per=Math.max(1,Math.round(span/ivl)),lap=Math.floor(k/per),j=k%per;when=sp.t0+lap*span+j*ivl;}
+        else{if(off>span-0.001)return;when=sp.t0+off;}
+        if(when>ctx.currentTime+0.12)break;if(when>=ctx.currentTime-0.01)click(when,(sp.loop?k%Math.max(1,Math.round(span/ivl)):k)%metDiv()===0);k++;}};
+    tick();sp.mt=setInterval(tick,30);}
   n.onended=()=>{if(selPlay&&selPlay.n===n){selPlay=null;src.video.pause();renderEdBtns();}};
   src.video.currentTime=vt(src,s);src.video.play().catch(()=>{});
   renderEdBtns();
 }
 function stopSel(){
-  if(!selPlay)return;const p=selPlay;selPlay=null;
+  if(!selPlay)return;const p=selPlay;selPlay=null;clearInterval(p.mt);
   try{p.n.onended=null;p.n.stop();}catch(e){}
   try{p.src.video.pause();}catch(e){}
   renderEdBtns();
@@ -1143,15 +1156,14 @@ function drawWave(){
   /* beat grid from the slice start: bars always, then beats and steps as you zoom in. Longer slices get numbered bars */
   const sd=stepDur(),pps=W/(span/sd),bar=16*sd;
   let every=1;while(pps*16*every<14*dpr)every*=2;/* thin bars out only when they would touch */
-  const lvl=pps>=7*dpr?1:pps*4>=7*dpr?4:16;
+  let lvl=16/metDiv();while(lvl<16&&pps*lvl<6*dpr)lvl*=2;/* one line per metronome tick, thinned only if too tight */
   {let k=Math.ceil((v0-s)/(sd*lvl))*lvl;g.font=(9*dpr)+'px ui-monospace,Menlo,monospace';
    for(let t=s+k*sd;t<=v1+1e-9;k+=lvl,t=s+k*sd){
      const x=X(t),kb=((k%16)+16)%16,isBar=kb===0,bn=Math.round(k/16);
      if(isBar){if(((bn%every)+every)%every!==0)continue;const inSel=t>=s-1e-6&&t<=e+1e-6;
        g.fillStyle=inSel?'rgba(173,207,222,.5)':'rgba(173,207,222,.25)';g.fillRect(x,0,dpr*(inSel?1.5:1),H);
        if(inSel&&t<e-1e-6&&bar/span*W*every>18*dpr){g.fillStyle='rgba(244,243,238,.75)';g.fillText(String(bn+1),x+3*dpr,11*dpr);}}
-     else if(kb%4===0){g.fillStyle='rgba(173,207,222,.2)';g.fillRect(x,0,dpr,H*0.55);}
-     else{g.fillStyle='rgba(173,207,222,.1)';g.fillRect(x,0,dpr,H*0.22);}
+     else{const q=kb%4===0;g.fillStyle=q?'rgba(173,207,222,.24)':'rgba(173,207,222,.14)';g.fillRect(x,0,dpr,q?H*0.55:H*0.32);}
    }}
   const mid=H/2,amp=H*0.46*src.norm,spp=span*sr/W,m=src.mono,P=src.peaks;
   for(let x=0;x<W;x++){
@@ -1941,7 +1953,7 @@ function renderChain(){
   $('chainTxt').textContent=chainOn?(S.chain.length?S.chain.map(x=>x+1).join(' '):'tap patterns to chain'):(S.chain.length?'off ('+S.chain.map(x=>x+1).join(' ')+')':'chain off');
 }
 function renderTransport(){
-  $('bPlay').innerHTML=playing?ICON_STOP:ICON_PLAY;$('bPlay').classList.toggle('on',playing);$('bMet').classList.toggle('on',!!UI.metro);
+  $('bPlay').innerHTML=playing?ICON_STOP:ICON_PLAY;$('bPlay').classList.toggle('on',playing);$('bMet').classList.toggle('on',!!UI.metro);if(typeof renderMet==='function')renderMet();
   $('bRec').classList.toggle('on',recArm);$('bKeys').classList.toggle('on',keys);
   $('bView').innerHTML=(view==='focus'?ICON_EYE_FOCUS:ICON_EYE)+'<span class="vb">'+(view==='mix'?'MIX':view==='focus'?TL[selTrack]:view)+'</span>';$('bView').classList.toggle('focus',view==='focus');$('bpmV').textContent=S.bpm;$('gBpm').value=S.bpm;$('oBpm').textContent=S.bpm;
   $('gSw').value=Math.round(S.swing*100);$('oSw').textContent=Math.round(S.swing*100)+'%';$('eFmt').value=S.format;
@@ -1970,7 +1982,17 @@ function renderAll(){if(tfxEls.length)renderTfx();renderTracks();renderSteps();r
 $('bPlay').onclick=()=>{playing?stop():start();};
 $('snM4').onclick=()=>nudge(-4);$('snM1').onclick=()=>nudge(-1);$('snP1').onclick=()=>nudge(1);$('snP4').onclick=()=>nudge(4);$('snV').onclick=()=>nudge(0);
 $('snAll').onclick=()=>{nudgeAll=!nudgeAll;renderSteps();};
-$('bMet').onclick=()=>{initAudio();UI.metro=!UI.metro;saveUI();renderTransport();};
+function renderMet(){document.querySelectorAll('.met').forEach(b=>{b.classList.toggle('on',!!UI.metro);b.querySelector('.mdiv').textContent=metDiv();});}
+function metBtn(b){
+  let tm=null,held=false;
+  b.addEventListener('pointerdown',e=>{held=false;clearTimeout(tm);tm=setTimeout(()=>{held=true;initAudio();UI.metro=!UI.metro;saveUI();renderMet();renderTransport();try{navigator.vibrate&&navigator.vibrate(20);}catch(_){}
+    toast('Metronome '+(UI.metro?'on':'off')+'.',900);},450);});
+  const end=()=>clearTimeout(tm);b.addEventListener('pointerup',end);b.addEventListener('pointercancel',end);b.addEventListener('pointerleave',end);
+  b.addEventListener('click',()=>{if(held){held=false;return;}initAudio();const i=MDIVS.indexOf(metDiv());UI.metDiv=MDIVS[(i+1)%MDIVS.length];saveUI();renderMet();waveDirty=true;
+    const d=metDiv();toast((d===1?'1 tick':d+' ticks')+' a bar'+(UI.metro?'':' (hold to turn the metronome on)')+'.',1200);});
+  b.addEventListener('contextmenu',e=>e.preventDefault());
+}
+metBtn($('bMet'));metBtn($('aMet'));renderMet();
 /* Hold REC + hold a pad while playing: erase that pad from each step as the playhead passes. A tap on REC still arms recording. */
 let recHeld=false,recUsed=false;const eraseHeld=new Set();
 $('bRec').onpointerdown=e=>{e.preventDefault();recHeld=true;recUsed=false;try{$('bRec').setPointerCapture(e.pointerId);}catch(_){}};
