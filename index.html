@@ -939,7 +939,7 @@ function relinkPads(src){
   pads.forEach(p=>{if(p&&p.srcId==null&&p.srcName&&want&&p.srcName===want&&(p.start||0)<src.dur){p.srcId=src.id;n++;}});
   if(relinkPad!=null&&pads[relinkPad]&&pads[relinkPad].srcId===src.id){
     const p=pads[relinkPad];src.sel={s:p.start||0,e:Math.min(src.dur,(p.start||0)+p.len)};if(p.slip!=null)src.slip=p.slip;
-    try{fitSel(true);previewSeek(src.sel.s);}catch(e){}bank=Math.floor(relinkPad/16);target=relinkPad%16;renderMini();
+    try{fitSel(true);previewSeek(src.sel.s);}catch(e){}bank=Math.floor(relinkPad/16);target=relinkPad%16;renderMini();markEditing(relinkPad);
   }
   relinkPad=null;
   if(n){padsChanged();setTimeout(()=>estFlash('Linked '+n+' pad'+(n>1?'s':'')+' back to '+src.name+'. EDIT SLICE and VIDEO SLIP work on them again.',4000),50);}
@@ -1039,10 +1039,27 @@ function openEditor(srcIdx,sel,padIdx){
     const src=cur();
     if(sel&&src){src.sel={s:sel.s,e:Math.min(src.dur,sel.e)};if(sel.slip!=null)src.slip=sel.slip;fitSel(true);previewSeek(src.sel.s);}
   }else if(curSrc<0&&sources.length)selectSource(0);
+  editing=null;if(sel&&padIdx!=null&&cur())markEditing(padIdx);
   if(padIdx!=null){bank=Math.floor(padIdx/16);target=padIdx%16;}else target=firstEmpty();
   renderMini();renderTabs();renderEdInfo();waveDirty=true;
 }
+/* EDIT SLICE: remember the pad and its slice, so DONE writes any change back to that pad */
+let editing=null;
+function markEditing(i){const src=cur();if(!src||!pads[i])return;editing={pad:i,srcId:src.id,s:src.sel.s,e:src.sel.e,slip:src.slip||0};$('edDone').textContent='DONE · PAD '+padLabel(i);}
+function editChanged(){const src=cur();return !!(editing&&src&&src.id===editing.srcId&&pads[editing.pad]&&(Math.abs(src.sel.s-editing.s)>1e-4||Math.abs(src.sel.e-editing.e)>1e-4||Math.abs((src.slip||0)-editing.slip)>1e-4));}
+async function doneEditor(){
+  if(edBusy)return;
+  if(editChanged()){
+    const src=cur(),i=editing.pad,old=pads[i];pushUndo();edBusy=true;stopSel();
+    const {s,e}=src.sel;est('Updating pad '+padLabel(i),0);
+    try{const p=await makePad(src,s,e-s,(k,n)=>est('Updating pad '+padLabel(i),k/n),src.slip||0);if(old&&old.name)p.name=old.name;pads[i]=p;save();padsChanged();toast('Pad '+padLabel(i)+' updated.',1400);}
+    catch(e){toast('Could not update pad '+padLabel(i)+'.',2000);}
+    edBusy=false;
+  }
+  closeEditor();
+}
 function closeEditor(){
+  editing=null;$('edDone').textContent='DONE';
   stopSel();$('ed').classList.add('hidden');edOpen=false;document.body.style.overflow='';
   renderAll();
 }
@@ -1213,7 +1230,8 @@ async function sendToPad(li){const i=bank*16+li;
   if(edBusy)return;pushUndo();edBusy=true;stopSel();
   const {s,e}=src.sel;est('Sending to pad '+padLabel(i),0);
   const p=await makePad(src,s,e-s,(k,n)=>est('Sending to pad '+padLabel(i),k/n),src.slip||0);
-  pads[i]=p;typeDefaults(i,src);selPad=i;target=(li+1)%16;edBusy=false;save();padsChanged();
+  const keep=editing&&editing.pad===i;pads[i]=p;if(!keep)typeDefaults(i,src);selPad=i;target=(li+1)%16;edBusy=false;save();padsChanged();
+  if(keep)markEditing(i);
   previewSeek(src.sel.s);
   estFlash('Sent to pad '+padLabel(i)+'. Next tap goes to pad '+padLabel(bank*16+target)+'.',1800);
   renderMini();renderPads();renderSteps();renderPadPanel();
@@ -1989,7 +2007,7 @@ document.querySelectorAll('.fIn').forEach(inp=>inp.addEventListener('change',e=>
 $('bDemo').onclick=demoKit;
 $('mClose').onclick=()=>{$('modal').classList.add('hidden');$('mVid').pause();};
 /* editor controls */
-$('edDone').onclick=closeEditor;
+$('edDone').onclick=doneEditor;
 const nd=()=>(pushUndo('nudge'),NUDGE[nudgeIdx][0]);
 $('nSm').onclick=()=>{if(cur())setS(cur().sel.s-nd());};
 $('nSp').onclick=()=>{if(cur())setS(cur().sel.s+nd());};
