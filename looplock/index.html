@@ -47,6 +47,13 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 #stage .badge,#stage #empty{z-index:3}
 #empty{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:20px}
 #empty .big{height:46px;padding:0 24px;font-size:14px;border-color:rgba(220,123,120,.5);color:var(--coral)}
+#xprog{position:absolute;left:12px;right:12px;top:50%;transform:translateY(-50%);z-index:5;background:rgba(49,48,67,.94);border:1px solid var(--line);border-radius:16px;padding:12px 14px}
+.xph{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+#xpT{font-size:11px;letter-spacing:.16em;color:var(--white)} #xpP{font:800 15px "JetBrains Mono",monospace;color:var(--white)}
+.xpb{height:8px;border-radius:4px;background:rgba(255,255,255,.08);margin:9px 0 7px;overflow:hidden}
+#xpI{display:block;height:100%;width:0;border-radius:4px;background:linear-gradient(90deg,var(--fire),var(--water));transition:width .2s linear}
+#xpS{font-size:11px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis} #xpE{font-size:11px;color:var(--txt);white-space:nowrap}
+.xpn{font-size:10px;color:var(--dim);margin-top:6px;text-align:center;opacity:.7}
 #impBox{position:absolute;left:12px;right:12px;bottom:12px;z-index:4;background:rgba(49,48,67,.9);border:1px solid var(--line);border-radius:14px;padding:10px 12px;text-align:center}
 #impBox p{margin:0;font-size:12px;color:var(--txt);line-height:1.4}
 #impBox .pill{margin-top:8px;color:var(--blue);border-color:rgba(126,179,210,.5)}
@@ -72,7 +79,7 @@ button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:poin
 #playB svg{width:26px;height:26px}
 #playB.on{background:linear-gradient(135deg,rgba(220,123,120,.45),rgba(126,179,210,.45))}
 #playB.beat{box-shadow:0 0 0 4px rgba(173,207,222,.6)}
-#metB{color:var(--air)} #metB svg{width:20px;height:20px;opacity:.28} #metB.on svg{opacity:1} #metB.on{border-color:rgba(173,207,222,.6);background:rgba(173,207,222,.1)} #metB .two{display:none} #metB.dbl .two{display:inline}
+#metB{color:var(--air)} #metB svg{width:20px;height:20px;opacity:.28} #metB.on svg{opacity:1} #metB.on{border-color:rgba(173,207,222,.6);background:rgba(173,207,222,.1)} #metB{position:relative} #metN{position:absolute;right:5px;bottom:3px;font:800 9px "JetBrains Mono",monospace;color:var(--air);opacity:.45;line-height:1} #metB.on #metN{opacity:1}
 .tb.lk{color:var(--blue);border-color:rgba(126,179,210,.4)}
 #lockTop.on{background:rgba(126,179,210,.18);border-color:rgba(126,179,210,.75)}
 .lockrow .tb.lk{background:rgba(126,179,210,.08);font-size:15px}
@@ -201,6 +208,7 @@ input,select,textarea{font-size:16px}
       <button class="pill big" id="loadBig">Import video</button>
       <p>Find the loop on the waveform, nudge it until it's perfect, check it with bar skip, lock it, export.</p>
     </div>
+    <div id="xprog" class="hide"><div class="xph"><b id="xpT">EXPORTING</b><span id="xpP">0%</span></div><div class="xpb"><i id="xpI"></i></div><div class="xph"><span id="xpS">Starting</span><span id="xpE" class="mono"></span></div><div class="xpn">Tap stop to cancel</div></div>
     <div id="impBox" class="hide"><p id="impStatus"></p><button class="pill hide" id="capB">Read audio by playing</button></div>
     <input type="file" id="file" accept="video/*" class="hide">
     <button class="stagebtn hide" id="newVid" title="Load another video"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="13" height="12" rx="2.5"/><path d="M16 10.5l5-3v9l-5-3"/><path d="M9.5 9.5v5M7 12h5"/></svg></button>
@@ -231,7 +239,7 @@ input,select,textarea{font-size:16px}
     <button class="tb lk oval" id="lockTop" title="Lock the loop length (L)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path class="shk" d="M7 11V8a5 5 0 0 1 9.6-2"/><rect x="5" y="11" width="14" height="10" rx="2.5"/></svg><span id="lockTopT">LOCK</span></button>
     <button class="tb" id="stopB" title="Stop everything: playback and export (Esc)"><svg viewBox="0 0 24 24" fill="currentColor"><rect x="6.5" y="6.5" width="11" height="11" rx="2"/></svg></button>
     <button class="tb" id="playB" title="Play loop (space)"><svg id="playIc" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.5v13l11-6.5z"/></svg><span id="playT" class="hide"></span></button>
-    <button class="tb" id="metB" title="Metronome on the division lines: off, on, double time"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M9 3h6l4 18H5z"/><path d="M6.5 15h11"/><path d="M12 15l5-9"/><circle cx="17" cy="6" r="1.3" fill="currentColor"/></svg><span class="two"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M9 3h6l4 18H5z"/><path d="M6.5 15h11"/><path d="M12 15l5-9"/><circle cx="17" cy="6" r="1.3" fill="currentColor"/></svg></span></button>
+    <button class="tb" id="metB" title="Metronome: hold for on or off, tap for ticks per bar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M9 3h6l4 18H5z"/><path d="M6.5 15h11"/><path d="M12 15l5-9"/><circle cx="17" cy="6" r="1.3" fill="currentColor"/></svg><span id="metN">4</span></button>
     <button class="tb k oval" id="skipB">BAR SKIP</button>
   </div>
   <div class="toolrow">
@@ -277,11 +285,12 @@ input,select,textarea{font-size:16px}
   <div class="sitem"><b>Waveform</b>Drag the red <span class="cS">S</span> (start) and blue <span class="cL">L</span> (loop point) flags to set your loop. Pinch to zoom. Double tap to zoom all the way out, double tap again to go back.</div>
   <div class="sitem"><b>Nudge row</b>Red arrows move the start, blue arrows move the loop point. The middle button sets how far each tap moves: 1 frame, 10 ms, 1 ms or 0.1 ms. Hold an arrow to keep moving.</div>
   <div class="sitem"><b>Play</b>Plays your loop around and around with no gap at all. This is the perfect loop.</div>
-  <div class="sitem"><b>Bar skip</b>Plays the first section of the loop and then the last one, over and over, so you hear the seam fast. Hold it to choose 2, 4, 8 or 16 sections.</div>
+  <div class="sitem"><b>Bar skip</b>Plays the first bar of the loop and then the last one, over and over, so you hear the seam fast. Long loops get more bars automatically. Hold it to choose 2 to 128 bars.</div>
   <div class="sitem"><b>Lock</b>Freezes the loop length. Then ÷2 and ×2 halve or double it, the arrows slide the whole loop, and you can press, hold and drag inside the loop to slide it.</div>
   <div class="sitem"><b>Start, End</b>Jump to the start or the end of the loop.</div>
   <div class="sitem"><b>XF</b>Crossfade while you listen: blends the end of the loop into the start so it doesn't click. Tap to change.</div>
-  <div class="sitem"><b>Metronome</b>Clicks on the section lines. Tap for on, again for double time, again for off.</div>
+  <div class="sitem"><b>Metronome</b>Hold for on or off. Tap to pick 1, 2, 4, 8 or 16 ticks a bar, shown as the small number. Each tick gets a faint line on the waveform.</div>
+  <div class="sitem"><b>Pull a line in from the edge</b>Start line off the left side? Drag in from the left edge and it comes to your finger. End line off the right side? Drag in from the right edge.</div>
   <div class="sitem"><b>Export buttons</b>Tap one to export, then pick where it goes in the share sheet. IG, YT and TT come out vertical 9:16, the first button keeps the video's shape. Hold any of them for its own settings. The small label shows them: offset·crossfade, Q for Seam Quietest, M for Master.</div>
   <div class="sitem"><b>EQ tab</b>Low shelf 150 Hz and high shelf 8 kHz go 18 dB either way, mid bell 2.5 kHz goes 12. Press and hold a knob's name to change its frequency. Drag a knob up or down, double tap to reset. You hear it while playing and it goes into every export.</div>
   <div class="sitem"><b>Save tab</b>Save Project keeps the video and everything about the loop, EQ included. Projects lists them so you can open or delete one.</div>
@@ -318,7 +327,7 @@ input,select,textarea{font-size:16px}
 </div></div>
 <div id="dset" class="hide" style="position:fixed;inset:0;z-index:20;background:rgba(49,48,67,.75);display:flex;align-items:flex-end;justify-content:center"><div class="sheet" style="width:100%;max-width:560px;background:#424C60;border-radius:22px 22px 0 0;padding:18px 18px calc(env(safe-area-inset-bottom) + 18px);border-top:1px solid var(--line)">
   <h4 style="margin:0 0 10px;font-size:12px;letter-spacing:.16em">DIVIDE THE LOOP</h4>
-  <p class="hint" style="margin:0 0 10px;font-size:11px">Bar skip plays the first section, then the last one, on repeat.</p>
+  <p class="hint" style="margin:0 0 10px;font-size:11px">One section is one bar. Bar skip plays the first bar, then the last one, on repeat. Long loops get more bars automatically, pick any count here.</p>
   <div class="chips" id="divChips2"></div>
   <button id="dDone" style="width:100%;height:44px;border-radius:999px;font-weight:700;letter-spacing:.08em;font-size:12px;color:#313043;background:linear-gradient(90deg,var(--fire),var(--water))">DONE</button>
 </div></div>
@@ -2434,7 +2443,7 @@ function suggest(quiet){
   const beat=60/S.bpm; let t0=S.grid0; while(t0<0.03) t0+=beat; while(t0-beat>=0.03) t0-=beat;
   let n=Math.round(4*4*beat*S.sr);
   if(t0*S.sr+n>total()){ t0=0; n=Math.min(n,total()); }
-  S.s0=snapOnset(Math.round(t0*S.sr)); S.n=n; if(S.s0+n>total()) S.n=total()-S.s0; S.div=4; S.locked=false;
+  S.s0=snapOnset(Math.round(t0*S.sr)); S.n=n; if(S.s0+n>total()) S.n=total()-S.s0; S.div=4; S.locked=false; S.autoBars=4;
   viewLoop(); edited(true);
   if(!quiet) toast('Suggested 4 bars at '+S.bpm+' bpm');
 }
@@ -2536,10 +2545,15 @@ function resizeLoop(k){
   S.n=nn; viewLoop(); edited(false); toast((k<1?'Contracted to ':'Expanded to ')+fmtMs(ln())+' · '+S.div+(S.div===1?' section':' sections'));
 }
 function edited(showStart){
-  render();
+  autoDiv(); render();
   if(S.mode&&S.mode!=='all') restartSoon();
   else if(!S.mode){ const v=vA(); const t=showStart?st():Math.max(0,en()-0.5/S.fps); v.currentTime=t+0.002; S.head=t; }
 }
+// a bar count from the tempo; only changes the divisions when the loop grows or shrinks by a whole bar
+function barsNow(){ if(!S.bpm||!S.n) return null; const b=ln()/(240/S.bpm); if(b<0.75) return null;
+  const P=[1,2,4,8,16,32,64,128]; for(const p of P) if(Math.abs(b-p)/p<0.12) return p; return clamp(Math.round(b),1,128); }
+function autoDiv(){ if(S.locked) return; const nb=barsNow(); if(nb==null||nb===S.autoBars) return;
+  S.autoBars=nb; S.div=nb; if(S.pb) S.pb.marks=null; }
 let rsT=null; function restartSoon(){ clearTimeout(rsT); rsT=setTimeout(()=>{ if(S.mode&&S.mode!=='all') play(S.mode,{keep:true}); },40); }
 
 function holdRepeat(el,fn){
@@ -2653,18 +2667,27 @@ $('#skipB').onclick=()=>{ if($('#skipB')._held){ $('#skipB')._held=false; return
 
 /* metronome: fires on the division lines while the loop plays */
 S.met='off'; S.gap=0; S.seamSpot='start'; S.platform='off';
-const MET_OPTS=['off','on','double'];
-$('#metB').onclick=()=>{ S.met=MET_OPTS[(MET_OPTS.indexOf(S.met)+1)%MET_OPTS.length]; if(S.pb) S.pb.marks=null; render();
-  toast({off:'Metronome off',on:'Metronome on the division lines',double:'Metronome double time'}[S.met]); };
+const MET_N=[1,2,4,8,16]; S.metN=4;
+try{ const v=+localStorage.getItem('ll_metN'); if(MET_N.includes(v)) S.metN=v; }catch(_){}
+(()=>{ const el=$('#metB'); let t=null,held=false;
+  el.addEventListener('pointerdown',()=>{ held=false; clearTimeout(t); t=setTimeout(()=>{ held=true;
+    S.met=S.met==='off'?'on':'off'; if(S.pb) S.pb.marks=null; render(); if(navigator.vibrate) try{ navigator.vibrate(10); }catch(_){}
+    toast(S.met==='off'?'Metronome off':'Metronome on · '+S.metN+(S.metN===1?' tick':' ticks')+' a bar'); },450); });
+  ['pointerup','pointercancel','pointerleave'].forEach(ev=>el.addEventListener(ev,()=>clearTimeout(t)));
+  el.onclick=()=>{ if(held){ held=false; return; }
+    S.metN=MET_N[(MET_N.indexOf(S.metN)+1)%MET_N.length]; try{ localStorage.setItem('ll_metN',S.metN); }catch(_){}
+    if(S.pb) S.pb.marks=null; render(); queueSession();
+    toast(S.metN+(S.metN===1?' tick':' ticks')+' a bar'+(S.met==='off'?' · hold to turn on':'')); };
+})();
 function clickAt(t,accent,off){
-  const c=ctx, o=c.createOscillator(), g=c.createGain(); o.frequency.value=accent?2400:off?1200:1600;
+  const c=ctx, o=c.createOscillator(), g=c.createGain(); o.frequency.value=accent?2400:off?1200:1800;
   g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(accent?0.32:off?0.12:0.2,t+0.001); g.gain.exponentialRampToValueAtTime(0.0001,t+0.035);
   o.connect(g); g.connect(c.destination); o.start(t); o.stop(t+0.04);
 }
 function metMarks(){
-  const dbl=S.met==='double', m=[];
-  if(S.mode==='skip'){ const h=Math.round(S.n/S.div)/S.sr; m.push({t:0,a:true},{t:h,a:false}); if(dbl) m.push({t:h/2,a:false,o:true},{t:h*1.5,a:false,o:true}); }
-  else { const d=S.n/S.div/S.sr; for(let k=0;k<S.div;k++){ m.push({t:k*d,a:k===0}); if(dbl) m.push({t:(k+0.5)*d,a:false,o:true}); } }
+  // one bar = one division; N ticks per bar, accent on each bar's downbeat, strongest on the loop's first
+  const N=S.metN||4, m=[], bar=S.n/S.div/S.sr, bars=S.mode==='skip'?2:S.div, b0=S.mode==='skip'?Math.round(S.n/S.div)/S.sr:bar;
+  for(let k=0;k<bars;k++) for(let j=0;j<N;j++) m.push({t:k*b0+j*bar/N,a:j===0&&(k===0||S.mode==='skip'),o:j>0,d:j===0&&k>0&&S.mode!=='skip'});
   return m.sort((x,y)=>x.t-y.t);
 }
 function metTick(){
@@ -2831,7 +2854,7 @@ function draw(){
   const pillTxt=(txt,x,align,col)=>{ g.textAlign=align; const w=g.measureText(txt).width+10*dpr, x0=align==='left'?x:align==='right'?x-w:x-w/2;
     g.fillStyle='rgba(49,48,67,.85)'; g.fillRect(x0,fy-11*dpr,w,15*dpr); g.fillStyle=col; g.fillText(txt,align==='left'?x+5*dpr:align==='right'?x-5*dpr:x,fy); };
   pillTxt('S '+fmtT(st(),4),4*dpr,'left','#DC7B78');
-  pillTxt(fmtMs(ln())+' ÷'+S.div,W/2,'center','#FFFFFF');
+  pillTxt(fmtMs(ln())+' · '+S.div+(S.div===1?' bar':' bars'),W/2,'center','#FFFFFF');
   pillTxt(fmtT(en(),4)+' L',W-4*dpr,'right','#7EB3D2');
 
 }
@@ -2845,11 +2868,15 @@ function drawNormal(g,W,top,wh,mid,amp,dpr){
   // waveform: dim outside, bright inside
   g.fillStyle=g.strokeStyle='rgba(173,207,222,.3)'; waveCol(0,W,a,b,mid,amp,g,dpr);
   g.save(); g.beginPath(); g.rect(xs,top,xe-xs,wh); g.clip(); g.fillStyle=g.strokeStyle='#ADCFDE'; waveCol(0,W,a,b,mid,amp,g,dpr); g.restore();
-  // divisions
+  // bars: a line on every bar, labels thinned so they never overlap
+  const bw=X(st()+d)-xs; let lk=1; while(bw*lk<18*dpr&&lk<S.div) lk*=2; let ln_=1; while(bw*ln_<3*dpr&&ln_<S.div) ln_*=2;
+  // metronome ticks: a faint line for every tick inside each bar
+  if(S.met!=='off'&&S.metN>1&&bw/S.metN>=4*dpr){ g.fillStyle='rgba(173,207,222,.24)';
+    for(let i=0;i<S.div;i++) for(let j=1;j<S.metN;j++){ const x=Math.round(X(st()+(i+j/S.metN)*d)); if(x>=0&&x<=W) g.fillRect(x,top+8*dpr,dpr,wh-26*dpr); } }
   g.font=`700 ${9*dpr}px Inter,system-ui`; g.textAlign='center';
-  for(let i=0;i<S.div;i++){ const x0=X(st()+i*d), x1=X(st()+(i+1)*d);
-    if(i>0){ g.fillStyle='rgba(173,207,222,.5)'; for(let y=top;y<top+wh;y+=6*dpr) g.fillRect(Math.round(x0),y,dpr,3*dpr); }
-    if(x1-x0>16*dpr){ const skip=(S.mode==='skip'||S.step==='divide')&&i>0&&i<S.div-1; g.fillStyle=skip?'rgba(173,207,222,.3)':'#ADCFDE'; g.fillText(String(i+1),(x0+x1)/2,top+wh-16*dpr); } }
+  for(let i=0;i<S.div;i++){ const x0=X(st()+i*d), x1=X(st()+(i+1)*d); if(x1<0||x0>W) continue;
+    if(i>0&&i%ln_===0){ const major=i%lk===0; g.fillStyle=major?'rgba(173,207,222,.55)':'rgba(173,207,222,.28)'; for(let y=top;y<top+wh;y+=6*dpr) g.fillRect(Math.round(x0),y,dpr,3*dpr); }
+    if(i%lk===0){ const skip=(S.mode==='skip'||S.step==='divide')&&i>0&&i<S.div-1; g.fillStyle=skip?'rgba(173,207,222,.3)':'#ADCFDE'; g.fillText(String(i+1),lk===1?(x0+x1)/2:x0+8*dpr,top+wh-16*dpr); } }
   // time ruler ticks at top of main area
   rulers(g,W,top,a,b,X,dpr);
   // markers
@@ -2896,13 +2923,17 @@ function drawSeam(g,W,top,wh,mid,amp,dpr){
     if(y<OVH){ drag={k:'ov'}; ovMove(e.clientX); return; }
     if(S.seam){ drag={k:x<r.width/2?'seamL':'seamR',x0:e.clientX,s0:S.s0,n:S.n,moved:false}; return; }
     const [a,b]=S.view, X=t=>(t-a)/(b-a)*r.width, ds=Math.abs(x-X(st())), de=Math.abs(x-X(en())), hit=24;
-    if(ds<hit&&ds<=de) drag={k:'S'};
+    const EDGE=24, xS=X(st()), xE=X(en());
+    // the start line is off the left edge, or the end line off the right: a drag in from that edge pulls it in
+    if(x<EDGE&&xS<0){ drag={k:'S',edge:true,off:0}; navigator.vibrate&&navigator.vibrate(8); }
+    else if(x>r.width-EDGE&&xE>r.width){ drag=S.locked?{k:'Lslide',edge:true}:{k:'L',edge:true}; navigator.vibrate&&navigator.vibrate(8); }
+    else if(ds<hit&&ds<=de) drag={k:'S'};
     else if(de<hit) drag={k:S.locked?'S':'L', fromL:S.locked};
     else { drag={k:'pan',x0:e.clientX,view:S.view.slice(),moved:false};
       if(S.locked&&x>X(st())&&x<X(en())){ const d0=drag, cx=e.clientX;
         d0.hold=setTimeout(()=>{ if(drag!==d0||d0.moved) return; d0.k='slide'; d0.off=Math.round(tAt(cx)*S.sr)-S.s0; S.sliding=true;
           draw(); },320); } }
-    if(drag.k==='S'&&S.locked) drag.off=Math.round(tAt(e.clientX)*S.sr)-S.s0;
+    if(drag.k==='S'&&S.locked&&!drag.edge) drag.off=Math.round(tAt(e.clientX)*S.sr)-S.s0;
   });
   function ovMove(cx){ const r=rect(); scrubTo(clamp((cx-r.left)/r.width,0,1)*S.dur); }
   cv.addEventListener('pointermove',e=>{
@@ -2925,6 +2956,7 @@ function drawSeam(g,W,top,wh,mid,amp,dpr){
     const s=Math.round(clamp(tAt(e.clientX),0,S.dur)*S.sr);
     if(drag.k==='S'){ if(S.locked) S.s0=clamp(s-(drag.off||0),0,total()-S.n); else { const end=S.s0+S.n; const ns=clamp(s,0,end-minN()); S.n=end-ns; S.s0=ns; }
       if(!S.mode){ vA().currentTime=st(); S.head=st(); } }
+    else if(drag.k==='Lslide'){ S.s0=clamp(s-S.n,0,total()-S.n); if(!S.mode){ const t=Math.max(0,en()-0.5/S.fps); vA().currentTime=t; S.head=t; } }
     else if(drag.k==='L'){ S.n=clamp(s-S.s0,minN(),total()-S.s0); if(!S.mode){ const t=Math.max(0,en()-0.5/S.fps); vA().currentTime=t; S.head=t; } }
     
   });
@@ -2938,7 +2970,7 @@ function drawSeam(g,W,top,wh,mid,amp,dpr){
       lastTap={t:now,x:e.clientX}; }
     if(d.k==='pan'&&!d.moved){ const t=clamp(tAt(e.clientX),0,S.dur); S.head=t; if(S.mode==='all') play('all'); else if(!S.mode) vA().currentTime=t; }
     if(d.k==='T'){ render(); if(S.mode==='loop') restartSoon(); return; }
-    if(d.k==='S'||d.k==='L'||((d.k==='seamL'||d.k==='seamR')&&d.moved)){ render(); if(S.mode&&S.mode!=='all') restartSoon(); }
+    if(d.k==='S'||d.k==='L'||d.k==='Lslide'||((d.k==='seamL'||d.k==='seamR')&&d.moved)){ autoDiv(); render(); if(S.mode&&S.mode!=='all') restartSoon(); }
   };
   cv.addEventListener('pointerup',up); cv.addEventListener('pointercancel',up);
   cv.addEventListener('wheel',e=>{ if(!S.buf) return; e.preventDefault();
@@ -2961,7 +2993,7 @@ function render(){
   $('#skipB').textContent=S.mode==='skip'?'STOP SKIP':'BAR SKIP';
   $('#xfB').textContent=S.fade?'XF '+S.fade+' ms':'XF OFF'; $('#xfB').classList.toggle('on',S.fade>0);
   ['#jS','#jL','#xfB','#metB'].forEach(id=>$(id).disabled=!has);
-  $('#metB').classList.toggle('on',S.met!=='off'); $('#metB').classList.toggle('dbl',S.met==='double');
+  $('#metB').classList.toggle('on',S.met!=='off'); $('#metN').textContent=S.metN;
   const rl=S.res==='frame'?'1 fr':S.res==='sec'?'1 sec':S.res; $('#resB').textContent=rl; $('#resK').textContent=S.res==='sec'?'÷'+S.div:rl;
   $('#nudgeU').classList.toggle('hide',S.locked); $('#nudgeK').classList.toggle('hide',!S.locked);
   $('#lockTop').classList.toggle('on',S.locked); $('#lockTopT').textContent=S.locked?'LOCKED':'LOCK';
@@ -3003,7 +3035,18 @@ function drawFit(g,v,W,H){
     const s=Math.min(W/vw,H/vh); g.drawImage(v,(W-vw*s)/2,(H-vh*s)/2,vw*s,vh*s);
   } else { const dw=vw*cover, dh=vh*cover; g.drawImage(v,(W-dw)/2,(H-dh)/2,dw,dh); }
 }
-function prog(p,msg){ if(S.xBusy){ const sb=document.querySelector('#exrow [data-x="'+S.xBusy+'"] small'); if(sb) sb.textContent=Math.round(p*100)+'%'; } }
+const XNAME={gen:'EXPORTING',ig:'EXPORTING FOR INSTAGRAM',yt:'EXPORTING FOR YOUTUBE',tt:'EXPORTING FOR TIKTOK'};
+const mmss=t=>{ t=Math.max(0,Math.round(t)); return Math.floor(t/60)+':'+String(t%60).padStart(2,'0'); };
+let XP={p:0,t0:0,iv:null};
+function progShow(on){ const el=$('#xprog');
+  if(on){ XP={p:0,t0:performance.now(),iv:null}; $('#xpT').textContent=XNAME[S.xBusy]||'EXPORTING'; $('#xpS').textContent='Starting'; $('#xpI').style.width='0%'; $('#xpP').textContent='0%'; $('#xpE').textContent='0:00';
+    el.classList.remove('hide'); XP.iv=setInterval(progTime,250); }
+  else { clearInterval(XP.iv); el.classList.add('hide'); } }
+function progTime(){ const el=(performance.now()-XP.t0)/1000, p=XP.p;
+  $('#xpE').textContent=mmss(el)+(p>0.04&&p<1?' · about '+mmss(el*(1-p)/p)+' left':''); }
+function prog(p,msg){ XP.p=p=clamp(p||0,0,1);
+  if(S.xBusy){ const sb=document.querySelector('#exrow [data-x="'+S.xBusy+'"] small'); if(sb) sb.textContent=Math.round(p*100)+'%'; }
+  $('#xpI').style.width=(p*100).toFixed(1)+'%'; $('#xpP').textContent=Math.round(p*100)+'%'; if(msg) $('#xpS').textContent=msg.replace(/…$/,''); progTime(); }
 // one pass of the loop is N0 whole video frames; the audio is fitted to exactly that length
 function plan(){
   // the offset is exact to the millisecond: whole frames are dropped, and the last kept frame is shortened by the rest
@@ -3130,7 +3173,7 @@ async function pickAudioCfg(sr,ch){
 }
 async function runExport(){
   if(!S.buf||S.busy) return null;
-  S.status=''; S.busy=true; S.cancel=false; render(); let ok=null;
+  S.status=''; S.busy=true; S.cancel=false; render(); progShow(true); let ok=null;
   const [W,H]=outSize();
   try{
     let blob=null, how='';
@@ -3142,7 +3185,7 @@ async function runExport(){
     if(!blob){ prog(0,'Switching to real time capture ('+why+')…'); blob=await exportRealtime(W,H); if(S.cancel) throw new Error('cancelled'); how='real time capture'+(why?', because '+why:''); }
     ok=blob;
   }catch(e){ if(S.cancel){ S.status='Export stopped.'; } else { console.error(e); S.status='Export failed: '+(e&&e.message||e); } }
-  S.busy=false; S.cancel=false; render(); return ok;
+  progShow(false); S.busy=false; S.cancel=false; render(); return ok;
 }
 /* trimmed down: no drawer. New video from the stage button, divisions from holding Bar skip. */
 function holdOrTap(el,onTap,onHold){ let t=null,held=false;
@@ -3151,7 +3194,7 @@ function holdOrTap(el,onTap,onHold){ let t=null,held=false;
   el.addEventListener('contextmenu',e=>e.preventDefault());
   el.addEventListener('click',e=>{ if(held){ e.preventDefault(); e.stopImmediatePropagation(); held=false; return; } if(onTap) onTap(e); },true); }
 $('#newVid').onclick=()=>$('#file').click();
-buildChips('#divChips2',[[2,'2'],[4,'4'],[8,'8'],[16,'16']],()=>S.div,v=>{ S.div=Number(v); if(S.pb) S.pb.marks=null; if(S.mode==='skip') restartSoon(); },'big');
+buildChips('#divChips2',[[2,'2'],[4,'4'],[8,'8'],[16,'16'],[32,'32'],[64,'64'],[128,'128']],()=>S.div,v=>{ S.div=Number(v); if(S.pb) S.pb.marks=null; if(S.mode==='skip') restartSoon(); },'big');
 holdOrTap($('#skipB'),null,()=>{ $('#dset').classList.remove('hide'); render(); });
 $('#dDone').onclick=()=>$('#dset').classList.add('hide');
 $('#dset').addEventListener('pointerdown',e=>{ if(e.target.id==='dset') $('#dset').classList.add('hide'); });
@@ -3496,9 +3539,10 @@ function applySession(o){
     const k=o.sr&&o.sr!==S.sr?S.sr/o.sr:1, T=total();
     const s0=Math.round(o.s0*k), n=Math.round(o.n*k);
     if(!(n>0)||s0<0||s0+n>T) return false;
-    S.s0=s0; S.n=n; S.div=o.div||4; S.locked=!!o.locked; S.res=o.res||S.res; S.met=o.met||'off';
+    S.s0=s0; S.n=n; S.div=o.div||4; S.locked=!!o.locked; S.res=o.res||S.res; S.met=o.met&&o.met!=='off'?'on':'off'; if(MET_N.includes(o.metN)) S.metN=o.metN;
     if(o.fade!=null) S.fade=o.fade; if(o.fps){ S.fps=o.fps; S.frames=Math.floor(S.dur*S.fps+1e-6); }
     if(o.eqf) for(const k of ['lo','mi','hi']) if(o.eqf[k]) EQF[k].f=o.eqf[k];
+    S.autoBars=barsNow();
     if(o.eq){ S.eq={lo:+o.eq.lo||0,mi:+o.eq.mi||0,hi:+o.eq.hi||0}; }
     eqAll();
     if(o.bpm!=null) S.bpm=o.bpm; if(o.grid0!=null) S.grid0=o.grid0*k;
@@ -3567,7 +3611,7 @@ eqAll();
 $$('#tabs button').forEach(b=>b.onclick=()=>{ $$('#tabs button').forEach(x=>x.classList.toggle('on',x===b)); $$('.tpanel').forEach(p=>p.classList.toggle('hide',p.id!==b.dataset.t)); });
 
 /* ---------- saved projects: the video plus everything about the loop ---------- */
-function sessionObj(){ return {name:S.file.name,size:S.file.size,sr:S.sr,s0:S.s0,n:S.n,div:S.div,locked:S.locked,view:S.view,res:S.res,met:S.met,fade:S.fade,step:S.step,fps:S.fps,bpm:S.bpm,grid0:S.grid0,eq:Object.assign({},S.eq),eqf:{lo:EQF.lo.f,mi:EQF.mi.f,hi:EQF.hi.f}}; }
+function sessionObj(){ return {name:S.file.name,size:S.file.size,sr:S.sr,s0:S.s0,n:S.n,div:S.div,locked:S.locked,view:S.view,res:S.res,met:S.met,metN:S.metN,fade:S.fade,step:S.step,fps:S.fps,bpm:S.bpm,grid0:S.grid0,eq:Object.assign({},S.eq),eqf:{lo:EQF.lo.f,mi:EQF.mi.f,hi:EQF.hi.f}}; }
 $('#pSave').onclick=async()=>{ if(!S.buf||!S.file){ toast('Import a video first'); return; }
   const d=new Date(), id='proj:'+d.getTime(), label=S.file.name.replace(/\.[^.]+$/,'')+' · '+(ln()).toFixed(2)+' s';
   try{ await IDB.put(id,{id,label,date:d.getTime(),blob:S.file,type:S.file.type,session:sessionObj()}); toast('Project saved'); }
