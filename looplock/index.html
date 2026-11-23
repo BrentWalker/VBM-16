@@ -2517,6 +2517,74 @@ function detectBpm(buf){
   return {bpm, phase:fine.ph*hs};
 }
 
+
+/* ---------- fast frame source: decode the video track in order with WebCodecs instead of seeking a <video> for every frame ---------- */
+function findBox(u8,type){ const t=[...type].map(c=>c.charCodeAt(0));
+  for(let i=4;i<u8.length-4;i++) if(u8[i]===t[0]&&u8[i+1]===t[1]&&u8[i+2]===t[2]&&u8[i+3]===t[3]){
+    const sz=(u8[i-4]<<24|u8[i-3]<<16|u8[i-2]<<8|u8[i-1])>>>0; if(sz>=8&&i-4+sz<=u8.length) return u8.slice(i+4,i-4+sz); }
+  return null; }
+async function videoFrameSource(f){
+  if(typeof VideoDecoder==='undefined'||typeof MP4Box==='undefined') return null;
+  const boxes=await topBoxes(f), moov=boxes.find(b=>b.type==='moov'), ftyp=boxes.find(b=>b.type==='ftyp');
+  if(!moov||moov.size>200*1048576) return null;
+  const mp=MP4Box.createFile(); let info=null; mp.onReady=i=>{ info=i; }; mp.onError=()=>{};
+  const ab=await new Blob([ftyp,moov].filter(Boolean).map(b=>f.slice(b.off,b.off+b.size))).arrayBuffer(); ab.fileStart=0; mp.appendBuffer(ab); mp.flush();
+  if(!info||!info.videoTracks||!info.videoTracks.length) return null;
+  const vt=info.videoTracks[0], trak=mp.getTrackById(vt.id), smp=trak.samples||[];
+  if(!smp.length) return null;
+  // decoder description (avcC / hvcC / vpcC / av1C) straight from the moov bytes
+  const u8=new Uint8Array(ab), kind=/^avc/.test(vt.codec)?'avcC':/^(hvc|hev)/.test(vt.codec)?'hvcC':/^vp09/.test(vt.codec)?'vpcC':/^av01/.test(vt.codec)?'av1C':null;
+  const description=kind?findBox(u8,kind):null; if(kind&&!description) return null;
+  const cfg={codec:vt.codec,codedWidth:vt.track_width||vt.video.width,codedHeight:vt.track_height||vt.video.height,hardwareAcceleration:'prefer-hardware'};
+  cfg.codedWidth=vt.video?vt.video.width:cfg.codedWidth; cfg.codedHeight=vt.video?vt.video.height:cfg.codedHeight;
+  if(description&&kind!=='vpcC') cfg.description=description;
+  try{ const ok=await VideoDecoder.isConfigSupported(cfg); if(!ok.supported){ delete cfg.hardwareAcceleration; const ok2=await VideoDecoder.isConfigSupported(cfg); if(!ok2.supported) return null; } }catch(e){ return null; }
+  // display rotation from the track matrix (iPhone portrait video is stored sideways)
+  let rot=0; try{ const m=vt.matrix; if(m){ const a=m[0]/65536, b=m[1]/65536; rot=Math.round(Math.atan2(b,a)/(Math.PI/2))*90; rot=((rot%360)+360)%360; } }catch(e){}
+  // edit list offset, so frame times match the <video> element's clock
+  let eoff=0; try{ const el=trak.edts&&trak.edts.elst&&trak.edts.elst.entries; if(el&&el.length){ const e0=el.find(e=>e.media_time>=0); if(e0) eoff=e0.media_time; } }catch(e){}
+  const ts=vt.timescale||trak.mdia.mdhd.timescale;
+  const usOf=sm=>Math.round((sm.cts-eoff)/ts*1e6);
+  const order=smp.map((sm,i)=>i);   // decode order already
+  let dec=null, q=[], feedI=0, cur=null, lastT=-1, err=null, ended=false;
+  const reset=async t=>{ if(dec){ try{ dec.close(); }catch(_){} } q.forEach(fr=>fr.close()); q=[]; if(cur){ cur.close(); cur=null; }
+    dec=new VideoDecoder({output:fr=>q.push(fr),error:e=>err=e}); dec.configure(cfg);
+    // start at the last sync sample whose time is at or before t
+    let k=0; const tu=t*1e6; for(let i=0;i<smp.length;i++){ if(smp[i].is_sync&&usOf(smp[i])<=tu) k=i; if(usOf(smp[i])>tu+2e6) break; }
+    feedI=k; ended=false; };
+  const feed=async()=>{ // read a run of samples from the file and hand them to the decoder
+    if(feedI>=smp.length){ if(!ended){ ended=true; await dec.flush(); } return; }
+    let j=feedI, end=smp[j].offset+smp[j].size; while(j+1<smp.length&&j-feedI<24&&smp[j+1].offset===end){ j++; end+=smp[j].size; }
+    const buf=new Uint8Array(await f.slice(smp[feedI].offset,end).arrayBuffer());
+    for(let i=feedI;i<=j;i++){ const sm=smp[i];
+      dec.decode(new EncodedVideoChunk({type:sm.is_sync?'key':'delta',timestamp:usOf(sm),duration:Math.round(sm.duration/ts*1e6),data:buf.subarray(sm.offset-smp[feedI].offset,sm.offset-smp[feedI].offset+sm.size)})); }
+    feedI=j+1; };
+  // the frame showing at time t (seconds): the newest decoded frame that starts at or before t
+  async function frameAt(t){
+    if(!dec||t<lastT-1e-6) await reset(t); lastT=t; const tu=t*1e6;
+    for(let guard=0;guard<100000;guard++){
+      if(err) throw err;
+      // take every queued frame that starts by t
+      while(q.length&&q[0].timestamp<=tu+500){ if(cur) cur.close(); cur=q.shift(); }
+      if(q.length&&q[0].timestamp>tu+500) break;
+      if(ended&&dec.decodeQueueSize===0&&!q.length) break;
+      if(dec.decodeQueueSize<8) await feed(); else await sleep(1);
+      if(ended) await sleep(0);
+    }
+    return cur; }
+  const close=()=>{ try{ dec&&dec.close(); }catch(_){} q.forEach(fr=>fr.close()); q=[]; if(cur){ cur.close(); cur=null; } };
+  return {frameAt,close,rot};
+}
+// draw a decoded frame upright and cropped to fill W x H (same framing as drawFit)
+function drawFrameFit(g,fr,rot,W,H){
+  const cw=fr.displayWidth||fr.codedWidth, ch=fr.displayHeight||fr.codedHeight, side=rot===90||rot===270;
+  const vw=side?ch:cw, vh=side?cw:ch, sc=Math.max(W/vw,H/vh), dw=vw*sc, dh=vh*sc;
+  g.fillStyle='#000'; g.fillRect(0,0,W,H);
+  if(!rot){ g.drawImage(fr,(W-dw)/2,(H-dh)/2,dw,dh); return; }
+  g.save(); g.translate(W/2,H/2); g.rotate(rot*Math.PI/180);
+  const w2=side?dh:dw, h2=side?dw:dh; g.drawImage(fr,-w2/2,-h2/2,w2,h2); g.restore();
+}
+
 function seekTo(v,t){
   return new Promise(res=>{ let done=false;
     const fin=()=>{ if(done)return; done=true; v.removeEventListener('seeked',on); clearTimeout(to); res(); };
@@ -3082,8 +3150,8 @@ function lufsLoop(chs,sr){ // ITU BS.1770 integrated loudness with gating
   return L(g.reduce((s,m)=>s+m,0)/g.length); }
 // 4x oversampled peaks (true peak estimate)
 const TPK=(()=>{ const P=4,T=8,h=[]; for(let p=0;p<P;p++){ const r=[]; for(let t=-T+1;t<=T;t++){ const x=t-p/P; const w=0.5+0.5*Math.cos(Math.PI*x/T); r.push(x===0?1:Math.sin(Math.PI*x)/(Math.PI*x)*w); } h.push(r); } return {P,T,h}; })();
-function tpLoop(c){ const n=c.length, out=new Float32Array(n), {P,T,h}=TPK;
-  for(let i=0;i<n;i++){ let m=Math.abs(c[i]); for(let p=1;p<P;p++){ const r=h[p]; let v=0; for(let t=0;t<2*T;t++) v+=r[t]*c[(i-T+1+t+n)%n]; const a=Math.abs(v); if(a>m) m=a; } out[i]=m; }
+function tpLoop(c,thr){ const n=c.length, out=new Float32Array(n), {P,T,h}=TPK; thr=thr||0;
+  for(let i=0;i<n;i++){ let m=Math.abs(c[i]); const m1=Math.abs(c[(i+1)%n]); if(m<thr&&m1<thr){ out[i]=m; continue; } for(let p=1;p<P;p++){ const r=h[p]; let v=0; for(let t=0;t<2*T;t++) v+=r[t]*c[(i-T+1+t+n)%n]; const a=Math.abs(v); if(a>m) m=a; } out[i]=m; }
   return out; }
 function masterLoop(full,sr,target){
   const n=full[0].length, ch=full.length; if(n<sr*0.2) return;
@@ -3107,16 +3175,17 @@ function masterLoop(full,sr,target){
   let gain=Math.pow(10,(target-lufsLoop(x,sr))/20), y=null;
   for(let round=0;round<3;round++){
     const z=x.map(c=>{ const o=new Float32Array(n); for(let i=0;i<n;i++) o[i]=c[i]*gain; return o; });
-    const tps=z.map(tpLoop), req=new Float32Array(n);
+    const tps=z.map(c=>tpLoop(c,ceil*0.5)), req=new Float32Array(n);
     for(let i=0;i<n;i++){ let m=0; for(const t of tps) if(t[i]>m) m=t[i]; req[i]=m>ceil?ceil/m:1; }
-    const mn=new Float32Array(n); for(let i=0;i<n;i++){ let m=1; for(let j=0;j<=look;j++){ const v=req[(i+j)%n]; if(v<m) m=v; } mn[i]=m; }
+    const mn=new Float32Array(n), dq=new Int32Array(n+look+2); let qh=0,qt=0;
+    for(let j=0;j<n+look;j++){ const v=req[j%n]; while(qt>qh&&req[dq[qt-1]%n]>=v) qt--; dq[qt++]=j; const i=j-look; if(i>=0){ while(dq[qh]<i) qh++; mn[i]=req[dq[qh]%n]; } }
     const av=new Float32Array(n); let sum=0; for(let j=0;j<look;j++) sum+=mn[(n-look+j)%n];
     for(let i=0;i<n;i++){ sum+=mn[i]-mn[(i-look+n)%n]; av[i]=Math.min(sum/look,mn[i]); }
     const g=new Float32Array(n); let e=1; for(let lap=0;lap<2;lap++) for(let i=0;i<n;i++){ const a=av[i]; e=a<e?a:e+(a-e)*(1-rel); if(lap) g[i]=e; }
     for(const c of z) for(let i=0;i<n;i++) c[i]*=g[i];
     y=z; const fix=target-lufsLoop(y,sr); if(Math.abs(fix)<0.2||round===2) break; gain*=Math.pow(10,fix/20);
   }
-  let top=0; for(const c of y){ const t=tpLoop(c); for(let i=0;i<n;i++) if(t[i]>top) top=t[i]; }
+  let top=0; for(const c of y){ const t=tpLoop(c,ceil*0.5); for(let i=0;i<n;i++) if(t[i]>top) top=t[i]; }
   const trim=top>ceil?ceil/top:1;
   for(let c=0;c<ch;c++){ const d=full[c], s=y[c]; for(let i=0;i<n;i++) d[i]=s[i]*trim; }
   let mg=0; for(let i=0;i<n;i++) if(gr[i]>mg) mg=gr[i];
@@ -3283,10 +3352,13 @@ xLabel();
 async function exportExact(W,H,vcfg,acfg,opt){
   opt=opt||{};
   const pl=opt.pl||plan(), {fps,N0,g:gapF,f0,reps,N}=pl, fd=1e6/fps;
+  if(!opt.A){ prog(0,S.master?'Mastering the audio…':'Preparing the audio…'); await sleep(40); }
   const A=opt.A||exportAudio(pl), k=pl.k||0;
   prog(0,'Rendering frames…');
-  let ev=null;
-  if(!opt.draw){ ev=document.createElement('video'); ev.muted=true; ev.playsInline=true; ev.setAttribute('playsinline',''); ev.preload='auto'; ev.className='offscreen';
+  let ev=null, fs=null;
+  // fast path: decode the frames in order. The old way (seek a video element per frame) can take seconds per frame on iPhone.
+  if(!opt.draw&&!window.LL_SEEK&&!(S.fmt!=='orig'&&S.fit==='fit')){ try{ fs=await videoFrameSource(S.file); }catch(e){ console.warn('frame decoder unavailable',e); fs=null; } }
+  if(!opt.draw&&!fs){ ev=document.createElement('video'); ev.muted=true; ev.playsInline=true; ev.setAttribute('playsinline',''); ev.preload='auto'; ev.className='offscreen';
     document.body.appendChild(ev); ev.src=S.url; await once(ev,'loadedmetadata'); }
   const cv=document.createElement('canvas'); cv.width=W; cv.height=H; const g=cv.getContext('2d',{alpha:false});
   const vch=[]; let verr=null;
@@ -3296,7 +3368,9 @@ async function exportExact(W,H,vcfg,acfg,opt){
   try{
     for(let i=0;i<N0;i++){
       if(S.cancel) throw new Error('cancelled');
-      if(opt.draw) opt.draw(g,i); else { await seekTo(ev,(f0+((k+i)%N0)+0.5)/fps); drawFit(g,ev,W,H); }
+      if(opt.draw) opt.draw(g,i);
+      else if(fs){ const fr=await fs.frameAt((f0+((k+i)%N0)+0.5)/fps); if(fr) drawFrameFit(g,fr,fs.rot,W,H); }
+      else { await seekTo(ev,(f0+((k+i)%N0)+0.5)/fps); drawFit(g,ev,W,H); }
       const fr=new VideoFrame(cv,{timestamp:Math.round(i*fd),duration:Math.round(fd)});
       venc.encode(fr,{keyFrame:i%gop===0}); fr.close();
       while(venc.encodeQueueSize>3) await sleep(4);
@@ -3304,7 +3378,7 @@ async function exportExact(W,H,vcfg,acfg,opt){
       if(i%4===0) prog(i/N0*0.8,`Rendering frame ${i+1} of ${N0}`);
     }
     await venc.flush(); venc.close();
-  } finally { if(ev) ev.remove(); try{ if(venc.state!=='closed') venc.close(); }catch(_){} }
+  } finally { if(ev) ev.remove(); if(fs) fs.close(); try{ if(venc.state!=='closed') venc.close(); }catch(_){} }
   if(verr) throw verr;
 
   prog(0.82,'Encoding audio…');
