@@ -176,6 +176,13 @@ button.danger{background:var(--fire);color:var(--ink);font-weight:700}
 .swT{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;letter-spacing:.12em;color:var(--air)}
 .sw .help{margin-top:8px}
 #mTxt{font-size:12px;margin-bottom:8px;line-height:1.5}
+#mProg{margin:2px 0 12px}
+#mProg .pTop{display:flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.08em;margin-bottom:8px}
+#mProgT{margin-left:auto;font-variant-numeric:tabular-nums;opacity:.85}
+.recDot{width:12px;height:12px;border-radius:50%;background:var(--fire);animation:recPulse 1s ease-in-out infinite}
+@keyframes recPulse{50%{opacity:.25;transform:scale(.8)}}
+#mProg .pBar{height:10px;border-radius:5px;background:var(--ink);overflow:hidden}
+#mProgB{display:block;height:100%;width:0;background:var(--fire);border-radius:5px;transition:width .2s linear}
 #mVid{width:100%;max-height:50vh;border-radius:10px;background:#000}
 #vHold{position:fixed;left:0;top:0;width:2px;height:2px;opacity:0;pointer-events:none;overflow:hidden}
 #vHold video{width:2px;height:2px}
@@ -382,6 +389,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
     <div class="help" style="margin-top:10px">
       <p>Drag either edge to move it. Edges can pass each other, whichever one is on the left is the start.</p>
       <p>Hold the selection for a moment until it lights up, then drag to slide the whole slice without changing its length.</p>
+      <p>Edge off screen? A blue arrow shows on that side: drag in from it to pull that edge to your finger, or tap it to see the whole slice. Bars are numbered inside the slice.</p>
       <p>Drag outside the selection to scroll, pinch to zoom, tap to preview a spot. ½ and ×2 halve or double the length. The length buttons snap it to the beat grid at your BPM.</p>
       <p>VIDEO SLIP moves the picture earlier or later while the sound stays put, up to 1 second each way. The red bar on the waveform shows where the video now comes from. Tap the readout to reset. Slip stays set for this video, so every slice you send from it gets the same fix.</p>
     </div>
@@ -392,6 +400,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
 <div id="modal" class="modal hidden">
   <div class="mbox">
     <div id="mTxt"></div>
+    <div id="mProg" class="hidden"><div class="pTop"><span class="recDot"></span><b>EXPORTING</b><span id="mProgT"></span></div><div class="pBar"><i id="mProgB"></i></div></div>
     <video id="mVid" class="hidden" playsinline loop muted></video>
     <div class="row"><button id="mSave" class="hidden">SAVE VIDEO</button><button id="mClose">CLOSE</button></div>
   </div>
@@ -1131,8 +1140,19 @@ function drawWave(){
   if(!src||!src.audio){g.fillStyle='rgba(255,255,255,.4)';g.font=(11*dpr)+'px ui-monospace,Menlo,monospace';g.fillText('waveform',10*dpr,H/2);return;}
   const {v0,v1}=src.view,span=v1-v0,sr=src.audio.sampleRate,X=t=>(t-v0)/span*W,{s,e}=src.sel,xs=X(s),xe=X(e);
   g.fillStyle=(drag&&drag.type==='slide')?'rgba(220,123,120,.45)':(drag&&drag.holding)?'rgba(173,207,222,.3)':'rgba(87,85,111,.6)';g.fillRect(xs,0,xe-xs,H);
-  const sd=stepDur();
-  if(span/sd<300){let k=Math.ceil((v0-s)/sd);for(let t=s+k*sd;t<v1;t+=sd,k++){const x=X(t),beat=((k%4)+4)%4===0;g.fillStyle=beat?'rgba(173,207,222,.22)':'rgba(173,207,222,.1)';g.fillRect(x,0,dpr,beat?H:H*0.22);}}
+  /* beat grid from the slice start: bars always, then beats and steps as you zoom in. Longer slices get numbered bars */
+  const sd=stepDur(),pps=W/(span/sd),bar=16*sd;
+  let every=1;while(pps*16*every<14*dpr)every*=2;/* thin bars out only when they would touch */
+  const lvl=pps>=7*dpr?1:pps*4>=7*dpr?4:16;
+  {let k=Math.ceil((v0-s)/(sd*lvl))*lvl;g.font=(9*dpr)+'px ui-monospace,Menlo,monospace';
+   for(let t=s+k*sd;t<=v1+1e-9;k+=lvl,t=s+k*sd){
+     const x=X(t),kb=((k%16)+16)%16,isBar=kb===0,bn=Math.round(k/16);
+     if(isBar){if(((bn%every)+every)%every!==0)continue;const inSel=t>=s-1e-6&&t<=e+1e-6;
+       g.fillStyle=inSel?'rgba(173,207,222,.5)':'rgba(173,207,222,.25)';g.fillRect(x,0,dpr*(inSel?1.5:1),H);
+       if(inSel&&t<e-1e-6&&bar/span*W*every>18*dpr){g.fillStyle='rgba(244,243,238,.75)';g.fillText(String(bn+1),x+3*dpr,11*dpr);}}
+     else if(kb%4===0){g.fillStyle='rgba(173,207,222,.2)';g.fillRect(x,0,dpr,H*0.55);}
+     else{g.fillStyle='rgba(173,207,222,.1)';g.fillRect(x,0,dpr,H*0.22);}
+   }}
   const mid=H/2,amp=H*0.46*src.norm,spp=span*sr/W,m=src.mono,P=src.peaks;
   for(let x=0;x<W;x++){
     const t=v0+x/W*span,i0=Math.floor(t*sr),i1=Math.floor((t+span/W)*sr);let lo=0,hi=0;
@@ -1147,7 +1167,7 @@ function drawWave(){
   g.fillStyle='#fff';g.fillRect(X(src.cursor),0,Math.max(1,dpr),H);
   /* arrows when an edge is off screen: slide in from that side to pull it */
   const arrow=(left)=>{const cx=left?2*dpr:W-2*dpr,dir=left?1:-1;g.fillStyle=COL.water;g.beginPath();g.moveTo(cx,H/2-14*dpr);g.lineTo(cx+dir*13*dpr,H/2);g.lineTo(cx,H/2+14*dpr);g.closePath();g.fill();};
-  if(xs<0)arrow(true);if(xe>W)arrow(false);
+  if(xs<0||xs>W)arrow(true);if(xe<0||xe>W)arrow(false);
   if(src.slip){const a=X(s+src.slip),b=X(e+src.slip);g.fillStyle='rgba(220,123,120,.95)';g.fillRect(a,H-11*dpr,Math.max(2,b-a),4*dpr);}
   /* overview strip */
   g.fillStyle='rgba(255,255,255,.08)';g.fillRect(0,H-3*dpr,W,3*dpr);
@@ -1165,8 +1185,9 @@ wave.addEventListener('pointerdown',e=>{
   if(ptrs.size===2){if(drag&&drag.timer)clearTimeout(drag.timer);const [a,b]=[...ptrs.values()];drag={type:'pinch',d0:Math.max(10,Math.abs(a-b)),mid:(a+b)/2,v0:src.view.v0,v1:src.view.v1};return;}
   const xs=pxOf(src.sel.s),xe=pxOf(src.sel.e),ds=Math.abs(x-xs),de=Math.abs(x-xe),cw=wave.clientWidth;
   /* an edge off screen: slide in from that side to pull it to your finger (left side = start, right side = end) */
-  if(x<28&&xs<0){pushUndo();drag={type:setS(tAt(x))};return;}
-  if(x>cw-28&&xe>cw){pushUndo();drag={type:setE(tAt(x))};return;}
+  const zone=Math.max(44,cw*0.12),sOff=xs<0||xs>cw,eOff=xe<0||xe>cw;
+  if(x<zone&&sOff){drag={type:'pull',which:'s',x0:x,moved:false};return;}
+  if(x>cw-zone&&eOff){drag={type:'pull',which:'e',x0:x,moved:false};return;}
   if(Math.min(ds,de)<24){pushUndo();
     if(Math.abs(xs-xe)<10)drag={type:'se',x0:x};
     else drag={type:ds<=de?'s':'e'};
@@ -1188,6 +1209,8 @@ wave.addEventListener('pointermove',e=>{
     const span=Math.max(0.01,Math.min(src.dur,span0*drag.d0/d));
     let v0=Math.max(0,Math.min(src.dur-span,tc-drag.mid/cw*span));src.view={v0,v1:v0+span};waveDirty=true;return;
   }
+  if(drag.type==='pull'){if(!drag.moved){if(Math.abs(x-drag.x0)<4)return;drag.moved=true;pushUndo();}
+    drag.type=drag.which==='s'?setS(tAt(x)):setE(tAt(x));return;}
   if(drag.type==='se'){if(Math.abs(x-drag.x0)<3)return;drag.type=x<drag.x0?'s':'e';}
   if(drag.type==='s'){drag.type=setS(tAt(x));return;}
   if(drag.type==='e'){drag.type=setE(tAt(x));return;}
@@ -1205,6 +1228,7 @@ const pUp=e=>{
   if(drag.timer)clearTimeout(drag.timer);
   if(drag.type==='pinch'){if(ptrs.size===0)drag=null;return;}
   if(drag.type==='pan'&&!drag.moved&&cur()){const t=tAt(relX(e));previewSeek(t);snippet(t);}
+  if(drag.type==='pull'&&!drag.moved){fitSel(true);waveDirty=true;}/* tap the arrow: zoom out to show the whole slice */
   if(ptrs.size===0){drag=null;waveDirty=true;}
 };
 wave.addEventListener('pointerup',pUp);wave.addEventListener('pointercancel',pUp);
@@ -2340,12 +2364,17 @@ async function exportClip(){
   if(playing)stop();
   const lenSel=$('eLen').value,bars=expBars()*expLoops;
   if(lenSel==='chain'&&!chainOn&&S.chain.length){chainOn=true;renderChain();}
-  const durS=expSteps()*expLoops*stepDur();
+  const durS=expSteps()*expLoops*playStep();
   const stream=new MediaStream([...cv.captureStream(30).getVideoTracks(),...recDest.stream.getAudioTracks()]);
   let rec;try{rec=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:6e6}:{});}catch(e){try{rec=new MediaRecorder(stream);}catch(e2){modal('Could not start the recorder in this browser.');return;}}
   const chunks=[];rec.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
-  exporting=true;expHidden=false;holdAwake(true);modal('Recording '+bars+(bars>1?' bars':' bar')+'. Keep this screen open.',false,false);
+  exporting=true;expHidden=false;holdAwake(true);modal('Recording '+bars+(bars>1?' bars':' bar')+'. Keep this screen open until it finishes.',false,false);
+  /* progress: pulsing dot, bar and time, the close button hides until it is done */
+  const fmt=t=>Math.floor(t/60)+':'+String(Math.floor(t%60)).padStart(2,'0'),t0=performance.now();
+  $('mProg').classList.remove('hidden');$('mClose').classList.add('hidden');$('mProgB').style.width='0';$('mProgT').textContent='0:00 / '+fmt(durS);
+  const progT=setInterval(()=>{const el=Math.min(durS,(performance.now()-t0)/1000);$('mProgB').style.width=(el/durS*100)+'%';$('mProgT').textContent=fmt(el)+' / '+fmt(durS);},200);
   rec.onstop=()=>{
+    clearInterval(progT);$('mProg').classList.add('hidden');$('mClose').classList.remove('hidden');
     exporting=false;holdAwake(false);
     const type=rec.mimeType||mime||'video/webm';
     lastBlob=new Blob(chunks,{type});lastName='vbm16-beat-'+S.bpm+'bpm.'+(type.includes('mp4')?'mp4':'webm');
