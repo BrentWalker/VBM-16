@@ -292,7 +292,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
 </div><div id="colR">
   <div id="panels">
   <section class="panel tight" id="secVfx"><h3>VIDEO FX</h3>
-  <div class="row vopt" style="margin-top:0"><button id="vFit">FILL</button><button id="vLay">STACK</button><button id="vWave">WAVE</button><button id="vTag">TAG</button></div>
+  <div class="row vopt" style="margin-top:0"><button id="vShape">9:16</button><button id="vFit">FILL</button><button id="vLay">STACK</button><button id="vWave">WAVE</button><button id="vTag">TAG</button></div>
   <div class="row vopt" id="vfxRow"><button data-v="zoom">ZOOM</button><button data-v="shake">SHK</button><button data-v="vhs">VHS</button><button data-v="duo">DUO</button></div>
   <div class="tvLab">TRACK VIDEO <span>tap to change the frame, hold for more</span></div>
   <div class="tfx" id="tvRow"></div>
@@ -417,7 +417,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
     <div class="swT"><span>EXPORT VIDEO</span></div>
     <div class="ctl"><label>LENGTH</label><select id="eLen" style="flex:1"><option value="pat" selected>Pattern length</option><option value="1">1 bar</option><option value="2">2 bars</option><option value="4">4 bars</option><option value="8">8 bars</option><option value="chain">Whole chain</option></select></div>
     <div class="ctl"><label>LOOPS</label><div class="row seg" id="eLoops" style="flex:1;margin:0"><button data-l="1">1×</button><button data-l="2">2×</button><button data-l="4">4×</button><button data-l="8">8×</button><button data-l="16">16×</button></div></div>
-    <div class="ctl"><label>FORMAT</label><select id="eFmt" style="flex:1"><option value="auto">First video</option><option value="9:16">9:16</option><option value="1:1">1:1</option><option value="16:9">16:9</option></select></div>
+    <div class="ctl"><label>FORMAT</label><select id="eFmt" style="flex:1"><option value="9:16">9:16 (TikTok, Reels)</option><option value="4:5">4:5 (Instagram post)</option><option value="1:1">1:1 (square)</option><option value="4:3">4:3</option><option value="16:9">16:9 (YouTube)</option><option value="auto">First video</option></select></div>
     <div class="help" id="eSum"></div>
     <div class="row"><button id="bExpGo" class="hl">RECORD</button><button id="expClose">CLOSE</button></div>
   </div>
@@ -531,7 +531,7 @@ function padDefaults(){const o={};for(const k in PAD_DEF)o[k]=Array(NP).fill(PAD
 const mkTrack=()=>Array(MAXST).fill(null);
 const mkPat=()=>Array.from({length:4},mkTrack);
 const mkPats=()=>Array.from({length:16},mkPat);
-const S={bpm:92,swing:0,format:'auto',trackFx:[[],[],[],[]],trackFxOn:[true,true,true,true],patterns:mkPats(),patLen:Array(16).fill(1),chain:[],...padDefaults()};
+const S={bpm:92,swing:0,format:'9:16',trackFx:[[],[],[],[]],trackFxOn:[true,true,true,true],patterns:mkPats(),patLen:Array(16).fill(1),chain:[],...padDefaults()};
 try{const j=JSON.parse(localStorage.getItem(KEY)||'null');if(j&&j.patterns)Object.assign(S,j);}catch(e){}
 S.patterns.forEach(P=>P.forEach(t=>{while(t.length<MAXST)t.push(null);}));
 if(!Array.isArray(S.patLen)||S.patLen.length!==16)S.patLen=Array(16).fill(1);
@@ -1383,7 +1383,7 @@ function layoutStage(){
 }
 window.addEventListener('resize',()=>layoutStage());
 function applyFormat(){
-  const map={'9:16':9/16,'1:1':1,'16:9':16/9};
+  const map={'9:16':9/16,'4:5':4/5,'1:1':1,'4:3':4/3,'16:9':16/9};
   sizeCanvas(S.format==='auto'?(sources[0]?sources[0].aspect:1):map[S.format]||1);
   layoutStage();
 }
@@ -1580,12 +1580,16 @@ requestAnimationFrame(loop);
 const LAYOUTS=[['stack','STACK'],['grid','GRID'],['pip','PIP'],['collage','COLLAGE'],['diag','DIAGONAL']];
 const TAGPOS=['↖','↗','↙','↘'];
 function renderVO(){
+  $('vShape').textContent=S.format==='auto'?'1ST VID':S.format;
   {const f=S.tv.map(t=>t.fit);$('vFit').textContent=f.every(x=>x===f[0])?(f[0]==='fit'?'FIT':f[0]==='blur'?'BLUR':'FILL'):'MIXED';}
   $('vLay').textContent=(LAYOUTS.find(l=>l[0]===VO.layout)||LAYOUTS[0])[1];
   $('vWave').classList.toggle('on',VO.wave);$('vTag').classList.toggle('on',VO.tag);
   $('tagRow').classList.toggle('hidden',!VO.tag);$('tagText').value=VO.tagText;$('tagPos').textContent=TAGPOS[VO.tagPos];
   document.querySelectorAll('#vfxRow button').forEach(b=>b.classList.toggle('on',!!VO.fx[b.dataset.v]));
 }
+const SHAPES=['9:16','4:5','1:1','4:3','16:9','auto'];
+$('vShape').onclick=()=>{pushUndo();S.format=SHAPES[(SHAPES.indexOf(S.format)+1)%SHAPES.length];save();applyFormat();renderVO();try{$('eFmt').value=S.format;renderExp();}catch(e){}
+  toast('Player and export shape: '+(S.format==='auto'?'first video':S.format)+'.',1200);};
 $('vFit').onclick=()=>{const order=['fill','fit','blur'],f=S.tv[0].fit,nx=order[(order.indexOf(f)+1)%3];pushUndo();S.tv.forEach(t=>t.fit=nx);save();renderVO();renderTv();
   toast('All tracks: '+nx.toUpperCase()+'.',1000);};
 $('vLay').onclick=()=>{const i=LAYOUTS.findIndex(l=>l[0]===VO.layout);VO.layout=LAYOUTS[(i+1)%LAYOUTS.length][0];saveVO();renderVO();
@@ -2159,7 +2163,7 @@ function setTrackLen(p,tracks,nx){
     setTrackLen(p,[selTrack],nx);toast('Track '+TL[selTrack]+': '+nx+(nx>1?' bars':' bar')+'. Pattern runs '+S.patLen[p]+(S.patLen[p]>1?' bars':' bar')+'.',1400);};
   b.addEventListener('contextmenu',e=>e.preventDefault());}
 $('bFollow').onclick=()=>{follow=!follow;renderPages();};
-$('eFmt').onchange=e=>{S.format=e.target.value;save();applyFormat();renderExp();};
+$('eFmt').onchange=e=>{S.format=e.target.value;save();applyFormat();renderExp();renderVO();};
 document.querySelectorAll('.fIn').forEach(inp=>inp.addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';addVideo(f);}));
 $('bDemo').onclick=demoKit;
 $('mClose').onclick=()=>{$('modal').classList.add('hidden');$('mVid').pause();};
