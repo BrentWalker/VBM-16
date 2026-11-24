@@ -72,6 +72,7 @@ body.wide #panelsL:empty{min-height:40px}
 .pageRow{display:flex;gap:6px;margin-top:8px;align-items:center}
 .pageRow>button{flex:0 0 auto;font-size:10px;padding:7px 9px}
 #bLen,#bFollow{background:var(--purple);font-weight:700}
+.tlen{font-size:9px;margin-left:2px;opacity:.85}
 #bInclV{font-weight:700}
 #bInclV.on{background:var(--air);color:var(--ink)}
 #bFollow.on{background:var(--air);color:var(--ink)}
@@ -519,6 +520,12 @@ function fixTrackFx(){
 fixTrackFx();
 const tAmt=(t,k)=>{const v=S.trackFxAmt[t][k];return v==null?50:v;};
 const plen=p=>S.patLen[p]*16;
+/* per-track length in bars. The pattern runs as long as its longest track; shorter tracks loop inside it and every track restarts together */
+const fixTrkLen=()=>{if(!Array.isArray(S.trkLen)||S.trkLen.length!==16)S.trkLen=S.patLen.map(n=>[n,n,n,n]);S.trkLen.forEach((a,p)=>{if(!Array.isArray(a)||a.length!==4)S.trkLen[p]=[S.patLen[p],S.patLen[p],S.patLen[p],S.patLen[p]];});};
+fixTrkLen();
+const tbars=(p,t)=>S.trkLen[p][t];
+const tlen=(p,t)=>S.trkLen[p][t]*16;
+const tIdx=(p,t,s)=>s%tlen(p,t);
 /* skipped steps: grayed out per pattern, the playhead jumps over them so the bar gets shorter */
 const isSkip=(p,s)=>!!(S.skip&&S.skip[p]&&S.skip[p].includes(s));
 const actSteps=p=>{let n=0;for(let i=0;i<plen(p);i++)if(!isSkip(p,i))n++;return n||plen(p);};
@@ -721,8 +728,9 @@ function scheduleStep(s,t){
   for(let tr=0;tr<4;tr++){
     if(muted[tr])continue;
     if(stut){if(s%stut===0&&lastHit[tr])trigger(tr,lastHit[tr].pad,lastHit[tr].semi,t);continue;}
-    if(eraseHeld.size&&recHeld&&!exporting){const c=cellEvs(pat[tr][s]),k=c.filter(x=>!eraseHeld.has(x.pad));if(k.length!==c.length){pat[tr][s]=packCell(k);eraseDirty=true;}}
-    const evs=cellEvs(pat[tr][s]);evs.forEach(ev=>{trigger(tr,ev.pad,ev.semi,Math.max(ctx.currentTime,t+(ev.n||0)*playStep()));lastHit[tr]=ev;});
+    const ts=tIdx(curPat,tr,s);
+    if(eraseHeld.size&&recHeld&&!exporting){const c=cellEvs(pat[tr][ts]),k=c.filter(x=>!eraseHeld.has(x.pad));if(k.length!==c.length){pat[tr][ts]=packCell(k);eraseDirty=true;}}
+    const evs=cellEvs(pat[tr][ts]);evs.forEach(ev=>{trigger(tr,ev.pad,ev.semi,Math.max(ctx.currentTime,t+(ev.n||0)*playStep()));lastHit[tr]=ev;});
   }
   if(eraseDirty){eraseDirty=false;save();if(curPat===editPat)renderSteps();renderPats();}
   const e={s,t,p:curPat};uiQ.push(e);sched.push(e);if(sched.length>48)sched.shift();
@@ -1432,10 +1440,10 @@ function loop(){
   while(uiQ.length&&uiQ[0].t<=now){const u=uiQ.shift();
     let redraw=false;
     if(playing&&u.p!==editPat){editPat=u.p;viewPage=0;renderPats();redraw=true;}
-    const pg=Math.floor(u.s/16);
+    const ls=tIdx(u.p,selTrack,u.s),pg=Math.floor(ls/16);
     if(pg!==playPage){playPage=pg;if(follow&&playing&&viewPage!==pg){viewPage=pg;redraw=true;}renderPages();}
     if(redraw)renderSteps();
-    setPlayhead(pg===viewPage?u.s%16:-1);}
+    setPlayhead(pg===viewPage?ls%16:-1);}
   const W=cv.width,H=cv.height;
   g2.globalAlpha=1;
   if(fx.ECHO){g2.fillStyle='rgba(49,48,67,0.16)';g2.fillRect(0,0,W,H);g2.globalAlpha=0.5;}
@@ -1603,9 +1611,9 @@ function tapPad(i){
   lastHit[selTrack]={pad:pi,semi};
   if(playing&&recArm&&sched.length){
     const now=ctx.currentTime;let best=sched[0];for(const e of sched)if(Math.abs(e.t-now)<Math.abs(best.t-now))best=e;
-    pushUndo('rec');const row=S.patterns[best.p][selTrack],evs=cellEvs(row[best.s]).map(e=>({...e}));
+    pushUndo('rec');const row=S.patterns[best.p][selTrack],bs=tIdx(best.p,selTrack,best.s),evs=cellEvs(row[bs]).map(e=>({...e}));
     played.forEach(sm=>{if(!evs.some(x=>x.pad===pi&&x.semi===sm)&&evs.length<MAXSTACK)evs.push({pad:pi,semi:sm});});
-    row[best.s]=packCell(evs);save();if(best.p===editPat)renderSteps();renderPats();
+    row[bs]=packCell(evs);save();if(best.p===editPat)renderSteps();renderPats();
   }
   renderPads();
 }
@@ -1645,7 +1653,7 @@ function stepPress(b,s){
 }
 function nudge(d){
   const row=S.patterns[editPat][selTrack];
-  const targets=nudgeAll?row.map((ev,i)=>ev?i:-1).filter(i=>i>=0&&i<plen(editPat)):(selStep>=0&&row[selStep]?[selStep]:[]);
+  const targets=nudgeAll?row.map((ev,i)=>ev?i:-1).filter(i=>i>=0&&i<tlen(editPat,selTrack)):(selStep>=0&&row[selStep]?[selStep]:[]);
   if(!targets.length){$('snV').textContent='HOLD A STEP TO NUDGE';return;}
   pushUndo('nudgeStep');
   targets.forEach(i=>{const evs=cellEvs(row[i]),cur=evs[0].n||0,nn=d===0?0:Math.max(-12,Math.min(12,Math.round(cur/NUD)+d))*NUD;
@@ -1655,8 +1663,8 @@ function nudge(d){
 function renderNudge(){
   const row=S.patterns[editPat][selTrack];$('snAll').classList.toggle('on',nudgeAll);
   let n=null;
-  if(nudgeAll){const evs=row.slice(0,plen(editPat)).filter(Boolean).map(c=>cellEvs(c)[0]);n=evs.length?(evs[0].n||0):0;$('snV').textContent=evs.length?'ALL '+TL[selTrack]+' '+nudgeTxt(n):'NO STEPS ON '+TL[selTrack];return;}
-  if(selStep>=0&&row[selStep]){n=cellEvs(row[selStep])[0].n||0;$('snV').textContent='STEP '+(selStep%16+1)+(S.patLen[editPat]>1?' BAR '+(Math.floor(selStep/16)+1):'')+' '+nudgeTxt(n);}
+  if(nudgeAll){const evs=row.slice(0,tlen(editPat,selTrack)).filter(Boolean).map(c=>cellEvs(c)[0]);n=evs.length?(evs[0].n||0):0;$('snV').textContent=evs.length?'ALL '+TL[selTrack]+' '+nudgeTxt(n):'NO STEPS ON '+TL[selTrack];return;}
+  if(selStep>=0&&row[selStep]){n=cellEvs(row[selStep])[0].n||0;$('snV').textContent='STEP '+(selStep%16+1)+(tbars(editPat,selTrack)>1?' BAR '+(Math.floor(selStep/16)+1):'')+' '+nudgeTxt(n);}
   else $('snV').textContent='HOLD A STEP TO NUDGE';
 }
 function nudgeTxt(n){const t=Math.round(n/NUD),ms=Math.round(n*stepDur()*1000);return (t>0?'+':'')+t+'/24 '+(ms>0?'+':'')+ms+'ms';}
@@ -1693,9 +1701,9 @@ function flash(pi,tr){
   const b=trkEls[tr]&&trkEls[tr].b;if(b){b.classList.add('hit');setTimeout(()=>b.classList.remove('hit'),90);}
 }
 function setPlayhead(s){if(curStep>=0&&stepEls[curStep])stepEls[curStep].classList.remove('ph');curStep=s;if(s>=0)stepEls[s].classList.add('ph');}
-function renderTracks(){trkEls.forEach(({b,m},t)=>{b.classList.toggle('sel',t===selTrack);m.classList.toggle('mu',muted[t]);});}
+function renderTracks(){const tl=S.trkLen[editPat],same=tl.every(x=>x===tl[0]);trkEls.forEach(({b,m},t)=>{b.classList.toggle('sel',t===selTrack);m.classList.toggle('mu',muted[t]);b.innerHTML=TL[t]+(same?'':'<sup class="tlen">'+tl[t]+'</sup>');});}
 function renderSteps(){
-  if(viewPage>=S.patLen[editPat])viewPage=0;
+  if(viewPage>=tbars(editPat,selTrack))viewPage=0;renderTracks();
   const row=S.patterns[editPat][selTrack],off=viewPage*16;
   stepEls.forEach((b,s)=>{const evs=cellEvs(row[off+s]),ev=evs[0];
     if(ev){const p=pads[ev.pad],sc=p?CATS[p.cat].c:COL.purple;b.style.background=sc;b.style.color=lightCol(sc)?COL.ink:'#fff';b.style.border=sc===COL.ink?'1.5px solid rgba(244,243,238,.55)':'';
@@ -1904,7 +1912,7 @@ function toggleSkip(s){
   save();renderSteps();
 }
 function renderPages(){
-  const n=S.patLen[editPat],el=$('pages');$('bLen').textContent='LNGTH '+n;
+  const n=tbars(editPat,selTrack),el=$('pages'),tl=S.trkLen[editPat],same=tl.every(x=>x===tl[0]);$('bLen').textContent='LNGTH '+(same?'':TL[selTrack]+' ')+n;
   if(el.childElementCount!==n){el.innerHTML='';for(let i=0;i<n;i++){const b=document.createElement('button');b.textContent=i+1;b.onpointerdown=e=>{e.preventDefault();pageDown(i);};b.onpointerup=b.onpointercancel=()=>pageUp(i);el.appendChild(b);}}
   [...el.children].forEach((b,i)=>{
     const sk=S.skip[editPat].filter(x=>Math.floor(x/16)===i).length;
@@ -1993,14 +2001,24 @@ $('pEdit').onclick=()=>{const p=pads[selPad];let idx=-1;if(p&&p.srcId!=null)idx=
 $('pClr').onclick=()=>{pushUndo();padsChanged();pads[selPad]=null;renderAll();};
 $('bChain').onclick=()=>{chainOn=!chainOn;renderChain();};
 $('bChainClr').onclick=()=>{pushUndo();S.chain=[];save();renderChain();};
-$('bCopy').onclick=()=>{pushUndo();const n=(editPat+1)%16;S.patterns[n]=JSON.parse(JSON.stringify(S.patterns[editPat]));S.patLen[n]=S.patLen[editPat];S.skip[n]=[...S.skip[editPat]];save();if(!playing){curPat=editPat=n;}renderPats();renderSteps();};
+$('bCopy').onclick=()=>{pushUndo();const n=(editPat+1)%16;S.patterns[n]=JSON.parse(JSON.stringify(S.patterns[editPat]));S.patLen[n]=S.patLen[editPat];S.trkLen[n]=[...S.trkLen[editPat]];S.skip[n]=[...S.skip[editPat]];save();if(!playing){curPat=editPat=n;}renderPats();renderSteps();};
 $('bClrTrk').onclick=()=>{pushUndo();S.patterns[editPat][selTrack]=mkTrack();save();renderSteps();renderPats();};
 $('bClrPat').onclick=()=>{pushUndo();S.patterns[editPat]=mkPat();S.skip[editPat]=[];save();renderSteps();renderPats();};
-$('bLen').onclick=()=>{pushUndo('len');
-  const p=editPat,old=S.patLen[p],nx=LENS[(LENS.indexOf(old)+1)%LENS.length];
-  if(nx>old){S.patterns[p].forEach(t=>{for(let b=old;b<nx;b++)for(let k=0;k<16;k++){const src=t[(b%old)*16+k];t[b*16+k]=src?JSON.parse(JSON.stringify(src)):null;}});}
-  S.patLen[p]=nx;S.skip[p]=S.skip[p].filter(i=>i<nx*16);if(viewPage>=nx)viewPage=0;save();renderSteps();renderPats();
-};
+/* LNGTH: tap sets the selected track's bars, hold sets all 4 tracks */
+function setTrackLen(p,tracks,nx){
+  tracks.forEach(t=>{const old=S.trkLen[p][t],row=S.patterns[p][t];
+    if(nx>old)for(let b=old;b<nx;b++)for(let k=0;k<16;k++){const src=row[(b%old)*16+k];row[b*16+k]=src?JSON.parse(JSON.stringify(src)):null;}
+    S.trkLen[p][t]=nx;});
+  S.patLen[p]=Math.max(...S.trkLen[p]);S.skip[p]=S.skip[p].filter(i=>i<S.patLen[p]*16);
+  if(viewPage>=tbars(p,selTrack))viewPage=0;save();renderSteps();renderPats();
+}
+{let lt=null,lHeld=false;const b=$('bLen');
+  b.addEventListener('pointerdown',()=>{lHeld=false;clearTimeout(lt);lt=setTimeout(()=>{lHeld=true;pushUndo();const p=editPat,old=tbars(p,selTrack),nx=LENS[(LENS.indexOf(old)+1)%LENS.length];
+    setTrackLen(p,[0,1,2,3],nx);try{navigator.vibrate&&navigator.vibrate(20);}catch(_){}toast('All tracks: '+nx+(nx>1?' bars':' bar')+'.',1200);},450);});
+  ['pointerup','pointercancel','pointerleave'].forEach(ev=>b.addEventListener(ev,()=>clearTimeout(lt)));
+  b.onclick=()=>{if(lHeld){lHeld=false;return;}pushUndo('len'+selTrack);const p=editPat,old=tbars(p,selTrack),nx=LENS[(LENS.indexOf(old)+1)%LENS.length];
+    setTrackLen(p,[selTrack],nx);toast('Track '+TL[selTrack]+': '+nx+(nx>1?' bars':' bar')+'. Pattern runs '+S.patLen[p]+(S.patLen[p]>1?' bars':' bar')+'.',1400);};
+  b.addEventListener('contextmenu',e=>e.preventDefault());}
 $('bFollow').onclick=()=>{follow=!follow;renderPages();};
 $('eFmt').onchange=e=>{S.format=e.target.value;save();applyFormat();renderExp();};
 document.querySelectorAll('.fIn').forEach(inp=>inp.addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';addVideo(f);}));
@@ -2026,7 +2044,7 @@ $('aRemove').onclick=removeSource;
 
 /* ---------- undo ---------- */
 const undoS=[],redoS=[];let lastPush={k:null,t:0};
-function snap(){return {pat:JSON.stringify(S.patterns),len:[...S.patLen],skip:JSON.stringify(S.skip),chain:[...S.chain],
+function snap(){return {pat:JSON.stringify(S.patterns),len:[...S.patLen],tlen:JSON.stringify(S.trkLen),skip:JSON.stringify(S.skip),chain:[...S.chain],
   pp:JSON.stringify({trackFx:S.trackFx,trackFxOn:S.trackFxOn,trackFxAmt:S.trackFxAmt,padChoke:S.padChoke,padSemi:S.padSemi,padVol:S.padVol,padRev:S.padRev,padFi:S.padFi,padFo:S.padFo,padDecay:S.padDecay,padMode:S.padMode,padFreeze:S.padFreeze}),
   pads:[...pads],srcs:sources.map(x=>({id:x.id,s:x.sel?x.sel.s:null,e:x.sel?x.sel.e:null,slip:x.slip||0}))};}
 function pushUndo(k){
@@ -2035,10 +2053,10 @@ function pushUndo(k){
   lastPush={k,t:n};undoS.push(snap());if(undoS.length>60)undoS.shift();redoS.length=0;renderUndo();
 }
 function restore(x){
-  S.patterns=JSON.parse(x.pat);S.patLen=[...x.len];S.skip=x.skip?JSON.parse(x.skip):Array.from({length:16},()=>[]);S.chain=[...x.chain];Object.assign(S,JSON.parse(x.pp));for(let t=0;t<4;t++)applyTrackFx(t);
+  S.patterns=JSON.parse(x.pat);S.patLen=[...x.len];S.trkLen=x.tlen?JSON.parse(x.tlen):null;fixTrkLen();S.skip=x.skip?JSON.parse(x.skip):Array.from({length:16},()=>[]);S.chain=[...x.chain];Object.assign(S,JSON.parse(x.pp));for(let t=0;t<4;t++)applyTrackFx(t);
   pads=[...x.pads];pads.forEach(p=>{if(p)p.slipTarget=null;});
   x.srcs.forEach(o=>{const sc=sources.find(y=>y.id===o.id);if(sc&&o.s!=null){sc.sel={s:o.s,e:o.e};sc.slip=o.slip;}});
-  if(viewPage>=S.patLen[editPat])viewPage=0;
+  if(viewPage>=tbars(editPat,selTrack))viewPage=0;
   $('empty').classList.toggle('hidden',hasPads()||sources.length>0);
   save();renderAll();renderMini();renderEdInfo();renderEdSlip();waveDirty=true;padsChanged();
 }
@@ -2131,13 +2149,14 @@ async function padFromRecord(rec){
   const p={buf,rbuf:reverseOf(buf),cat:m.cat||'TONE',name:m.name||undefined,len,start:m.start||0,slip:m.slip||0,srcId:null,srcName:m.srcName,srcKey:m.srcKey||null,frames,fps:frames.length/len,thumb:frames[0].toDataURL('image/jpeg',0.6)};
   recCache.set(p,rec);return p;
 }
-function stateJSON(){return {bpm:S.bpm,swing:S.swing,format:S.format,trackFx:S.trackFx,trackFxOn:S.trackFxOn,trackFxAmt:S.trackFxAmt,patterns:S.patterns,patLen:S.patLen,skip:S.skip,chain:S.chain,padChoke:S.padChoke,padSemi:S.padSemi,padVol:S.padVol,padRev:S.padRev,padFi:S.padFi,padFo:S.padFo,padDecay:S.padDecay,padMode:S.padMode,padFreeze:S.padFreeze};}
+function stateJSON(){return {bpm:S.bpm,swing:S.swing,format:S.format,trackFx:S.trackFx,trackFxOn:S.trackFxOn,trackFxAmt:S.trackFxAmt,patterns:S.patterns,patLen:S.patLen,trkLen:S.trkLen,skip:S.skip,chain:S.chain,padChoke:S.padChoke,padSemi:S.padSemi,padVol:S.padVol,padRev:S.padRev,padFi:S.padFi,padFo:S.padFo,padDecay:S.padDecay,padMode:S.padMode,padFreeze:S.padFreeze};}
 function applyState(st){
-  const keys=['bpm','swing','format','trackFx','trackFxOn','trackFxAmt','patterns','patLen','skip','chain','padChoke','padSemi','padVol','padRev','padFi','padFo','padDecay','padMode','padFreeze'];
+  const keys=['bpm','swing','format','trackFx','trackFxOn','trackFxAmt','patterns','patLen','trkLen','skip','chain','padChoke','padSemi','padVol','padRev','padFi','padFo','padDecay','padMode','padFreeze'];
   keys.forEach(k=>{if(st[k]!=null)S[k]=st[k];});
   S.patterns.forEach(P=>P.forEach(t=>{while(t.length<MAXST)t.push(null);}));
   if(!Array.isArray(S.patLen)||S.patLen.length!==16)S.patLen=Array(16).fill(1);
   if(!Array.isArray(S.skip)||S.skip.length!==16)S.skip=Array.from({length:16},()=>[]);
+  fixTrkLen();
   fixPadArrays();if(!Array.isArray(S.trackFx)||S.trackFx.length!==4)S.trackFx=[[],[],[],[]];if(!Array.isArray(S.trackFxOn)||S.trackFxOn.length!==4)S.trackFxOn=[true,true,true,true];fixTrackFx();
   for(let t=0;t<4;t++)applyTrackFx(t);viewPage=0;save();applyFormat();
 }
@@ -2263,7 +2282,7 @@ async function loadSampleList(list){
 /* INIT: clear patterns, pads, or everything (undo brings back pads and patterns) */
 function clearPatterns(quiet){
   if(playing)stop();if(!quiet)pushUndo();
-  Object.assign(S,{patterns:mkPats(),patLen:Array(16).fill(1),skip:Array.from({length:16},()=>[]),chain:[]});
+  Object.assign(S,{patterns:mkPats(),patLen:Array(16).fill(1),trkLen:null,skip:Array.from({length:16},()=>[]),chain:[]});fixTrkLen();
   curPat=editPat=0;viewPage=0;queued=null;selStep=-1;lastHit=[null,null,null,null];chainOn=false;
   save();renderAll();if(!quiet)toast('Patterns cleared. Undo brings them back.',2400);
 }
