@@ -67,7 +67,10 @@ body.wide #panelsL:empty{min-height:40px}
 #tracks .tsel{flex:1;border-radius:0;font-weight:700;font-size:13px;border-bottom:3px solid transparent}
 #tracks .tmute{flex:0 0 30px;border-radius:0;background:var(--purple);font-size:10px}
 #tracks .tmute.mu{background:var(--fire);color:var(--ink)}
-#tracks .tsel.sel{background:var(--purple)}
+#tracks .tsel.sel{background:var(--purple);background:color-mix(in srgb,var(--tc,#57556F) 45%,#424C60)}
+/* light bar across the top of the sequencer in the selected track's color */
+#secSeq{position:relative;--tc:#7C5D48}
+#secSeq::before{content:"";position:absolute;left:14px;right:14px;top:0;height:5px;border-radius:0 0 5px 5px;background:var(--tc);box-shadow:0 0 14px 2px var(--tc);transition:background .15s,box-shadow .15s}
 #tracks .tsel.hit{filter:brightness(1.5)}
 .pageRow{display:flex;gap:6px;margin-top:8px;align-items:center}
 .pageRow>button{flex:0 0 auto;font-size:10px;padding:7px 9px}
@@ -1701,7 +1704,7 @@ function flash(pi,tr){
   const b=trkEls[tr]&&trkEls[tr].b;if(b){b.classList.add('hit');setTimeout(()=>b.classList.remove('hit'),90);}
 }
 function setPlayhead(s){if(curStep>=0&&stepEls[curStep])stepEls[curStep].classList.remove('ph');curStep=s;if(s>=0)stepEls[s].classList.add('ph');}
-function renderTracks(){const tl=S.trkLen[editPat],same=tl.every(x=>x===tl[0]);trkEls.forEach(({b,m},t)=>{b.classList.toggle('sel',t===selTrack);m.classList.toggle('mu',muted[t]);b.innerHTML=TL[t]+(same?'':'<sup class="tlen">'+tl[t]+'</sup>');});}
+function renderTracks(){$('secSeq').style.setProperty('--tc',TCOL[selTrack]);const tl=S.trkLen[editPat],same=tl.every(x=>x===tl[0]);trkEls.forEach(({b,m},t)=>{b.classList.toggle('sel',t===selTrack);m.classList.toggle('mu',muted[t]);b.innerHTML=TL[t]+(same?'':'<sup class="tlen">'+tl[t]+'</sup>');});}
 function renderSteps(){
   if(viewPage>=tbars(editPat,selTrack))viewPage=0;renderTracks();
   const row=S.patterns[editPat][selTrack],off=viewPage*16;
