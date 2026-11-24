@@ -34,7 +34,8 @@ body.wide #vidBlock.lifted{opacity:.6;outline:2px dashed var(--air);outline-offs
 body.wide #panelsL:empty{min-height:40px}
 #stage{touch-action:pan-y;position:relative;height:36vh;min-height:200px;background:#000;border-radius:14px;overflow:hidden;display:flex;align-items:center;justify-content:center}
 #ovc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-#cv{display:block;max-width:100%;max-height:100%;width:auto;height:auto}
+#cv{display:block;width:100%;height:100%}
+#stage.locked{margin:0 auto;min-height:0}
 .overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:16px;text-align:center;background:linear-gradient(160deg,var(--ink),var(--purple))}
 .hidden{display:none!important}
 .ov-title{font-size:16px;font-weight:700}
@@ -171,6 +172,15 @@ select{font:inherit;font-size:12px;background:var(--slate);color:var(--w);border
 .tfx button.on{background:var(--air);color:var(--ink)}
 #tfxAmts .ctl output{width:56px}
 #tfxAmts .ctl label{width:74px}
+.tvLab{font-size:10px;letter-spacing:.1em;opacity:.8;margin:9px 0 0}
+.tvLab span{opacity:.6;letter-spacing:0;margin-left:4px}
+.tvH{font-size:10px;letter-spacing:.12em;opacity:.8;margin:10px 0 5px}
+.tvH span{opacity:.6;letter-spacing:0}
+.tvGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.tvGrid.c3{grid-template-columns:repeat(3,1fr)}.tvGrid.c5{grid-template-columns:repeat(5,1fr)}
+.tvGrid button{padding:10px 0;font-size:11px;font-weight:700}
+.tvGrid button.on{background:var(--air);color:var(--ink)}
+#tvWin{z-index:15}
 .tfxGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0}
 .tfxGrid button{padding:10px 0;font-size:13px;flex-direction:column;gap:2px;line-height:1.1}
 .tfxGrid button.on{background:var(--air);color:var(--ink)}
@@ -284,6 +294,8 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
   <section class="panel tight" id="secVfx"><h3>VIDEO FX</h3>
   <div class="row vopt" style="margin-top:0"><button id="vFit">FILL</button><button id="vLay">STACK</button><button id="vWave">WAVE</button><button id="vTag">TAG</button></div>
   <div class="row vopt" id="vfxRow"><button data-v="zoom">ZOOM</button><button data-v="shake">SHK</button><button data-v="vhs">VHS</button><button data-v="duo">DUO</button></div>
+  <div class="tvLab">TRACK VIDEO <span>tap to change the frame, hold for more</span></div>
+  <div class="tfx" id="tvRow"></div>
   <div class="row vopt hidden" id="tagRow"><input id="tagText" class="txt" maxlength="24" aria-label="Producer tag text"><button id="tagPos" style="flex:0 0 56px">↘</button></div>
   </section>
 
@@ -429,6 +441,18 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
     <div class="row"><button id="initCancel">CANCEL</button></div>
   </div>
 </div>
+<div id="tvWin" class="modal hidden">
+  <div class="mbox sw">
+    <div class="swT"><span id="tvTitle">TRACK A VIDEO</span></div>
+    <div class="tvH">FRAME</div><div class="tvGrid c3" id="tvFit"></div>
+    <div class="help"><p>FILL crops to fill its space, FIT shows the whole frame, BLUR shows the whole frame over a blurred copy instead of black. In FOCUS or 4-up view, drag the video to move this track's frame and pinch to zoom it. Double tap to reset.</p></div>
+    <div class="tvH">PLACE IN MIX</div><div class="tvGrid" id="tvPos"></div>
+    <div class="tvH">FX <span>up to 2</span></div><div class="tvGrid c5" id="tvFx"></div>
+    <div class="tvH">BLEND</div><div class="tvGrid c3" id="tvBlend"></div>
+    <div class="ctl"><label>OPACITY</label><input type="range" id="tvOp" min="10" max="100" step="1"><output id="tvOpV"></output></div>
+    <div class="row"><button id="tvReset">RESET FRAME</button><button id="tvDone" class="hl">DONE</button></div>
+  </div>
+</div>
 <div id="tfxWin" class="modal hidden">
   <div class="mbox sw">
     <div class="swT"><span id="tfxTitle">TRACK A FX</span></div>
@@ -529,6 +553,11 @@ fixTrkLen();
 const tbars=(p,t)=>S.trkLen[p][t];
 const tlen=(p,t)=>S.trkLen[p][t]*16;
 const tIdx=(p,t,s)=>s%tlen(p,t);
+/* per-track video: frame (fill, fit, blur), pan and zoom, place in MIX, up to 2 picture FX, blend and opacity */
+const TV_DEF=()=>({fit:'fill',z:1,x:0,y:0,pos:'auto',fx:[],blend:'normal',op:100});
+const fixTv=()=>{if(!Array.isArray(S.tv)||S.tv.length!==4)S.tv=[0,1,2,3].map(TV_DEF);S.tv=S.tv.map(t=>Object.assign(TV_DEF(),t||{}));};
+fixTv();
+const tvOf=v=>S.tv[v&&v.tr!=null?v.tr:selTrack];
 /* skipped steps: grayed out per pattern, the playhead jumps over them so the bar gets shorter */
 const isSkip=(p,s)=>!!(S.skip&&S.skip[p]&&S.skip[p].includes(s));
 const actSteps=p=>{let n=0;for(let i=0;i<plen(p);i++)if(!isSkip(p,i))n++;return n||plen(p);};
@@ -1341,9 +1370,22 @@ function demoFrame(cat,name,i,p){
 const cv=$('cv'),g2=cv.getContext('2d'),tmp=document.createElement('canvas'),tg=tmp.getContext('2d');
 let curStep=-1;
 function sizeCanvas(a){const M=720;if(a>=1){cv.width=M;cv.height=Math.round(M/a)&~1;}else{cv.height=M;cv.width=Math.round(M*a)&~1;}}
+/* the player is the exact shape of the video, so there are no bars around it; resizing the player scales the whole picture */
+function layoutStage(){
+  const st=$('stage');if(!st)return;try{
+  if(!hasPads()&&!sources.length){st.classList.remove('locked');st.style.width='';return;}
+  st.classList.add('locked');st.style.width='';
+  const wide=document.body.classList.contains('wide'),f=UI[wide?'stageHW':'stageH']||(wide?0.5:0);
+  const want=f?Math.round(f*window.innerHeight):Math.max(200,Math.round(window.innerHeight*0.36));
+  const par=st.parentNode,cs=getComputedStyle(par),pw=par.clientWidth-parseFloat(cs.paddingLeft)-parseFloat(cs.paddingRight),a=cv.width/cv.height;
+  let h=want,w=h*a;if(w>pw){w=pw;h=w/a;}
+  st.style.width=Math.round(w)+'px';st.style.height=Math.round(h)+'px';}catch(e){}
+}
+window.addEventListener('resize',()=>layoutStage());
 function applyFormat(){
   const map={'9:16':9/16,'1:1':1,'16:9':16/9};
   sizeCanvas(S.format==='auto'?(sources[0]?sources[0].aspect:1):map[S.format]||1);
+  layoutStage();
 }
 function drawVoice(v,x,y,w,h,now,clip){
   const p=pads[v.pad];if(!p)return;
@@ -1352,21 +1394,35 @@ function drawVoice(v,x,y,w,h,now,clip){
   if(v.loop&&v.end==null)fi=((fi%n)+n)%n;else if(v.loop)fi=(((Math.floor((Math.min(now,v.end)-v.start)*v.rate*p.fps))%n)+n)%n;else fi=Math.min(n-1,Math.max(0,fi));
   if(v.rev)fi=n-1-fi;
   const fz=S.padFreeze[v.pad];if(fz!=null&&fz>=0)fi=Math.round(fz/100*(n-1));
-  const f=p.frames[fi];
-  let sc=VO.fit==='fit'?Math.min(w/f.width,h/f.height):Math.max(w/f.width,h/f.height);
-  const dt=now-v.start;
-  if(VO.fx.zoom&&dt>=0&&dt<0.2){const q=1-dt/0.2;sc*=1+0.2*q*q;}
-  const dw=f.width*sc,dh=f.height*sc;
+  const f=p.frames[fi],T=tvOf(v),tfx=k=>T.fx.includes(k);
+  const cover=Math.max(w/f.width,h/f.height),contain=Math.min(w/f.width,h/f.height);
+  let sc=(T.fit==='fill'?cover:contain)*T.z;
+  const dt=now-v.start,life=Math.max(0.05,p.len/(v.rate||1));
+  if((VO.fx.zoom||tfx('punch'))&&dt>=0&&dt<0.2){const q=1-dt/0.2;sc*=1+0.2*q*q;}
+  if(tfx('drift'))sc*=1+0.14*Math.min(1,Math.max(0,dt)/Math.max(life,1.5));
+  const dw=f.width*sc,dh=f.height*sc,mx=Math.abs(dw-w)/2,my=Math.abs(dh-h)/2;
+  let ox=Math.max(-mx,Math.min(mx,T.x*w)),oy=Math.max(-my,Math.min(my,T.y*h));
+  if(tfx('drift')){const k=Math.min(1,Math.max(0,dt)/Math.max(life,1.5));ox+=Math.max(-mx,Math.min(mx,w*0.03*k))*((v.pad%2)?1:-1);}
+  if(tfx('shake')&&dt>=0&&dt<0.24){const m=Math.min(w,h)*0.05*(1-dt/0.24);ox+=(Math.random()-0.5)*2*m;oy+=(Math.random()-0.5)*2*m;}
+  const ga0=g2.globalAlpha;
   g2.save();g2.beginPath();if(clip)clip(g2);else g2.rect(x,y,w,h);g2.clip();
-  if(VO.fit==='fit'){g2.fillStyle=COL.ink;g2.fillRect(x,y,w,h);}
-  g2.drawImage(f,x+(w-dw)/2,y+(h-dh)/2,dw,dh);
-  if(VO.fx.duo){/* duotone: grey it, tint with the track color, lift the shadows to ink */
+  if(T.fit==='blur'){/* blurred, darker copy of the same frame fills the space behind */
+    const bw=24,bh=Math.max(2,Math.round(24*h/w));if(tmp.width!==bw||tmp.height!==bh){tmp.width=bw;tmp.height=bh;}
+    const bs=Math.max(bw/f.width,bh/f.height);tg.imageSmoothingEnabled=true;tg.drawImage(f,(bw-f.width*bs)/2,(bh-f.height*bs)/2,f.width*bs,f.height*bs);
+    g2.imageSmoothingEnabled=true;g2.drawImage(tmp,0,0,bw,bh,x-w*0.08,y-h*0.08,w*1.16,h*1.16);
+    g2.fillStyle='rgba(49,48,67,.35)';g2.fillRect(x,y,w,h);
+  }else if(T.fit==='fit'){g2.fillStyle=COL.ink;g2.fillRect(x,y,w,h);}
+  g2.globalAlpha=ga0*(T.op/100);if(T.blend!=='normal')g2.globalCompositeOperation=T.blend;
+  g2.drawImage(f,x+(w-dw)/2+ox,y+(h-dh)/2+oy,dw,dh);
+  g2.globalCompositeOperation='source-over';g2.globalAlpha=ga0;
+  if(VO.fx.duo||tfx('duo')){/* duotone: grey it, tint with the track color, lift the shadows to ink */
     const ga=g2.globalAlpha;g2.globalAlpha=1;
     g2.globalCompositeOperation='saturation';g2.fillStyle='#888';g2.fillRect(x,y,w,h);
     g2.globalCompositeOperation='multiply';g2.fillStyle=TCOL[v.tr!=null?v.tr:selTrack];g2.fillRect(x,y,w,h);
     g2.globalCompositeOperation='screen';g2.fillStyle=COL.ink;g2.fillRect(x,y,w,h);
     g2.globalCompositeOperation='source-over';g2.globalAlpha=ga;
   }
+  if(tfx('vhs')&&!VO.fx.vhs)vhsRect(x,y,w,h);
   const endT=v.end!=null?v.end:(v.loop?Infinity:v.start+p.len/v.rate),over=now-endT;if(over>0){g2.fillStyle='rgba(49,48,67,'+Math.min(0.55,over*1.5)+')';g2.fillRect(x,y,w,h);}
   if(el<0.08){g2.fillStyle='rgba(255,255,255,'+(0.18*(1-el/0.08))+')';g2.fillRect(x,y,w,h);}
   g2.restore();
@@ -1404,6 +1460,12 @@ function drawMix(show,W,H,now){
   const along=L==='grid'?!(H>=W):(H>=W);/* stack splits along the long side, grid across it */
   if(along){const bh=H/n;show.forEach((v,k)=>drawVoice(v,0,k*bh,W,bh,now));g2.fillStyle=COL.ink;for(let k=1;k<n;k++)g2.fillRect(0,k*bh-1,W,2);}
   else{const bw=W/n;show.forEach((v,k)=>drawVoice(v,k*bw,0,bw,H,now));g2.fillStyle=COL.ink;for(let k=1;k<n;k++)g2.fillRect(k*bw-1,0,2,H);}
+}
+function vhsRect(x,y,w,h){
+  g2.save();g2.globalCompositeOperation='lighter';g2.globalAlpha=0.16;
+  g2.drawImage(cv,x,y,w,h,x+w*0.008,y,w,h);g2.drawImage(cv,x,y,w,h,x-w*0.008,y,w,h);g2.restore();
+  for(let k=0;k<2;k++){const yy=y+Math.random()*h,hh=h*(0.01+Math.random()*0.03);g2.drawImage(cv,x,yy,w,hh,x+(Math.random()-0.5)*w*0.05,yy,w,hh);}
+  g2.fillStyle='rgba(0,0,0,.2)';const st=Math.max(3,Math.round(h/150));for(let yy=y;yy<y+h;yy+=st)g2.fillRect(x,yy,w,st/2);
 }
 function vhs(W,H){
   g2.save();g2.globalCompositeOperation='lighter';g2.globalAlpha=0.16;g2.drawImage(cv,W*0.006,0);g2.drawImage(cv,-W*0.006,0);g2.restore();
@@ -1469,6 +1531,19 @@ function loop(){
   if(view===4){
     const hw=W/2,hh=H/2;
     for(let t=0;t<4;t++){const x=(t%2)*hw,y=Math.floor(t/2)*hh;if(act[t])drawVoice(act[t],x,y,hw,hh,now);}
+  }else if(view==='mix'&&[0,1,2,3].some(t=>S.tv[t].pos!=='auto'&&act[t])){
+    /* placed tracks keep their own spot; the rest share the MIX layout underneath */
+    const auto=sounding.filter(v=>S.tv[v.tr].pos==='auto').sort((a,b)=>b.start-a.start).slice(0,4).sort((a,b)=>a.tr-b.tr||a.start-b.start);
+    if(auto.length>1)drawMix(auto,W,H,now);else if(auto.length===1)drawVoice(auto[0],0,0,W,H,now);
+    else if(!S.tv.some((t,i)=>t.pos==='full'&&act[i])&&latest)drawVoice(latest,0,0,W,H,now);
+    const R={full:[0,0,W,H],top:[0,0,W,H/2],bottom:[0,H/2,W,H/2],left:[0,0,W/2,H],right:[W/2,0,W/2,H],tl:[0,0,W/2,H/2],tr:[W/2,0,W/2,H/2],bl:[0,H/2,W/2,H/2],br:[W/2,H/2,W/2,H/2]};
+    const LAYER={full:0,top:1,bottom:1,left:1,right:1,tl:2,tr:2,bl:2,br:2,pip:3};
+    [0,1,2,3].filter(t=>S.tv[t].pos!=='auto'&&act[t]).sort((a,b)=>LAYER[S.tv[a].pos]-LAYER[S.tv[b].pos]).forEach(t=>{
+      const ps=S.tv[t].pos;
+      if(ps==='pip'){const sz=Math.min(W,H)*0.36,m=Math.min(W,H)*0.04;drawVoice(act[t],W-sz-m,H-sz-m,sz,sz,now);g2.strokeStyle=COL.ink;g2.lineWidth=Math.max(3,W*0.006);g2.strokeRect(W-sz-m,H-sz-m,sz,sz);}
+      else{const [rx,ry,rw,rh]=R[ps];drawVoice(act[t],rx,ry,rw,rh,now);}
+    });
+    shown=latest;
   }else if(view==='mix'&&sounding.length>1){
     const show=sounding.sort((a,b)=>b.start-a.start).slice(0,4).sort((a,b)=>a.tr-b.tr||a.start-b.start);
     drawMix(show,W,H,now);shown=latest;
@@ -1505,13 +1580,14 @@ requestAnimationFrame(loop);
 const LAYOUTS=[['stack','STACK'],['grid','GRID'],['pip','PIP'],['collage','COLLAGE'],['diag','DIAGONAL']];
 const TAGPOS=['↖','↗','↙','↘'];
 function renderVO(){
-  $('vFit').textContent=VO.fit==='fit'?'FIT':'FILL';
+  {const f=S.tv.map(t=>t.fit);$('vFit').textContent=f.every(x=>x===f[0])?(f[0]==='fit'?'FIT':f[0]==='blur'?'BLUR':'FILL'):'MIXED';}
   $('vLay').textContent=(LAYOUTS.find(l=>l[0]===VO.layout)||LAYOUTS[0])[1];
   $('vWave').classList.toggle('on',VO.wave);$('vTag').classList.toggle('on',VO.tag);
   $('tagRow').classList.toggle('hidden',!VO.tag);$('tagText').value=VO.tagText;$('tagPos').textContent=TAGPOS[VO.tagPos];
   document.querySelectorAll('#vfxRow button').forEach(b=>b.classList.toggle('on',!!VO.fx[b.dataset.v]));
 }
-$('vFit').onclick=()=>{VO.fit=VO.fit==='fit'?'fill':'fit';saveVO();renderVO();};
+$('vFit').onclick=()=>{const order=['fill','fit','blur'],f=S.tv[0].fit,nx=order[(order.indexOf(f)+1)%3];pushUndo();S.tv.forEach(t=>t.fit=nx);save();renderVO();renderTv();
+  toast('All tracks: '+nx.toUpperCase()+'.',1000);};
 $('vLay').onclick=()=>{const i=LAYOUTS.findIndex(l=>l[0]===VO.layout);VO.layout=LAYOUTS[(i+1)%LAYOUTS.length][0];saveVO();renderVO();
   toast('MIX layout: '+LAYOUTS.find(l=>l[0]===VO.layout)[1]+(view==='mix'?'':' (shows in MIX view)'),1600);};
 $('vWave').onclick=()=>{VO.wave=!VO.wave;saveVO();renderVO();};
@@ -1524,8 +1600,8 @@ document.querySelectorAll('#vfxRow button').forEach(b=>b.onclick=()=>{VO.fx[b.da
 (()=>{
   const st=$('stage'),gr=$('vGrip'),PRE=[0.26,0.36,0.52,0.78];let y0=0,h0=0,drag=false,lastTap=0;
   const key=()=>document.body.classList.contains('wide')?'stageHW':'stageH';
-  const setH=f=>{f=Math.max(0.2,Math.min(0.85,f));st.style.height=Math.round(f*window.innerHeight)+'px';UI[key()]=f;saveUI();};
-  window.applyStageH=()=>{const f=UI[key()]||(key()==='stageHW'?0.5:0);st.style.height=f?Math.round(f*window.innerHeight)+'px':'';};
+  const setH=f=>{f=Math.max(0.2,Math.min(0.85,f));st.style.height=Math.round(f*window.innerHeight)+'px';UI[key()]=f;saveUI();layoutStage();};
+  window.applyStageH=()=>{const f=UI[key()]||(key()==='stageHW'?0.5:0);st.style.height=f?Math.round(f*window.innerHeight)+'px':'';layoutStage();};
   applyStageH();
   gr.addEventListener('pointerdown',e=>{e.preventDefault();const n=performance.now();
     if(n-lastTap<300){const cur=st.offsetHeight/window.innerHeight;const nx=PRE.find(p=>p>cur+0.02);setH(nx!=null?nx:PRE[0]);lastTap=0;return;}
@@ -1549,6 +1625,7 @@ function makeZoomable(box,getTarget){
   badge.onclick=e=>{e.stopPropagation();reset();};
   box.addEventListener('pointerdown',e=>{
     if(e.target.closest('button,label'))return;
+    if(box.id==='stage'&&frameMode())return;/* FOCUS and 4-up: gestures frame the track instead */
     pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(pts.size===2){const [a,b]=[...pts.values()];g={d0:Math.hypot(a.x-b.x,a.y-b.y)||1,z0:st.z,cx:(a.x+b.x)/2,cy:(a.y+b.y)/2,x0:st.x,y0:st.y};}
     else if(pts.size===1){
@@ -1566,7 +1643,32 @@ function makeZoomable(box,getTarget){
   box.addEventListener('pointerup',up);box.addEventListener('pointercancel',up);
   return reset;
 }
-makeZoomable($('stage'),()=>cv);
+const resetStageZoom=makeZoomable($('stage'),()=>cv);
+/* frame a track: drag to move, pinch to zoom, double tap to reset. FOCUS frames the selected track, 4-up the quarter you touch */
+function frameMode(){return hasPads()&&(view==='focus'||view===4);}
+{const st=$('stage'),pts=new Map();let fg=null,lastTap=0;
+  const trackAt=(cx,cy)=>{if(view!==4)return selTrack;const r=cv.getBoundingClientRect();return (cx>r.left+r.width/2?1:0)+(cy>r.top+r.height/2?2:0);};
+  const cell=()=>{const r=cv.getBoundingClientRect();return view===4?{w:r.width/2,h:r.height/2}:{w:r.width,h:r.height};};
+  st.addEventListener('pointerdown',e=>{
+    if(!frameMode()||e.target.closest('button,label'))return;
+    resetStageZoom();pts.set(e.pointerId,{x:e.clientX,y:e.clientY});st.style.touchAction='none';
+    if(pts.size===1){const t=trackAt(e.clientX,e.clientY),n=performance.now();
+      if(n-lastTap<300){pushUndo();Object.assign(S.tv[t],{z:1,x:0,y:0});save();renderTv();toast('Track '+TL[t]+' frame reset.',900);lastTap=0;fg=null;return;}lastTap=n;
+      const T=S.tv[t];fg={t,px:e.clientX,py:e.clientY,x0:T.x,y0:T.y,z0:T.z,undo:false};}
+    else if(pts.size===2&&fg){const [a,b]=[...pts.values()],T=S.tv[fg.t];fg.d0=Math.hypot(a.x-b.x,a.y-b.y)||1;fg.z0=T.z;fg.cx=(a.x+b.x)/2;fg.cy=(a.y+b.y)/2;fg.x0=T.x;fg.y0=T.y;}
+  });
+  st.addEventListener('pointermove',e=>{
+    if(!fg||!pts.has(e.pointerId))return;pts.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    const T=S.tv[fg.t],c=cell();if(!fg.undo){pushUndo();fg.undo=true;}
+    if(pts.size>=2&&fg.d0){const [a,b]=[...pts.values()],d=Math.hypot(a.x-b.x,a.y-b.y);
+      T.z=Math.max(1,Math.min(4,fg.z0*d/fg.d0));T.x=Math.max(-1.5,Math.min(1.5,fg.x0+((a.x+b.x)/2-fg.cx)/c.w));T.y=Math.max(-1.5,Math.min(1.5,fg.y0+((a.y+b.y)/2-fg.cy)/c.h));}
+    else{T.x=Math.max(-1.5,Math.min(1.5,fg.x0+(e.clientX-fg.px)/c.w));T.y=Math.max(-1.5,Math.min(1.5,fg.y0+(e.clientY-fg.py)/c.h));}
+  });
+  const up=e=>{if(!pts.has(e.pointerId))return;pts.delete(e.pointerId);
+    if(pts.size===0){if(fg&&fg.undo){save();renderTv();}fg=null;st.style.touchAction='pan-y';}
+    else if(fg){const [p]=[...pts.values()],T=S.tv[fg.t];fg.px=p.x;fg.py=p.y;fg.x0=T.x;fg.y0=T.y;fg.d0=0;}};
+  st.addEventListener('pointerup',up);st.addEventListener('pointercancel',up);
+}
 const resetEdZoom=makeZoomable($('edVid'),()=>$('edVid').querySelector('video'));
 
 /* ---------- main UI ---------- */
@@ -1598,7 +1700,7 @@ function buildUI(){
   });
   for(let i=0;i<16;i++){const b=document.createElement('button');b.textContent=i+1;b.onpointerdown=e=>{e.preventDefault();tapPat(i);};$('pats').append(b);patEls.push(b);}
   buildMini();
-  buildTfx();buildBanks($('banks'),b=>setBank(b));buildBanks($('edBanks'),b=>setBank(b));
+  buildTfx();buildTv();buildBanks($('banks'),b=>setBank(b));buildBanks($('edBanks'),b=>setBank(b));
 }
 const liveV={};
 function endLive(i){const v=liveV[i];if(v&&ctx){(Array.isArray(v)?v:[v]).forEach(x=>release(x,ctx.currentTime));delete liveV[i];}}
@@ -1718,7 +1820,7 @@ function renderSteps(){
   renderNudge();
   renderPages();
 }
-function renderPads(){
+function renderPads(){layoutStage();
   padEls.forEach((b,i)=>{
     const p=keys?pads[selPad]:pads[bank*16+i];
     b.style.backgroundImage=p?'url('+p.thumb+')':'none';
@@ -1759,6 +1861,40 @@ function buildTfx(){
   $('tfxClear').onclick=()=>{pushUndo();S.trackFx[tfxEdit]=[];S.trackFxAmt[tfxEdit]={};save();applyTrackFx(tfxEdit);renderTfx();};
   $('tfxWin').addEventListener('click',e=>{if(e.target.id==='tfxWin')$('tfxWin').classList.add('hidden');});
 }
+/* ---------- track video ---------- */
+const TV_FIT=[['fill','FILL'],['fit','FIT'],['blur','BLUR']];
+const TV_POS=[['auto','AUTO'],['full','FULL'],['top','TOP'],['bottom','BOTTOM'],['left','LEFT'],['right','RIGHT'],['tl','TOP L'],['tr','TOP R'],['bl','BOT L'],['br','BOT R'],['pip','PIP']];
+const TV_FX=[['punch','PUNCH'],['shake','SHAKE'],['drift','DRIFT'],['duo','DUO'],['vhs','VHS']];
+const TV_BLEND=[['normal','NORMAL'],['screen','SCREEN'],['multiply','MULTIPLY']];
+const tvEls=[];let tvEdit=0;
+function tvSum(t){const T=S.tv[t],bits=[TV_FIT.find(x=>x[0]===T.fit)[1]];if(T.pos!=='auto')bits.push(TV_POS.find(x=>x[0]===T.pos)[1]);
+  T.fx.forEach(k=>bits.push(TV_FX.find(x=>x[0]===k)[1]));if(T.blend!=='normal')bits.push(T.blend==='screen'?'SCRN':'MULT');if(T.z>1.01)bits.push(T.z.toFixed(1)+'×');return bits.join(' ');}
+function renderTv(){
+  tvEls.forEach((b,t)=>{b.innerHTML='<b>'+TL[t]+'</b><span>'+tvSum(t)+'</span>';const T=S.tv[t];b.classList.toggle('set',T.fit!=='fill'||T.pos!=='auto'||T.fx.length||T.blend!=='normal'||T.op<100||T.z>1.01);});
+  const T=S.tv[tvEdit];if(!T)return;
+  [['tvFit','fit'],['tvPos','pos'],['tvBlend','blend']].forEach(([id,k])=>[...$(id).children].forEach(b=>b.classList.toggle('on',b.dataset.k===T[k])));
+  [...$('tvFx').children].forEach(b=>b.classList.toggle('on',T.fx.includes(b.dataset.k)));
+  $('tvOp').value=T.op;$('tvOpV').textContent=T.op+'%';$('tvTitle').textContent='TRACK '+TL[tvEdit]+' VIDEO';
+  try{renderVO();}catch(e){}
+}
+function buildTv(){
+  for(let t=0;t<4;t++){const b=document.createElement('button');b.style.borderBottomColor=TCOL[t];let tm=null,held=false;
+    b.onpointerdown=e=>{e.preventDefault();held=false;clearTimeout(tm);tm=setTimeout(()=>{held=true;openTv(t);},450);};
+    b.onpointerup=()=>{clearTimeout(tm);if(held)return;const o=['fill','fit','blur'],T=S.tv[t];pushUndo('tvfit'+t);T.fit=o[(o.indexOf(T.fit)+1)%3];save();renderTv();toast('Track '+TL[t]+': '+T.fit.toUpperCase()+'.',900);};
+    b.onpointercancel=b.onpointerleave=()=>clearTimeout(tm);b.oncontextmenu=e=>e.preventDefault();
+    $('tvRow').appendChild(b);tvEls.push(b);}
+  const grid=(id,list,fn)=>list.forEach(([k,l])=>{const b=document.createElement('button');b.textContent=l;b.dataset.k=k;b.onclick=()=>{fn(k);save();renderTv();};$(id).appendChild(b);});
+  grid('tvFit',TV_FIT,k=>{pushUndo('tvf');S.tv[tvEdit].fit=k;});
+  grid('tvPos',TV_POS,k=>{pushUndo('tvp');S.tv[tvEdit].pos=k;if(k!=='auto'&&view!=='mix')toast('Places show in MIX view.',1400);});
+  grid('tvBlend',TV_BLEND,k=>{pushUndo('tvb');S.tv[tvEdit].blend=k;});
+  grid('tvFx',TV_FX,k=>{const a=S.tv[tvEdit].fx,i=a.indexOf(k);pushUndo('tvx');if(i>=0)a.splice(i,1);else{if(a.length>=2){toast('Up to 2 per track. Tap one to remove it first.',1600);return;}a.push(k);}});
+  $('tvOp').oninput=e=>{pushUndo('tvo'+tvEdit);S.tv[tvEdit].op=+e.target.value;save();renderTv();};
+  $('tvReset').onclick=()=>{pushUndo();Object.assign(S.tv[tvEdit],{z:1,x:0,y:0});save();renderTv();};
+  $('tvDone').onclick=()=>$('tvWin').classList.add('hidden');
+  $('tvWin').addEventListener('click',e=>{if(e.target.id==='tvWin')$('tvWin').classList.add('hidden');});
+  renderTv();
+}
+function openTv(t){tvEdit=t;renderTv();$('tvWin').classList.remove('hidden');}
 function openTfx(t){tfxEdit=t;$('tfxTitle').textContent='TRACK '+TL[t]+' FX';renderTfx();$('tfxWin').classList.remove('hidden');}
 function renderTfx(){
   tfxEls.forEach((b,t)=>{const a=S.trackFx[t],lab=a.map(k=>TFX.find(x=>x[0]===k)[1]);
@@ -1951,7 +2087,7 @@ function renderPadPanel(){
   $('pSlV').textContent=slipTxt(p?(p.slipTarget!=null?p.slipTarget:p.slip||0):0);
   if(!slipBusy)$('pSlNote').textContent=!p?'':p.srcId==null?'Slip works on pads cut from your own videos.':has?'':'Slip needs this pad\'s video loaded. Reload it in SLICE to adjust.';
 }
-function renderAll(){if(tfxEls.length)renderTfx();renderTracks();renderSteps();renderPads();renderFx();renderPats();renderChain();renderTransport();renderPadPanel();}
+function renderAll(){layoutStage();if(tfxEls.length)renderTfx();if(tvEls.length)renderTv();renderTracks();renderSteps();renderPads();renderFx();renderPats();renderChain();renderTransport();renderPadPanel();}
 
 /* ---------- controls ---------- */
 $('bPlay').onclick=()=>{playing?stop():start();};
@@ -2047,7 +2183,7 @@ $('aRemove').onclick=removeSource;
 
 /* ---------- undo ---------- */
 const undoS=[],redoS=[];let lastPush={k:null,t:0};
-function snap(){return {pat:JSON.stringify(S.patterns),len:[...S.patLen],tlen:JSON.stringify(S.trkLen),skip:JSON.stringify(S.skip),chain:[...S.chain],
+function snap(){return {tv:JSON.stringify(S.tv),pat:JSON.stringify(S.patterns),len:[...S.patLen],tlen:JSON.stringify(S.trkLen),skip:JSON.stringify(S.skip),chain:[...S.chain],
   pp:JSON.stringify({trackFx:S.trackFx,trackFxOn:S.trackFxOn,trackFxAmt:S.trackFxAmt,padChoke:S.padChoke,padSemi:S.padSemi,padVol:S.padVol,padRev:S.padRev,padFi:S.padFi,padFo:S.padFo,padDecay:S.padDecay,padMode:S.padMode,padFreeze:S.padFreeze}),
   pads:[...pads],srcs:sources.map(x=>({id:x.id,s:x.sel?x.sel.s:null,e:x.sel?x.sel.e:null,slip:x.slip||0}))};}
 function pushUndo(k){
@@ -2056,7 +2192,7 @@ function pushUndo(k){
   lastPush={k,t:n};undoS.push(snap());if(undoS.length>60)undoS.shift();redoS.length=0;renderUndo();
 }
 function restore(x){
-  S.patterns=JSON.parse(x.pat);S.patLen=[...x.len];S.trkLen=x.tlen?JSON.parse(x.tlen):null;fixTrkLen();S.skip=x.skip?JSON.parse(x.skip):Array.from({length:16},()=>[]);S.chain=[...x.chain];Object.assign(S,JSON.parse(x.pp));for(let t=0;t<4;t++)applyTrackFx(t);
+  if(x.tv)S.tv=JSON.parse(x.tv);fixTv();S.patterns=JSON.parse(x.pat);S.patLen=[...x.len];S.trkLen=x.tlen?JSON.parse(x.tlen):null;fixTrkLen();S.skip=x.skip?JSON.parse(x.skip):Array.from({length:16},()=>[]);S.chain=[...x.chain];Object.assign(S,JSON.parse(x.pp));for(let t=0;t<4;t++)applyTrackFx(t);
   pads=[...x.pads];pads.forEach(p=>{if(p)p.slipTarget=null;});
   x.srcs.forEach(o=>{const sc=sources.find(y=>y.id===o.id);if(sc&&o.s!=null){sc.sel={s:o.s,e:o.e};sc.slip=o.slip;}});
   if(viewPage>=tbars(editPat,selTrack))viewPage=0;
@@ -2152,14 +2288,14 @@ async function padFromRecord(rec){
   const p={buf,rbuf:reverseOf(buf),cat:m.cat||'TONE',name:m.name||undefined,len,start:m.start||0,slip:m.slip||0,srcId:null,srcName:m.srcName,srcKey:m.srcKey||null,frames,fps:frames.length/len,thumb:frames[0].toDataURL('image/jpeg',0.6)};
   recCache.set(p,rec);return p;
 }
-function stateJSON(){return {bpm:S.bpm,swing:S.swing,format:S.format,trackFx:S.trackFx,trackFxOn:S.trackFxOn,trackFxAmt:S.trackFxAmt,patterns:S.patterns,patLen:S.patLen,trkLen:S.trkLen,skip:S.skip,chain:S.chain,padChoke:S.padChoke,padSemi:S.padSemi,padVol:S.padVol,padRev:S.padRev,padFi:S.padFi,padFo:S.padFo,padDecay:S.padDecay,padMode:S.padMode,padFreeze:S.padFreeze};}
+function stateJSON(){return {bpm:S.bpm,swing:S.swing,format:S.format,trackFx:S.trackFx,trackFxOn:S.trackFxOn,trackFxAmt:S.trackFxAmt,tv:S.tv,patterns:S.patterns,patLen:S.patLen,trkLen:S.trkLen,skip:S.skip,chain:S.chain,padChoke:S.padChoke,padSemi:S.padSemi,padVol:S.padVol,padRev:S.padRev,padFi:S.padFi,padFo:S.padFo,padDecay:S.padDecay,padMode:S.padMode,padFreeze:S.padFreeze};}
 function applyState(st){
-  const keys=['bpm','swing','format','trackFx','trackFxOn','trackFxAmt','patterns','patLen','trkLen','skip','chain','padChoke','padSemi','padVol','padRev','padFi','padFo','padDecay','padMode','padFreeze'];
+  const keys=['bpm','swing','format','trackFx','trackFxOn','trackFxAmt','tv','patterns','patLen','trkLen','skip','chain','padChoke','padSemi','padVol','padRev','padFi','padFo','padDecay','padMode','padFreeze'];
   keys.forEach(k=>{if(st[k]!=null)S[k]=st[k];});
   S.patterns.forEach(P=>P.forEach(t=>{while(t.length<MAXST)t.push(null);}));
   if(!Array.isArray(S.patLen)||S.patLen.length!==16)S.patLen=Array(16).fill(1);
   if(!Array.isArray(S.skip)||S.skip.length!==16)S.skip=Array.from({length:16},()=>[]);
-  fixTrkLen();
+  fixTrkLen();fixTv();
   fixPadArrays();if(!Array.isArray(S.trackFx)||S.trackFx.length!==4)S.trackFx=[[],[],[],[]];if(!Array.isArray(S.trackFxOn)||S.trackFxOn.length!==4)S.trackFxOn=[true,true,true,true];fixTrackFx();
   for(let t=0;t<4;t++)applyTrackFx(t);viewPage=0;save();applyFormat();
 }
@@ -2319,7 +2455,7 @@ const idb={db:null,
   async get(k){const db=this.db||await this.open();if(!db)return null;return new Promise(res=>{try{const r=db.transaction('kv').objectStore('kv').get(k);r.onsuccess=()=>res(r.result||null);r.onerror=()=>res(null);}catch(e){res(null);}});}
 };
 let autoT=null,restoring=false;
-function padsChanged(){if(restoring)return;clearTimeout(autoT);autoT=setTimeout(autosave,2500);}
+function padsChanged(){layoutStage();if(restoring)return;clearTimeout(autoT);autoT=setTimeout(autosave,2500);}
 async function autosave(){
   try{const recs=[];for(let i=0;i<NP;i++){const p=pads[i];recs.push(p?await padRecord(p):null);}
     await idb.put('pads',{recs,name:$('sessName').value});}catch(e){}
