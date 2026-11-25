@@ -77,6 +77,9 @@ body.wide #panelsL:empty{min-height:40px}
 .pageRow{display:flex;gap:6px;margin-top:8px;align-items:center}
 .pageRow>button{flex:0 0 auto;font-size:10px;padding:7px 9px}
 #bLen,#bFollow{background:var(--purple);font-weight:700}
+button.hold{position:relative;overflow:hidden;touch-action:none}
+button.hold .hbar{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--fire);opacity:.55;pointer-events:none}
+button.hold.flash{background:var(--fire)!important;color:var(--ink)}
 .tlen{font-size:9px;margin-left:2px;opacity:.85}
 #bInclV{font-weight:700}
 #bInclV.on{background:var(--air);color:var(--ink)}
@@ -2157,8 +2160,20 @@ $('pClr').onclick=()=>{pushUndo();padsChanged();pads[selPad]=null;renderAll();};
 $('bChain').onclick=()=>{chainOn=!chainOn;renderChain();};
 $('bChainClr').onclick=()=>{pushUndo();S.chain=[];save();renderChain();};
 $('bCopy').onclick=()=>{pushUndo();const n=(editPat+1)%16;S.patterns[n]=JSON.parse(JSON.stringify(S.patterns[editPat]));S.patLen[n]=S.patLen[editPat];S.trkLen[n]=[...S.trkLen[editPat]];S.skip[n]=[...S.skip[editPat]];save();if(!playing){curPat=editPat=n;}renderPats();renderSteps();};
-$('bClrTrk').onclick=()=>{pushUndo();S.patterns[editPat][selTrack]=mkTrack();save();renderSteps();renderPats();};
-$('bClrPat').onclick=()=>{pushUndo();S.patterns[editPat]=mkPat();S.skip[editPat]=[];save();renderSteps();renderPats();};
+/* hold to clear: a bar fills across the button, let go early to cancel */
+function holdToClear(b,ms,fn,tip){
+  b.classList.add('hold');const bar=document.createElement('span');bar.className='hbar';b.appendChild(bar);
+  let t0=0,raf=0,done=false;
+  const stop=()=>{cancelAnimationFrame(raf);raf=0;if(!done)bar.style.width='0';};
+  const step=()=>{const k=Math.min(1,(performance.now()-t0)/ms);bar.style.width=(k*100)+'%';
+    if(k>=1){done=true;raf=0;fn();try{navigator.vibrate&&navigator.vibrate(30);}catch(_){}b.classList.add('flash');setTimeout(()=>{b.classList.remove('flash');bar.style.width='0';},350);return;}
+    raf=requestAnimationFrame(step);};
+  b.addEventListener('pointerdown',e=>{e.preventDefault();done=false;t0=performance.now();try{b.setPointerCapture(e.pointerId);}catch(_){}raf=requestAnimationFrame(step);});
+  b.addEventListener('pointerup',()=>{const short=!done&&performance.now()-t0<250;stop();if(short)toast(tip,1300);});
+  b.addEventListener('pointercancel',stop);b.addEventListener('contextmenu',e=>e.preventDefault());
+}
+holdToClear($('bClrTrk'),1000,()=>{pushUndo();S.patterns[editPat][selTrack]=mkTrack();save();renderSteps();renderPats();toast('Track '+TL[selTrack]+' cleared. Undo brings it back.',1400);},'Hold to clear this track.');
+holdToClear($('bClrPat'),1000,()=>{pushUndo();S.patterns[editPat]=mkPat();S.skip[editPat]=[];save();renderSteps();renderPats();toast('Pattern '+(editPat+1)+' cleared. Undo brings it back.',1400);},'Hold to clear this pattern.');
 /* LNGTH: tap sets the selected track's bars, hold sets all 4 tracks */
 function setTrackLen(p,tracks,nx){
   tracks.forEach(t=>{const old=S.trkLen[p][t],row=S.patterns[p][t];
