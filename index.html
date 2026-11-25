@@ -89,7 +89,14 @@ body.wide #panelsL:empty{min-height:40px}
 .steps button.skOff{opacity:.25}
 .pages button.play::after{content:"";position:absolute;left:50%;bottom:2px;width:5px;height:5px;margin-left:-2.5px;border-radius:50%;background:var(--fire)}
 .steps{display:grid;grid-template-columns:repeat(8,1fr);gap:4px;margin-top:8px}
-.steps button{height:30px;padding:0;font-size:10px;background:#28273a;border-radius:6px}
+.steps button{height:40px;padding:0;font-size:11px;background:#28273a;border-radius:6px;overflow:hidden;position:relative}
+.steps .seg{position:absolute;inset:0;display:grid;gap:1.5px;background:var(--ink)}
+.steps .seg i{font-style:normal;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;line-height:1;overflow:hidden;white-space:nowrap}
+.steps button.nl .seg{left:3px}.steps button.nr .seg{right:3px}
+.steps .seg.s2{grid-template-columns:1fr 1fr}
+.steps .seg.s3{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
+.steps .seg.s3 i:nth-child(3){grid-column:1 / span 2}
+.steps .seg.s4{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
 .steps button.beat{box-shadow:inset 0 0 0 1px rgba(173,207,222,.35)}
 .chordRow button{padding:8px 0;font-size:10px}
 .steps button sup.stk{font-size:8px;font-weight:800;background:var(--ink);color:var(--w);border-radius:6px;padding:0 3px;margin-left:2px;vertical-align:4px}
@@ -1815,8 +1822,12 @@ function renderSteps(){
   if(viewPage>=tbars(editPat,selTrack))viewPage=0;renderTracks();
   const row=S.patterns[editPat][selTrack],off=viewPage*16;
   stepEls.forEach((b,s)=>{const evs=cellEvs(row[off+s]),ev=evs[0];
-    if(ev){const p=pads[ev.pad],sc=p?CATS[p.cat].c:COL.purple;b.style.background=sc;b.style.color=lightCol(sc)?COL.ink:'#fff';b.style.border=sc===COL.ink?'1.5px solid rgba(244,243,238,.55)':'';
-      b.innerHTML=evs.length>1?(Math.floor(ev.pad/16)===bank?String(ev.pad%16+1):padLabel(ev.pad))+'<sup class="stk">'+evs.length+'</sup>':(Math.floor(ev.pad/16)===bank?String(ev.pad%16+1):padLabel(ev.pad))+(ev.semi?'·'+ev.semi:'');}
+    const lab=e=>(Math.floor(e.pad/16)===bank?String(e.pad%16+1):padLabel(e.pad)),colOf=e=>{const p=pads[e.pad];return p?CATS[p.cat].c:COL.purple;};
+    if(ev&&evs.length>1){/* stacked step: split into 2 (side by side), 3 (two on top, one below) or 4 (quarters), each sound in its own color */
+      b.style.background=COL.ink;b.style.color='';b.style.border='';
+      b.innerHTML='<span class="seg s'+evs.length+'">'+evs.map(e=>{const c=colOf(e);return '<i style="background:'+c+';color:'+(lightCol(c)?COL.ink:'#fff')+(c===COL.ink?';box-shadow:inset 0 0 0 1px rgba(244,243,238,.5)':'')+'">'+lab(e)+'</i>';}).join('')+'</span>';}
+    else if(ev){const sc=colOf(ev);b.style.background=sc;b.style.color=lightCol(sc)?COL.ink:'#fff';b.style.border=sc===COL.ink?'1.5px solid rgba(244,243,238,.55)':'';
+      b.innerHTML=lab(ev)+(ev.semi?'·'+ev.semi:'');}
     else{b.style.background='';b.style.color='';b.style.border='';b.textContent='';}
     b.classList.toggle('sel',!nudgeAll&&off+s===selStep&&!!ev);
     b.classList.toggle('nl',!!(ev&&ev.n<0));b.classList.toggle('nr',!!(ev&&ev.n>0));
