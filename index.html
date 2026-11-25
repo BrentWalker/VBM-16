@@ -122,13 +122,17 @@ button.hold.flash{background:var(--fire)!important;color:var(--ink)}
 .fx button{font-size:9px;padding:10px 0;background:var(--purple)}
 .fx button.fon{background:var(--air);color:var(--ink)}
 .fx button.latch{background:var(--fire);color:var(--ink)}
-.panel{margin-top:14px;background:rgba(66,76,96,.45);border-radius:14px;padding:10px}
+.panel{margin-top:8px;background:rgba(66,76,96,.45);border-radius:14px;padding:8px 10px}
 .panel h3{margin:0 0 6px;font-size:11px;letter-spacing:.14em;opacity:.85;font-weight:600;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px}
 .panel h3::after{content:"▾";font-size:12px;opacity:.8}
-.panel.min h3{margin:0;-webkit-user-select:none;user-select:none}
+.panel h3>span{margin-left:auto}
+/* every closed panel is the same height with the same gap */
+.panel.min{padding:0 12px!important;height:44px;display:flex;align-items:center}
+.panel.min h3{margin:0;padding:0!important;width:100%;height:44px;line-height:1;-webkit-user-select:none;user-select:none}
 .panel.min h3::after{content:"▸"}
 .panel.min>*:not(h3){display:none!important}
 .panel.tight{margin-top:8px;padding:8px 10px}
+#vidBlock .transport{margin-top:8px}
 .panel.tight .fx{margin-top:0}
 .panel.tight .steps{margin-top:6px}
 #secVid{padding:6px}
