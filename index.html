@@ -69,9 +69,10 @@ body.wide #panelsL:empty{min-height:40px}
 #tracks .tmute{flex:0 0 30px;border-radius:0;background:var(--purple);font-size:10px}
 #tracks .tmute.mu{background:var(--fire);color:var(--ink)}
 #tracks .tsel.sel{background:var(--purple);background:color-mix(in srgb,var(--tc,#57556F) 45%,#424C60)}
-/* light bar across the top of the sequencer in the selected track's color */
+/* small light across the top of the selected track button, in its color */
 #secSeq{position:relative;--tc:#7C5D48}
-#secSeq::before{content:"";position:absolute;left:14px;right:14px;top:0;height:5px;border-radius:0 0 5px 5px;background:var(--tc);box-shadow:0 0 14px 2px var(--tc);transition:background .15s,box-shadow .15s}
+#tracks .tsel{position:relative}
+#tracks .tsel.sel::before{content:"";position:absolute;left:22%;right:22%;top:3px;height:3px;border-radius:3px;background:var(--tc);box-shadow:0 0 8px 1px var(--tc)}
 #tracks .tsel.hit{filter:brightness(1.5)}
 .pageRow{display:flex;gap:6px;margin-top:8px;align-items:center}
 .pageRow>button{flex:0 0 auto;font-size:10px;padding:7px 9px}
