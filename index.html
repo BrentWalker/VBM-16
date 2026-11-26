@@ -131,6 +131,12 @@ button.hold.flash{background:var(--fire)!important;color:var(--ink)}
 .trimBar{display:flex;align-items:center;gap:8px;margin-top:5px;font-size:10px;opacity:.9}
 .trimBar span{flex:1;letter-spacing:.04em}
 .trimBar button{padding:6px 10px;font-size:10px}
+#trimWin{z-index:30}
+#trimWin #ptWave{height:120px}
+.trimPads{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin:8px 0}
+.trimPads button{aspect-ratio:1.7;padding:0;border-radius:8px;background:var(--slate) center/cover no-repeat;position:relative;font-size:10px;font-weight:800;color:#fff;text-shadow:0 1px 2px #000}
+.trimPads button.on{box-shadow:inset 0 0 0 3px var(--fire)}
+.trimPads button:disabled{opacity:.25}
 /* every closed panel is the same height with the same gap */
 .panel.min{padding:0 12px!important;height:44px;display:flex;align-items:center}
 .panel.min h3{margin:0;padding:0!important;width:100%;height:44px;line-height:1;-webkit-user-select:none;user-select:none}
@@ -291,7 +297,7 @@ body.wide .edR .edH{margin-top:8px}
 .mpad::after{content:"";position:absolute;inset:0;background:rgba(49,48,67,.35)}
 .mpad b{position:absolute;left:5px;top:3px;font-size:11px;z-index:1}
 .mpad.tgt{box-shadow:inset 0 0 0 2px var(--air)}
-.mpad.tgt::before{content:"NEXT";position:absolute;right:4px;bottom:3px;font-size:8px;z-index:1;background:var(--air);color:var(--ink);padding:1px 3px;border-radius:3px}
+.mpad.tgt::before{content:"EDIT";position:absolute;right:4px;bottom:3px;font-size:8px;z-index:1;background:var(--air);color:var(--ink);padding:1px 3px;border-radius:3px}
 header>button,header>label.btn{flex:1 1 0;min-width:0;height:42px;padding:0;border-radius:11px}
 header>#bExp{flex:1.7 1 0}
 .vgrip{height:16px;width:72px;margin:6px auto 0;border-radius:8px;background:var(--purple);touch-action:none;cursor:ns-resize;position:relative}
@@ -482,6 +488,15 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
 <path d="M-20 2c10 12 28 12 38 2" fill="none" stroke="#7EB3D2" stroke-width="5" stroke-linecap="round"/>
 <g id="dkHead"><circle cx="16" cy="-30" r="20" fill="#ADCFDE"/><path d="M33-31c8-3 16-1 20 4-5 5-13 6-20 3z" fill="#DC7B78"/><circle cx="22" cy="-36" r="3.8" fill="#313043"/><circle cx="23.2" cy="-37.3" r="1.3" fill="#fff"/></g>
 </g></g><path d="M0 74q7.5-6 15 0t15 0 15 0 15 0 15 0 15 0 15 0 15 0V110H0z" fill="#7EB3D2"/></svg></div><div class="dtxt"><b>DUCKER</b><span class="dmsg"></span></div><button id="duckOk" class="hl">OK</button><button id="duckX" aria-label="Close ducker">CLOSE</button>
+</div>
+<div id="trimWin" class="modal hidden">
+  <div class="mbox sw">
+    <div class="swT"><span id="trimTitle">TRIM PAD</span></div>
+    <div id="trimSlot"></div>
+    <div class="help"><p>Drag the red lines to trim, tap the waveform to hear it. Tap another pad to save this one and trim that one.</p></div>
+    <div class="trimPads" id="trimPads"></div>
+    <div class="row"><button id="trimDone" class="hl">DONE</button></div>
+  </div>
 </div>
 <div id="padMoveWin" class="modal hidden">
   <div class="mbox sw">
@@ -1183,8 +1198,7 @@ async function slicerPadTap(li){
   if(!p){await sendToPad(li);return;}
   const idx=p.srcId!=null?sources.findIndex(x=>x.id===p.srcId):-1;
   selPad=i;target=li;
-  if(idx<0){renderMini();renderPads();renderPadPanel();trigger(selTrack,i,0,ctx?ctx.currentTime:0);
-    estFlash('Pad '+padLabel(i)+' was not cut from a video loaded here. Hold it to replace it with this slice.',2600);editing=null;$('edDone').textContent='DONE';return;}
+  if(idx<0){editing=null;$('edDone').textContent='DONE';renderMini();openTrimWin(i);return;}
   if(idx!==curSrc)selectSource(idx);
   const src=cur();src.sel={s:p.start||0,e:Math.min(src.dur,(p.start||0)+p.len)};src.slip=p.slip||0;
   try{fitSel(true);previewSeek(src.sel.s);}catch(e){}
@@ -2336,6 +2350,20 @@ function drawTrim(){
     const t=Math.max(trim.v0,Math.min(trim.v1,tAt(e.clientX)));
     if(dr.which==='s')trim.s=Math.min(t,trim.e-0.02);else trim.e=Math.max(t,trim.s+0.02);drawTrim();});
   const up=()=>{if(!dr)return;if(!dr.moved&&trim)trimAudition();dr=null;};c.addEventListener('pointerup',up);c.addEventListener('pointercancel',()=>dr=null);}
+/* trim window: pops up over the slicer for pads whose video is not loaded */
+function openTrimWin(i){
+  $('trimSlot').appendChild($('ptBox'));$('trimWin').classList.remove('hidden');
+  selPad=i;trimLoad(i);renderTrimWin();setTimeout(drawTrim,20);
+}
+function renderTrimWin(){
+  $('trimTitle').textContent='TRIM PAD '+padLabel(selPad);const g=$('trimPads');g.innerHTML='';
+  for(let k=0;k<16;k++){const i=bank*16+k,p=pads[i],b=document.createElement('button');b.textContent=padLabel(i);b.disabled=!p;
+    if(p)b.style.backgroundImage='url('+p.thumb+')';b.classList.toggle('on',i===selPad);
+    b.onclick=async()=>{if(i===selPad)return trimAudition();await trimCommit();selPad=i;trimLoad(i);renderTrimWin();drawTrim();trimAudition();};g.appendChild(b);}
+}
+async function closeTrimWin(){await trimCommit();$('trimWin').classList.add('hidden');const pe=$('secPad'),h=pe.querySelector('h3');h.after($('ptBox'));renderMini();renderPads();renderPadPanel();setTimeout(drawTrim,20);}
+$('trimDone').onclick=closeTrimWin;
+$('trimWin').addEventListener('click',e=>{if(e.target.id==='trimWin')closeTrimWin();});
 function trimAudition(){if(!trim)return;initAudio();const t=trim,buf=t.src?t.src.audio:t.p.buf,s=ctx.createBufferSource(),g=ctx.createGain();s.buffer=buf;g.gain.value=S.padVol[t.pad];s.connect(g);g.connect(trackG[selTrack]||ctx.destination);s.start(ctx.currentTime+0.01,t.s,t.e-t.s);}
 $('ptReset').onclick=()=>{if(!trim)return;trim.s=trim.s0;trim.e=trim.e0;drawTrim();};
 document.addEventListener('visibilitychange',()=>{if(document.hidden)trimCommit();});
@@ -2405,9 +2433,8 @@ const revTog=()=>{const v=!S.padRev[selPad];setPadParam('padRev',v,'reverse '+(v
 $('pRev').onclick=revTog;bankBtn($('pRev'),revTog);
 $('pAud').onclick=()=>{initAudio();trigger(selTrack,selPad,0,ctx.currentTime);};
 $('pEdit').onclick=()=>{const p=pads[selPad];let idx=-1;if(p&&p.srcId!=null)idx=sources.findIndex(x=>x.id===p.srcId);
-  openEditor(idx>=0?idx:curSrc,idx>=0?{s:p.start,e:p.start+p.len,slip:p.slip||0}:null,selPad);
-  if(p&&idx<0&&p.srcName){relinkPad=selPad;setTimeout(()=>estFlash('This pad came from '+p.srcName+', which is not loaded. Tap + VIDEO and pick it again to edit this slice.',6000),60);}
-  else if(p&&idx<0){setTimeout(()=>estFlash('This pad was not cut from a video here, so there is no slice to edit.',4000),60);}};
+  if(p&&idx<0){openTrimWin(selPad);return;}/* video not loaded: trim the pad's own sound */
+  openEditor(idx>=0?idx:curSrc,idx>=0?{s:p.start,e:p.start+p.len,slip:p.slip||0}:null,selPad);};
 $('pClr').onclick=()=>{pushUndo();padsChanged();pads[selPad]=null;renderAll();};
 $('bChain').onclick=()=>{chainOn=!chainOn;renderChain();};
 $('bChainClr').onclick=()=>{pushUndo();S.chain=[];save();renderChain();};
