@@ -615,7 +615,7 @@ function initAudio(){
   try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}
   ctx=new AC({latencyHint:'interactive'});
   bus=ctx.createGain();
-  lpf=ctx.createBiquadFilter();lpf.type='lowpass';lpf.frequency.value=20000;lpf.Q.value=5;
+  lpf=ctx.createBiquadFilter();lpf.type='lowpass';lpf.frequency.value=20000;lpf.Q.value=0.9;/* LOW: a gentle, round low pass (no sharp resonant peak) */
   hpf=ctx.createBiquadFilter();hpf.type='highpass';hpf.frequency.value=10;hpf.Q.value=3;
   dlySend=ctx.createGain();dlySend.gain.value=0;
   dly=ctx.createDelay(2);dly.delayTime.value=stepDur()*3;
@@ -731,7 +731,7 @@ function release(v,t,tc){
 function setFx(k,on){
   fx[k]=on;
   if(ctx){const n=ctx.currentTime;
-    if(k==='LPF')lpf.frequency.setTargetAtTime(on?480:20000,n,0.02);
+    if(k==='LPF')lpf.frequency.setTargetAtTime(on?650:20000,n,on?0.06:0.09);
     if(k==='HPF')hpf.frequency.setTargetAtTime(on?1600:10,n,0.02);
     if(k==='ECHO'){dly.delayTime.setValueAtTime(Math.min(1.9,stepDur()*3),n);dlySend.gain.setTargetAtTime(on?0.55:0,n,0.01);}
   }
