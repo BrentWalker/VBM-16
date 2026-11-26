@@ -59,7 +59,6 @@ body.wide #panelsL,body.wide #colR>:last-child{margin-bottom:calc(40px + var(--d
 #bRec{color:var(--fire)}
 .kill{color:var(--fire)}
 .kill:active{background:var(--fire)!important;color:var(--ink)}
-.edTop .edIc{flex:0 0 auto;width:48px;height:40px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:10px;background:var(--slate)}
 .pad.erasing{outline:3px solid var(--fire);outline-offset:-3px;filter:saturate(.3) brightness(.7)}
 #bMet.on{background:var(--water)!important}
 #bView.focus{background:var(--purple)}
@@ -103,7 +102,6 @@ button.hold.flash{background:var(--fire)!important;color:var(--ink)}
 .steps .seg.s4{grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr}
 .steps button.beat{box-shadow:inset 0 0 0 1px rgba(173,207,222,.35)}
 .chordRow button{padding:8px 0;font-size:10px}
-.steps button sup.stk{font-size:8px;font-weight:800;background:var(--ink);color:var(--w);border-radius:6px;padding:0 3px;margin-left:2px;vertical-align:4px}
 .steps button.sel{outline:2px dashed var(--fire);outline-offset:-3px}
 .steps button.nl{box-shadow:inset 3px 0 0 var(--ink)}
 .steps button.nr{box-shadow:inset -3px 0 0 var(--ink)}
@@ -288,6 +286,8 @@ header>#bExp{flex:1.7 1 0}
 .vopt button.on{background:var(--air)!important;color:var(--ink)!important}
 #vLay,#vFit{background:var(--slate)}
 section.panel.lifted{transform:scale(1.02);box-shadow:0 8px 24px rgba(0,0,0,.45),0 0 0 2px var(--air);position:relative;z-index:5}
+
+.ver{text-align:center;font-size:10px;letter-spacing:.14em;opacity:.55;margin:-4px 0 8px}
 a.guide{display:flex;align-items:center;gap:12px;width:100%;height:50px;padding:0 14px;margin:6px 0 12px;border-radius:16px;border:1px solid rgba(173,207,222,.45);background:rgba(173,207,222,.1);color:var(--w);font-weight:700;font-size:14px;text-decoration:none;opacity:1}
 a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;background:var(--air);color:var(--ink);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:800}
 </style>
@@ -398,7 +398,6 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
 </div></div>
 </div>
 
-<!-- slice editor -->
 <div id="modal" class="modal hidden">
   <div class="mbox">
     <div id="mTxt"></div>
@@ -482,6 +481,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
   <div class="mbox sw">
     <div class="swT"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h13l3 3v13H4z"/><path d="M8 4v5h7V4"/><rect x="7.5" y="13" width="9" height="7" rx="1"/></svg><span>SESSION</span></div>
     <a class="guide" href="https://brentwalker.github.io/VBM-16/manual.html" target="_blank" rel="noopener"><i>?</i><span>Getting started guide</span></a>
+    <div class="ver">VBM-16 · VERSION 1.0</div>
     <p class="help" style="margin:-6px 0 10px"><a id="tutLink" href="https://claude.ai/artifact/KqWeYPqnK9pxDATQS2VJQC" style="color:var(--air)">Quick swipe tutorial</a> · VBM-16 v1.1</p>
     <div class="row"><input id="sessName" class="txt" value="My session" maxlength="40" aria-label="Session name"></div>
     <div class="row"><button id="bSaveSess" class="hl">SAVE SESSION</button><label class="btn">OPEN<input type="file" id="fOpen" accept=".zip,.json,application/zip,application/json" hidden></label></div>
@@ -649,7 +649,7 @@ function wakeAudio(){
   try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}
   if(ctx&&ctx.state!=='running'){try{ctx.resume().catch(()=>{});}catch(e){}}
 }
-/* stop every sound right now: the sequence, held pads, loops, slicer preview and FX tails (echo and reverb) */
+/* stop every sound right now: the sequence, held pads, loops, drawer preview and FX tails (echo and reverb) */
 function stopAll(){
   if(exporting)return;
   if(playing)stop();
@@ -993,8 +993,6 @@ function readNote(buf){
   if(!L)return null;const f=fs/L;return 69+12*Math.log2(f/440);
 }
 function keyMsg(src){const k=src.key;if(!k)return ' Could not read a key.';return ' Key: '+k.long+(k.conf==='strong'?'.':k.conf==='likely'?' (likely, maybe '+k.alt+').':' (rough guess).');}
-/* pads from a saved session keep their chops but not the full video. The video picked right after EDIT SLICE asked for it
-   links that pad, and every pad cut from the same video, back to it, so EDIT SLICE and VIDEO SLIP work again */
 /* a video added again links back the pads that were cut from it */
 function relinkPads(src){let n=0;
   /* match by sound: the pad's first samples must line up with the video's audio where it was cut */
@@ -1064,7 +1062,7 @@ function listenAudio(url,secs,onProg){
   });
   return {promise,cancel:()=>cancel()};
 }
-/* ---------- editor status ---------- */
+/* ---------- drawer status line ---------- */
 let flashT=null;
 function est(txt,p){clearTimeout(flashT);$('est').classList.remove('hidden');$('estTxt').textContent=txt;$('estBarW').classList.toggle('hidden',p==null);$('estBar').style.width=((p||0)*100)+'%';$('estBtn').classList.add('hidden');}
 function estDone(){$('est').classList.add('hidden');}
