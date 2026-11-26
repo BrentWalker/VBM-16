@@ -127,10 +127,11 @@ button.hold.flash{background:var(--fire)!important;color:var(--ink)}
 .panel h3::after{content:"▾";font-size:12px;opacity:.8}
 .panel h3>span{margin-left:auto}
 .trim{margin:2px 0 8px}
-#ptWave{display:block;width:100%;height:84px;border-radius:10px;background:#28273a;touch-action:none}
+#ptWave{display:block;width:100%;height:118px;border-radius:10px;background:#28273a;touch-action:none}
 .trimBar{display:flex;align-items:center;gap:8px;margin-top:5px;font-size:10px;opacity:.9}
 .trimBar span{flex:1;letter-spacing:.04em}
 .trimBar button{padding:6px 10px;font-size:10px}
+.trimBar .tz{flex:0 0 auto;display:flex;align-items:center;gap:4px}.trimBar .tz i{font-style:normal;min-width:26px;text-align:center;opacity:.8}.trimBar .tz button{padding:6px 11px;font-size:12px}
 /* trim dock: always on screen, folds to a thin bar */
 :root{--dockH:0px}
 #trimDock{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:min(100vw,900px);z-index:12;background:var(--ink);border-radius:16px 16px 0 0;box-shadow:0 -6px 22px rgba(0,0,0,.45),0 0 0 1px rgba(173,207,222,.25);padding:0 10px calc(8px + env(safe-area-inset-bottom))}
@@ -499,7 +500,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
 </g></g><path d="M0 74q7.5-6 15 0t15 0 15 0 15 0 15 0 15 0 15 0 15 0V110H0z" fill="#7EB3D2"/></svg></div><div class="dtxt"><b>DUCKER</b><span class="dmsg"></span></div><button id="duckOk" class="hl">OK</button><button id="duckX" aria-label="Close ducker">CLOSE</button>
 </div>
 <div id="trimDock"><div id="tdBar"><b>TRIM</b><span id="tdName"></span><button id="tdMin" aria-label="Fold or open the trim"><svg width="14" height="9" viewBox="0 0 14 9"><path d="M1.5 1.5 7 7l5.5-5.5" fill="none" stroke="#F4F3EE" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
-<div id="tdBody"><div class="trim" id="ptBox"><canvas id="ptWave"></canvas><div class="trimBar"><span id="ptInfo"></span><button id="ptReset">RESET</button></div></div></div></div>
+<div id="tdBody"><div class="trim" id="ptBox"><canvas id="ptWave"></canvas><div class="trimBar"><span id="ptInfo"></span><span class="tz" id="ptZoom"><button id="tzOut" aria-label="Zoom out">−</button><i id="tzV"></i><button id="tzIn" aria-label="Zoom in">+</button></span><button id="ptReset">RESET</button></div></div></div></div>
 <div id="padMoveWin" class="modal hidden">
   <div class="mbox sw">
     <div class="swT"><span>MOVE PAD</span></div>
@@ -1292,6 +1293,7 @@ function drawWave(){
     const y0=Math.max(0,mid-hi*amp),y1=Math.min(H,mid-lo*amp);g.fillRect(x,y0,1,Math.max(1,y1-y0));
   }
   g.fillStyle='rgba(255,255,255,.12)';g.fillRect(0,mid,W,1);
+  {const R=srcRegions(src,-1);if(R.regs.length){const band=Math.min(H*0.3,R.lanes*12*dpr);g.fillStyle='rgba(38,37,53,.75)';g.fillRect(0,0,W,band);drawRegions(g,W,H,R.regs,R.lanes,X,-1,dpr,band);}}
   const hw=7*dpr,hh=22*dpr,ec=(drag&&drag.type==='slide')?COL.fire:COL.water;
   for(const x of [xs,xe]){g.fillStyle=ec;g.fillRect(x-dpr,0,2*dpr,H);g.fillRect(x-hw,0,hw*2,hh);g.fillRect(x-hw,H-hh,hw*2,hh);}
   g.fillStyle='#fff';g.fillRect(X(src.cursor),0,Math.max(1,dpr),H);
@@ -2311,7 +2313,7 @@ function trimLoad(i){
   if(trim&&trim.pad!==i)trimCommit();
   const p=pads[i];if(!p){trim=null;drawTrim();return;}
   const src=trimSrc(p);
-  if(src){const s0=p.start||0,e0=Math.min(src.dur,s0+p.len),pad=Math.max(0.5,p.len);trim={pad:i,p,src,s:s0,e:e0,s0,e0,v0:Math.max(0,s0-pad),v1:Math.min(src.dur,e0+pad)};}
+  if(src){const s0=p.start||0,e0=Math.min(src.dur,s0+p.len);trim={pad:i,p,src,s:s0,e:e0,s0,e0,v0:0,v1:src.dur};tzFit();}
   else{const L=p.buf.duration;trim={pad:i,p,src:null,s:0,e:L,s0:0,e0:L,v0:0,v1:L};}
   drawTrim();
 }
@@ -2329,30 +2331,67 @@ async function trimCommit(){
   }catch(e){toast('Could not trim pad '+padLabel(i)+'.',1600);}
   trimBusy=false;
 }
+/* region map: one view of the whole video's sound, every pad cut from it drawn as a region; zoom stays put between pads */
+let tview={id:null,v0:0,v1:0};const RCOL=[COL.fire,COL.air,COL.water,'#C9A27E',COL.purple,'#9FC79A','#E3B4D0','#7C5D48'];
+function tzFit(){const t=trim;if(!t||!t.src)return;const D=t.src.dur,z=Math.max(1,UI.tz||1),span=D/z;
+  if(tview.id===t.src.id&&Math.abs((tview.v1-tview.v0)-span)<1e-6){t.v0=tview.v0;t.v1=tview.v1;}else{t.v0=0;t.v1=span;}
+  if(t.s<t.v0||t.e>t.v1){const c=Math.min(span,t.e-t.s)<span?(t.s+t.e)/2:t.s+span/2;t.v0=Math.max(0,Math.min(D-span,c-span/2));t.v1=t.v0+span;}
+  tview={id:t.src.id,v0:t.v0,v1:t.v1};}
+function srcRegions(src,selI,liveS,liveE){const out=[];for(let k=0;k<NP;k++){const p=pads[k];if(!p||p.srcId!==src.id)continue;let a=p.start||0,b=a+p.len;if(k===selI&&liveS!=null){a=liveS;b=liveE;}out.push({k,a,b});}
+  out.sort((x,y)=>x.a-y.a||y.b-x.b);const ends=[];for(const r of out){let l=ends.findIndex(e=>e<=r.a+1e-4);if(l<0){l=ends.length;ends.push(0);}ends[l]=r.b;r.lane=l;}
+  return {regs:out,lanes:Math.max(1,ends.length)};}
+function regCol(k){return RCOL[k%16%RCOL.length];}
+function drawRegions(g,W,H,regs,lanes,X,selI,dpr,bandH){const lh=Math.min(14*dpr,bandH/lanes);
+  for(const r of regs){const x0=X(r.a),x1=X(r.b);if(x1<0||x0>W)continue;const y=r.lane*lh,c=regCol(r.k),on=r.k===selI;
+    g.globalAlpha=on?1:.75;g.fillStyle=c;g.fillRect(x0,y+dpr,Math.max(2*dpr,x1-x0-dpr),lh-2*dpr);
+    if(!on){g.globalAlpha=.35;g.fillRect(x0,0,dpr,H);}
+    g.globalAlpha=1;const lb=padLabel(r.k),fs=Math.min(10*dpr,lh-3*dpr);g.font='700 '+fs+'px ui-monospace,Menlo,monospace';
+    if(x1-x0>g.measureText(lb).width+4*dpr){g.fillStyle=lightCol(c)?COL.ink:'#fff';g.textAlign='left';g.fillText(lb,Math.max(x0,0)+2*dpr,y+lh-3.5*dpr);}
+    if(on){g.strokeStyle='#fff';g.lineWidth=dpr;g.strokeRect(x0+.5,y+dpr+.5,Math.max(2*dpr,x1-x0-dpr)-1,lh-2*dpr-1);}}
+  return lh;}
 function drawTrim(){
   const c=$('ptWave');if(!c)return;if(trim)$('tdName').textContent='PAD '+padLabel(trim.pad)+' · '+Math.round((trim.e-trim.s)*1000)+' ms'+(trimChanged()?' · edited':'');else $('tdName').textContent='tap a pad';const dpr=Math.min(2,window.devicePixelRatio||1),W=Math.round(c.clientWidth*dpr),H=Math.round(c.clientHeight*dpr);if(!W)return;
   if(c.width!==W||c.height!==H){c.width=W;c.height=H;}const g=c.getContext('2d');g.clearRect(0,0,W,H);
-  if(!trim){g.fillStyle='rgba(244,243,238,.5)';g.font=(11*dpr)+'px ui-monospace,Menlo,monospace';g.textAlign='center';g.fillText('Tap a pad to trim it',W/2,H/2+4*dpr);$('ptInfo').textContent='';$('tdName').textContent='tap a pad';return;}
+  $('ptZoom').classList.toggle('hidden',!(trim&&trim.src));
+  if(!trim){g.fillStyle='rgba(244,243,238,.5)';g.font=(11*dpr)+'px ui-monospace,Menlo,monospace';g.textAlign='center';g.fillText('Tap a pad to trim it',W/2,H/2+4*dpr);$('ptInfo').textContent='';return;}
   const t=trim,span=t.v1-t.v0,X=x=>(x-t.v0)/span*W;
-  const buf=t.src?t.src.audio:t.p.buf,sr=buf.sampleRate,d=t.src?t.src.mono:buf.getChannelData(0),nrm=t.src?(t.src.norm||1):1,mid=H/2;
+  let band=0,R=null;if(t.src){R=srcRegions(t.src,t.pad,t.s,t.e);band=Math.min(H*0.34,R.lanes*14*dpr);}
+  const buf=t.src?t.src.audio:t.p.buf,sr=buf.sampleRate,d=t.src?t.src.mono:buf.getChannelData(0),nrm=t.src?(t.src.norm||1):1,top=band,WH=H-band,mid=top+WH/2,P=t.src&&t.src.peaks;
   const x0=Math.max(0,X(t.s)),x1=Math.min(W,X(t.e));
-  g.fillStyle='rgba(173,207,222,.12)';g.fillRect(x0,0,x1-x0,H);
-  for(let x=0;x<W;x++){const a=Math.floor((t.v0+x/W*span)*sr),b=Math.floor((t.v0+(x+1)/W*span)*sr);let lo=0,hi=0;for(let k=a;k<b&&k<d.length;k+=Math.max(1,Math.floor((b-a)/64))){const v=d[k];if(v<lo)lo=v;if(v>hi)hi=v;}
-    g.fillStyle=x>=x0&&x<=x1?'#ADCFDE':'rgba(173,207,222,.35)';const y0=mid-Math.min(1,hi*nrm)*H*0.46,y1=mid-Math.max(-1,lo*nrm)*H*0.46;g.fillRect(x,y0,1,Math.max(1,y1-y0));}
-  g.fillStyle='rgba(49,48,67,.55)';g.fillRect(0,0,x0,H);g.fillRect(x1,0,W-x1,H);
-  [[x0,true],[x1,false]].forEach(([x,st])=>{g.fillStyle=COL.fire;g.fillRect(x-dpr,0,2*dpr,H);g.beginPath();const w=9*dpr;if(st){g.moveTo(x,0);g.lineTo(x+w,0);g.lineTo(x,w*1.3);}else{g.moveTo(x,H);g.lineTo(x-w,H);g.lineTo(x,H-w*1.3);}g.fill();});
-  $('ptInfo').textContent=Math.round((t.e-t.s)*1000)+' ms'+(trimChanged()?' · saves when you pick another pad':'')+(t.src?'':' · trims inside the chop');
-  $('tdName').textContent='PAD '+padLabel(t.pad)+' · '+Math.round((t.e-t.s)*1000)+' ms'+(trimChanged()?' · edited':'');
+  g.fillStyle='rgba(173,207,222,.12)';g.fillRect(x0,top,x1-x0,WH);
+  for(let x=0;x<W;x++){const a=Math.floor((t.v0+x/W*span)*sr),b=Math.floor((t.v0+(x+1)/W*span)*sr);let lo=0,hi=0;
+    if(P&&(b-a)>=P.B){for(let k=Math.floor(a/P.B);k<Math.ceil(b/P.B)&&k<P.min.length;k++){if(P.min[k]<lo)lo=P.min[k];if(P.max[k]>hi)hi=P.max[k];}}
+    else for(let k=a;k<b&&k<d.length;k+=Math.max(1,Math.floor((b-a)/64))){const v=d[k];if(v<lo)lo=v;if(v>hi)hi=v;}
+    g.fillStyle=x>=x0&&x<=x1?'#ADCFDE':'rgba(173,207,222,.35)';const y0=mid-Math.min(1,hi*nrm)*WH*0.46,y1=mid-Math.max(-1,lo*nrm)*WH*0.46;g.fillRect(x,y0,1,Math.max(1,y1-y0));}
+  g.fillStyle='rgba(49,48,67,.45)';g.fillRect(0,top,x0,WH);g.fillRect(x1,top,W-x1,WH);
+  if(R){g.fillStyle='rgba(38,37,53,.9)';g.fillRect(0,0,W,band);drawRegions(g,W,H,R.regs,R.lanes,X,t.pad,dpr,band);
+    if(span<t.src.dur-1e-6){g.fillStyle='rgba(255,255,255,.08)';g.fillRect(0,H-3*dpr,W,3*dpr);g.fillStyle='rgba(173,207,222,.6)';g.fillRect(t.v0/t.src.dur*W,H-3*dpr,Math.max(2,span/t.src.dur*W),3*dpr);}}
+  [[x0,true],[x1,false]].forEach(([x,st])=>{g.fillStyle=COL.fire;g.fillRect(x-dpr,top,2*dpr,WH);g.beginPath();const w=9*dpr;if(st){g.moveTo(x,top);g.lineTo(x+w,top);g.lineTo(x,top+w*1.3);}else{g.moveTo(x,H);g.lineTo(x-w,H);g.lineTo(x,H-w*1.3);}g.fill();});
+  $('ptInfo').textContent=Math.round((t.e-t.s)*1000)+' ms'+(trimChanged()?' · saves when you pick another pad':'')+(t.src?'':' · video not loaded, can only trim shorter');
+  $('tzV').textContent=t.src?'×'+(UI.tz||1):'';
 }
+async function trimPick(k){if(k===selPad){trimAudition();return;}await trimCommit();selPad=k;const b=Math.floor(k/16);if(b!==bank&&!keys)setBank(b);trimLoad(k);renderPads();renderMini();renderPadPanel();drawTrim();trimAudition();}
 {const c=$('ptWave');let dr=null;
-  const tAt=x=>{const r=c.getBoundingClientRect();return trim.v0+(x-r.left)/r.width*(trim.v1-trim.v0);};
+  const geo=()=>{const r=c.getBoundingClientRect(),dpr=Math.min(2,window.devicePixelRatio||1);let band=0,R=null;if(trim&&trim.src){R=srcRegions(trim.src,trim.pad,trim.s,trim.e);band=Math.min(r.height*0.34,R.lanes*14);}return {r,band,R};};
+  const tAt=(x,r)=>trim.v0+(x-r.left)/r.width*(trim.v1-trim.v0);
   c.addEventListener('pointerdown',e=>{if(!trim)return;e.preventDefault();try{c.setPointerCapture(e.pointerId);}catch(_){}
-    const r=c.getBoundingClientRect(),px=t=>r.left+(t-trim.v0)/(trim.v1-trim.v0)*r.width,ds=Math.abs(e.clientX-px(trim.s)),de=Math.abs(e.clientX-px(trim.e));
-    dr={which:Math.min(ds,de)<34?(ds<de?'s':'e'):null,x:e.clientX,moved:false};});
-  c.addEventListener('pointermove',e=>{if(!dr||!dr.which)return;if(!dr.moved&&Math.abs(e.clientX-dr.x)<3)return;dr.moved=true;
-    const t=Math.max(trim.v0,Math.min(trim.v1,tAt(e.clientX)));
-    if(dr.which==='s')trim.s=Math.min(t,trim.e-0.02);else trim.e=Math.max(t,trim.s+0.02);drawTrim();});
-  const up=()=>{if(!dr)return;if(!dr.moved&&trim)trimAudition();dr=null;};c.addEventListener('pointerup',up);c.addEventListener('pointercancel',()=>dr=null);}
+    const {r,band,R}=geo(),px=t=>r.left+(t-trim.v0)/(trim.v1-trim.v0)*r.width,ds=Math.abs(e.clientX-px(trim.s)),de=Math.abs(e.clientX-px(trim.e)),y=e.clientY-r.top;
+    let which=null,pick=null;
+    if(R&&y<band){const lane=Math.floor(y/(band/R.lanes)),t=tAt(e.clientX,r),hit=R.regs.filter(q=>q.lane===lane&&t>=q.a&&t<=q.b);if(hit.length)pick=hit[0].k;}
+    else if(Math.min(ds,de)<28)which=ds<de?'s':'e';
+    else if(R){const t=tAt(e.clientX,r);if(!(t>=trim.s&&t<=trim.e)){const hit=R.regs.filter(q=>q.k!==trim.pad&&t>=q.a&&t<=q.b).sort((a,b)=>(a.b-a.a)-(b.b-b.a));if(hit.length)pick=hit[0].k;}}
+    dr={which,pick,x:e.clientX,v0:trim.v0,moved:false,r};});
+  c.addEventListener('pointermove',e=>{if(!dr)return;if(!dr.moved&&Math.abs(e.clientX-dr.x)<4)return;dr.moved=true;
+    if(dr.which){const t=Math.max(trim.src?0:trim.v0,Math.min(trim.src?trim.src.dur:trim.v1,tAt(e.clientX,dr.r)));
+      if(dr.which==='s')trim.s=Math.min(t,trim.e-0.02);else trim.e=Math.max(t,trim.s+0.02);
+      if(trim.src){const sp=trim.v1-trim.v0,edge=sp*0.04;if(t<trim.v0+edge&&trim.v0>0){trim.v0=Math.max(0,trim.v0-sp*0.02);trim.v1=trim.v0+sp;}else if(t>trim.v1-edge&&trim.v1<trim.src.dur){trim.v1=Math.min(trim.src.dur,trim.v1+sp*0.02);trim.v0=trim.v1-sp;}tview={id:trim.src.id,v0:trim.v0,v1:trim.v1};}
+      drawTrim();}
+    else if(trim.src&&trim.v1-trim.v0<trim.src.dur-1e-6){const sp=trim.v1-trim.v0,dt=(e.clientX-dr.x)/dr.r.width*sp;trim.v0=Math.max(0,Math.min(trim.src.dur-sp,dr.v0-dt));trim.v1=trim.v0+sp;tview={id:trim.src.id,v0:trim.v0,v1:trim.v1};drawTrim();}});
+  const up=()=>{if(!dr)return;const d=dr;dr=null;if(d.moved||!trim)return;if(d.pick!=null)trimPick(d.pick);else if(!d.which)trimAudition();};
+  c.addEventListener('pointerup',up);c.addEventListener('pointercancel',()=>dr=null);}
+function trimZoom(f){if(!trim||!trim.src)return;const z=Math.max(1,Math.min(64,(UI.tz||1)*f));UI.tz=z;saveUI();const D=trim.src.dur,sp=D/z,c=(trim.s+trim.e)/2;
+  trim.v0=Math.max(0,Math.min(D-sp,c-sp/2));trim.v1=trim.v0+sp;tview={id:trim.src.id,v0:trim.v0,v1:trim.v1};drawTrim();}
+$('tzOut').onclick=()=>trimZoom(0.5);$('tzIn').onclick=()=>trimZoom(2);
 /* trim dock: never closes, only folds; follows the selected pad */
 function dockSize(){const d=$('trimDock');document.documentElement.style.setProperty('--dockH',d.offsetHeight+'px');}
 function setDockMin(m){$('trimDock').classList.toggle('min',m);UI.trimMin=m;saveUI();if(m)trimCommit();dockSize();if(!m)setTimeout(drawTrim,20);}
