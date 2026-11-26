@@ -198,7 +198,17 @@ select{font:inherit;font-size:12px;background:var(--slate);color:var(--w);border
 #duckPop .duck svg{width:100%;height:100%}
 #duckPop .dtxt{flex:1;display:flex;flex-direction:column;gap:2px;font-size:12px}
 #duckPop .dtxt b{letter-spacing:.14em;color:var(--air)}
-#duckPop button{flex:0 0 auto;padding:10px 12px;font-size:11px}
+#duckPop{flex-wrap:wrap;max-height:calc(100vh - 20px);overflow-y:auto}
+#duckPop>button{flex:0 0 auto;padding:10px 12px;font-size:11px}
+#duckCard{flex:1 0 100%;padding:4px 4px 2px}
+#duckCard .dkH{font-size:10px;letter-spacing:.12em;opacity:.8;margin:8px 0 5px}
+#duckCard .dkRow{display:flex;gap:6px;margin-top:6px}
+#duckCard .dkRow button{flex:1;padding:10px 0;font-size:11px;font-weight:700}
+#duckCard .dkRow button.on{background:var(--air);color:var(--ink)}
+#dkCurve{display:block;width:100%;height:96px;border-radius:10px;margin-top:8px;touch-action:none}
+#duckCard .ctl{margin-top:6px}
+#duckCard .ctl output{min-width:58px;white-space:nowrap;text-align:right}
+#duckCard input:disabled{opacity:.35}
 @keyframes duckIn{0%{transform:translate(-50%,-140%) scale(.6)}100%{transform:translate(-50%,0) scale(1)}}
 @keyframes duckOut{to{transform:translate(-50%,-140%) scale(.7);opacity:0}}
 @keyframes duckBob{50%{transform:translateY(-4px) rotate(-4deg)}}
@@ -455,7 +465,16 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
     <div class="row"><button id="bExpGo" class="hl">RECORD</button><button id="expClose">CLOSE</button></div>
   </div>
 </div>
-<div id="duckPop" class="hidden"><div class="duck"><svg viewBox="0 0 120 110" aria-hidden="true"><ellipse cx="62" cy="76" rx="42" ry="26" fill="#ADCFDE"/><path d="M28 70c-12-2-20-12-18-22 8 6 16 8 24 8z" fill="#ADCFDE"/><circle cx="78" cy="38" r="22" fill="#ADCFDE"/><path d="M96 38c8-3 17-2 22 3-5 6-14 8-22 5z" fill="#DC7B78"/><circle cx="84" cy="32" r="4.2" fill="#313043"/><circle cx="85.4" cy="30.6" r="1.4" fill="#fff"/><path d="M46 74c8 10 24 12 34 4" fill="none" stroke="#7EB3D2" stroke-width="5" stroke-linecap="round"/><path d="M52 100l-6 8h14zM74 100l-6 8h14z" fill="#DC7B78"/></svg></div><div class="dtxt"><b>DUCKER</b><span class="dmsg"></span></div><button id="duckX" aria-label="Close ducker">CLOSE</button></div>
+<div id="duckPop" class="hidden"><div class="duck"><svg viewBox="0 0 120 110" aria-hidden="true"><ellipse cx="62" cy="76" rx="42" ry="26" fill="#ADCFDE"/><path d="M28 70c-12-2-20-12-18-22 8 6 16 8 24 8z" fill="#ADCFDE"/><circle cx="78" cy="38" r="22" fill="#ADCFDE"/><path d="M96 38c8-3 17-2 22 3-5 6-14 8-22 5z" fill="#DC7B78"/><circle cx="84" cy="32" r="4.2" fill="#313043"/><circle cx="85.4" cy="30.6" r="1.4" fill="#fff"/><path d="M46 74c8 10 24 12 34 4" fill="none" stroke="#7EB3D2" stroke-width="5" stroke-linecap="round"/><path d="M52 100l-6 8h14zM74 100l-6 8h14z" fill="#DC7B78"/></svg></div><div class="dtxt"><b>DUCKER</b><span class="dmsg"></span></div><button id="duckX" aria-label="Close ducker">CLOSE</button>
+  <div id="duckCard" class="hidden">
+    <div class="dkH">SHAPE</div><div class="dkRow" id="dkPre"></div>
+    <canvas id="dkCurve"></canvas>
+    <div class="ctl"><label>DEPTH</label><input type="range" id="dkDepth" min="0" max="100" step="1"><output id="dkDepthV"></output></div>
+    <div class="ctl"><label>HOLD</label><input type="range" id="dkHold" min="0" max="200" step="1"><output id="dkHoldV"></output></div>
+    <div class="ctl"><label>RELEASE</label><input type="range" id="dkRel" min="20" max="1000" step="5"><output id="dkRelV"></output></div>
+    <div class="dkH">SYNC RELEASE TO THE BEAT</div><div class="dkRow" id="dkSync"></div>
+    <div class="dkRow"><button id="dkTry">TRY IT</button><button id="dkRemove">REMOVE</button><button id="dkDone" class="hl">DONE</button></div>
+  </div></div>
 <div id="padMoveWin" class="modal hidden">
   <div class="mbox sw">
     <div class="swT"><span>MOVE PAD</span></div>
@@ -592,7 +611,10 @@ const TV_DEF=()=>({fit:'fill',z:1,x:0,y:0,pos:'auto',fx:[],blend:'normal',op:100
 const fixTv=()=>{if(!Array.isArray(S.tv)||S.tv.length!==4)S.tv=[0,1,2,3].map(TV_DEF);S.tv=S.tv.map(t=>Object.assign(TV_DEF(),t||{}));};
 fixTv();
 const tvOf=v=>S.tv[v&&v.tr!=null?v.tr:selTrack];
-const fixDuck=()=>{if(!Array.isArray(S.duckBy)||S.duckBy.length!==4)S.duckBy=[null,null,null,null];};fixDuck();
+const DUCK_PRE={tight:{depth:45,hold:0,rel:90},pump:{depth:85,hold:30,rel:260},breathe:{depth:65,hold:60,rel:700}};
+const fixDuck=()=>{if(!Array.isArray(S.duckBy)||S.duckBy.length!==4)S.duckBy=[null,null,null,null];
+  if(!Array.isArray(S.duckCfg)||S.duckCfg.length!==4)S.duckCfg=[0,1,2,3].map(()=>({preset:'pump',sync:null,...DUCK_PRE.pump}));};fixDuck();
+const duckRel=c=>c.sync?stepDur()*(16/c.sync)*1000:c.rel;
 /* skipped steps: grayed out per pattern, the playhead jumps over them so the bar gets shorter */
 const isSkip=(p,s)=>!!(S.skip&&S.skip[p]&&S.skip[p].includes(s));
 const actSteps=p=>{let n=0;for(let i=0;i<plen(p);i++)if(!isSkip(p,i))n++;return n||plen(p);};
@@ -705,7 +727,7 @@ function trigger(tr,pi,semi,t,live){
   const p=pads[pi];if(!p||!ctx)return null;
   /* secret ducker: this pad pushes down any track it is set to duck */
   if(S.duckBy)for(let d=0;d<4;d++)if(S.duckBy[d]===pi&&d!==tr&&TN[d]&&TN[d].dk){const gn=TN[d].dk.gain,at=Math.max(t,ctx.currentTime);
-    gn.cancelScheduledValues(at);gn.setTargetAtTime(0.2,at,0.005);gn.setTargetAtTime(1,at+0.07,0.11);}
+    const c=S.duckCfg[d];gn.cancelScheduledValues(at);gn.setTargetAtTime(1-c.depth/100,at,0.004);gn.setTargetAtTime(1,at+0.012+c.hold/1000,Math.max(0.005,duckRel(c)/1000/3));}
   const rev=fx.REV||S.padRev[pi],mode=S.padMode[pi]||'one';
   const src=ctx.createBufferSource();src.buffer=rev?p.rbuf:p.buf;
   let rate=Math.pow(2,(S.padSemi[pi]+(semi||0))/12);
@@ -1544,25 +1566,25 @@ function duckZone(h3,x){const r=h3.getBoundingClientRect(),rg=document.createRan
 function duckStart(){
   duckMode=true;duckSel=[];duckPrev={};
   document.querySelectorAll('section.panel[id]').forEach(sec=>{duckPrev[sec.id]=sec.classList.contains('min');const keep=sec.id==='secFx'||sec.id==='secPads'||sec.id==='secVid';if(!keep)sec.classList.add('min');else if(sec.id!=='secVid')sec.classList.remove('min');});
-  const d=$('duckPop');d.classList.remove('hidden','bye');d.querySelector('.dmsg').textContent='Tap the track to duck';
+  const d=$('duckPop');d.classList.remove('hidden','bye');$('duckCard').classList.add('hidden');duckCard=null;d.querySelector('.dmsg').textContent=S.duckBy.some(x=>x!=null)?'Tap a track to duck, or a ducked one to tune it':'Tap the track to duck';
   try{navigator.vibrate&&navigator.vibrate([30,40,30]);}catch(_){}
   renderTfx();$('secFx').scrollIntoView({behavior:'smooth',block:'start'});
 }
 function duckEnd(msg){
-  duckMode=false;duckSel=[];
+  duckMode=false;duckSel=[];duckCard=null;$('duckCard').classList.add('hidden');
   if(duckPrev)document.querySelectorAll('section.panel[id]').forEach(sec=>{if(sec.id in duckPrev)sec.classList.toggle('min',duckPrev[sec.id]);});duckPrev=null;
   const d=$('duckPop');d.classList.add('bye');setTimeout(()=>d.classList.add('hidden'),350);renderTfx();if(msg)toast(msg,2000);
 }
 function duckTrack(t){
-  if(S.duckBy[t]!=null&&!duckSel.includes(t)){pushUndo();S.duckBy[t]=null;save();renderTfx();toast('Track '+TL[t]+' is not ducked anymore.',1400);return;}
+  if(S.duckBy[t]!=null&&!duckSel.includes(t)&&!duckSel.length){openDuckCard([t]);return;}
   const i=duckSel.indexOf(t);if(i>=0)duckSel.splice(i,1);else duckSel.push(t);
   $('duckPop').querySelector('.dmsg').textContent=duckSel.length?'Now tap the pad that ducks '+duckSel.map(x=>TL[x]).join(' + '):'Tap the track to duck';renderTfx();
 }
 function duckPad(pi){
   if(!duckSel.length){toast('Pick a track to duck first.',1200);return;}
   if(!pads[pi]){toast('That pad is empty.',1200);return;}
-  pushUndo();const tr=[...duckSel];tr.forEach(t=>S.duckBy[t]=pi);save();
-  duckEnd('Pad '+padLabel(pi)+' now ducks track'+(tr.length>1?'s ':' ')+tr.map(x=>TL[x]).join(' + ')+'.');
+  pushUndo();const tr=[...duckSel];tr.forEach(t=>S.duckBy[t]=pi);save();duckSel=[];renderTfx();
+  toast('Pad '+padLabel(pi)+' now ducks track'+(tr.length>1?'s ':' ')+tr.map(x=>TL[x]).join(' + ')+'.',1600);openDuckCard(tr);
 }
 {const h3=$('secFx').querySelector('h3');let tm=null;
   h3.addEventListener('pointerdown',e=>{if(!duckZone(h3,e.clientX))return;clearTimeout(tm);tm=setTimeout(()=>{duckMode?duckEnd('Ducker closed.'):duckStart();},1000);});
@@ -1572,6 +1594,50 @@ $('tfx').addEventListener('pointerdown',e=>{if(!duckMode)return;const b=e.target
 $('tfx').addEventListener('pointerup',e=>{if(duckMode)e.stopImmediatePropagation();},true);
 $('pads').addEventListener('pointerdown',e=>{if(!duckMode)return;const b=e.target.closest('.pad');if(!b)return;e.stopImmediatePropagation();e.preventDefault();duckPad(bank*16+padEls.indexOf(b));},true);
 $('duckX').onclick=()=>duckEnd('Ducker closed.');
+/* duck settings: presets, a curve to drag, exact sliders, tempo sync */
+var duckCard=null;
+function openDuckCard(tr){duckCard=tr;$('duckCard').classList.remove('hidden');$('duckPop').querySelector('.dmsg').textContent='Track '+tr.map(x=>TL[x]).join(' + ')+' ducked by pad '+padLabel(S.duckBy[tr[0]]);renderDuckCard();}
+function setDuck(o){if(!duckCard)return;pushUndo('duckcfg');duckCard.forEach(t=>Object.assign(S.duckCfg[t],o));save();renderDuckCard();}
+function renderDuckCard(){
+  if(!duckCard)return;const c=S.duckCfg[duckCard[0]];
+  [...$('dkPre').children].forEach(b=>b.classList.toggle('on',b.dataset.k===c.preset));
+  [...$('dkSync').children].forEach(b=>b.classList.toggle('on',String(b.dataset.k)===String(c.sync||'off')));
+  $('dkDepth').value=c.depth;$('dkDepthV').textContent=c.depth+'%';
+  $('dkHold').value=c.hold;$('dkHoldV').textContent=c.hold+' ms';
+  $('dkRel').value=Math.round(c.rel);$('dkRel').disabled=!!c.sync;$('dkRelV').textContent=Math.round(duckRel(c))+' ms';
+  drawDuckCurve();
+}
+function drawDuckCurve(){
+  const cv2=$('dkCurve'),dpr=Math.min(2,window.devicePixelRatio||1),W=cv2.clientWidth*dpr,H=cv2.clientHeight*dpr;if(!W)return;
+  if(cv2.width!==W||cv2.height!==H){cv2.width=W;cv2.height=H;}
+  const g=cv2.getContext('2d'),c=S.duckCfg[duckCard[0]],rel=duckRel(c),span=1100,X=ms=>8*dpr+(W-16*dpr)*ms/span,Y=v=>6*dpr+(H-12*dpr)*(1-v);
+  g.clearRect(0,0,W,H);g.fillStyle='rgba(173,207,222,.08)';g.fillRect(0,0,W,H);
+  g.strokeStyle='rgba(173,207,222,.18)';g.lineWidth=dpr;for(let ms=0;ms<=span;ms+=100){g.beginPath();g.moveTo(X(ms),0);g.lineTo(X(ms),H);g.stroke();}
+  const lo=1-c.depth/100,tau=Math.max(5,rel/3);
+  g.beginPath();g.moveTo(X(0),Y(1));g.lineTo(X(4),Y(lo));g.lineTo(X(12+c.hold),Y(lo));
+  for(let ms=12+c.hold;ms<=span;ms+=6){const k=1-Math.exp(-(ms-12-c.hold)/tau);g.lineTo(X(ms),Y(lo+(1-lo)*k));}
+  g.lineTo(X(span),Y(1));g.lineTo(X(span),H);g.lineTo(X(0),H);g.closePath();g.fillStyle='rgba(220,123,120,.22)';g.fill();
+  g.beginPath();g.moveTo(X(0),Y(1));g.lineTo(X(4),Y(lo));g.lineTo(X(12+c.hold),Y(lo));for(let ms=12+c.hold;ms<=span;ms+=6){const k=1-Math.exp(-(ms-12-c.hold)/tau);g.lineTo(X(ms),Y(lo+(1-lo)*k));}
+  g.strokeStyle='#DC7B78';g.lineWidth=2.5*dpr;g.stroke();
+  const hx=X(Math.min(span,12+c.hold+rel)),hy=Y(lo);g.fillStyle='#ADCFDE';g.beginPath();g.arc(hx,hy,7*dpr,0,7);g.fill();g.strokeStyle='#313043';g.lineWidth=2*dpr;g.stroke();
+  g.fillStyle='rgba(244,243,238,.7)';g.font=(9*dpr)+'px ui-monospace,Menlo,monospace';g.textAlign='right';g.fillText('DRAG THE DOT: DOWN = DEEPER, RIGHT = LONGER',W-8*dpr,15*dpr);g.textAlign='left';
+}
+{const cv2=$('dkCurve');let drag=null;
+  cv2.addEventListener('pointerdown',e=>{if(!duckCard)return;e.preventDefault();try{cv2.setPointerCapture(e.pointerId);}catch(_){}drag={x:e.clientX,y:e.clientY,c:{...S.duckCfg[duckCard[0]]},u:false};});
+  cv2.addEventListener('pointermove',e=>{if(!drag)return;const r=cv2.getBoundingClientRect(),c=drag.c;
+    if(!drag.u){pushUndo();drag.u=true;}
+    const depth=Math.max(0,Math.min(100,Math.round(c.depth+(e.clientY-drag.y)/r.height*100)));
+    const rel=Math.max(20,Math.min(1000,Math.round(duckRel(c)+(e.clientX-drag.x)/r.width*1100)));
+    duckCard.forEach(t=>Object.assign(S.duckCfg[t],{depth,rel,sync:null,preset:null}));renderDuckCard();});
+  const up=()=>{if(drag&&drag.u)save();drag=null;};cv2.addEventListener('pointerup',up);cv2.addEventListener('pointercancel',up);}
+[['tight','TIGHT'],['pump','PUMP'],['breathe','BREATHE']].forEach(([k,l])=>{const b=document.createElement('button');b.textContent=l;b.dataset.k=k;b.onclick=()=>setDuck({preset:k,sync:null,...DUCK_PRE[k]});$('dkPre').appendChild(b);});
+[['off','OFF'],[16,'1/16'],[8,'1/8'],[4,'1/4'],[2,'1/2']].forEach(([k,l])=>{const b=document.createElement('button');b.textContent=l;b.dataset.k=k;b.onclick=()=>setDuck({sync:k==='off'?null:k,preset:null});$('dkSync').appendChild(b);});
+$('dkDepth').oninput=e=>setDuck({depth:+e.target.value,preset:null});
+$('dkHold').oninput=e=>setDuck({hold:+e.target.value,preset:null});
+$('dkRel').oninput=e=>setDuck({rel:+e.target.value,preset:null});
+$('dkTry').onclick=()=>{if(!duckCard)return;initAudio();const pi=S.duckBy[duckCard[0]];if(pi!=null)trigger(selTrack,pi,0,ctx.currentTime+0.01,true);};
+$('dkRemove').onclick=()=>{if(!duckCard)return;pushUndo();const tr=duckCard;tr.forEach(t=>S.duckBy[t]=null);save();duckEnd('Track'+(tr.length>1?'s ':' ')+tr.map(x=>TL[x]).join(' + ')+' not ducked anymore.');};
+$('dkDone').onclick=()=>duckEnd('Ducker set.');
 const meterLv=[0,0,0,0],meterBuf=new Float32Array(256);
 function meters(){
   if(!ctx||!TN.length||$('secFx').classList.contains('min'))return;
@@ -2286,7 +2352,7 @@ $('aRemove').onclick=removeSource;
 
 /* ---------- undo ---------- */
 const undoS=[],redoS=[];let lastPush={k:null,t:0};
-function snap(){return {tv:JSON.stringify(S.tv),duck:JSON.stringify(S.duckBy),pat:JSON.stringify(S.patterns),len:[...S.patLen],tlen:JSON.stringify(S.trkLen),skip:JSON.stringify(S.skip),chain:[...S.chain],
+function snap(){return {tv:JSON.stringify(S.tv),duck:JSON.stringify(S.duckBy),duckCfg:JSON.stringify(S.duckCfg),pat:JSON.stringify(S.patterns),len:[...S.patLen],tlen:JSON.stringify(S.trkLen),skip:JSON.stringify(S.skip),chain:[...S.chain],
   pp:JSON.stringify({trackFx:S.trackFx,trackFxOn:S.trackFxOn,trackFxAmt:S.trackFxAmt,padChoke:S.padChoke,padSemi:S.padSemi,padVol:S.padVol,padRev:S.padRev,padFi:S.padFi,padFo:S.padFo,padDecay:S.padDecay,padMode:S.padMode,padFreeze:S.padFreeze}),
   pads:[...pads],srcs:sources.map(x=>({id:x.id,s:x.sel?x.sel.s:null,e:x.sel?x.sel.e:null,slip:x.slip||0}))};}
 function pushUndo(k){
@@ -2295,7 +2361,7 @@ function pushUndo(k){
   lastPush={k,t:n};undoS.push(snap());if(undoS.length>60)undoS.shift();redoS.length=0;renderUndo();
 }
 function restore(x){
-  if(x.tv)S.tv=JSON.parse(x.tv);fixTv();if(x.duck)S.duckBy=JSON.parse(x.duck);fixDuck();S.patterns=JSON.parse(x.pat);S.patLen=[...x.len];S.trkLen=x.tlen?JSON.parse(x.tlen):null;fixTrkLen();S.skip=x.skip?JSON.parse(x.skip):Array.from({length:16},()=>[]);S.chain=[...x.chain];Object.assign(S,JSON.parse(x.pp));for(let t=0;t<4;t++)applyTrackFx(t);
+  if(x.tv)S.tv=JSON.parse(x.tv);fixTv();if(x.duck)S.duckBy=JSON.parse(x.duck);if(x.duckCfg)S.duckCfg=JSON.parse(x.duckCfg);fixDuck();S.patterns=JSON.parse(x.pat);S.patLen=[...x.len];S.trkLen=x.tlen?JSON.parse(x.tlen):null;fixTrkLen();S.skip=x.skip?JSON.parse(x.skip):Array.from({length:16},()=>[]);S.chain=[...x.chain];Object.assign(S,JSON.parse(x.pp));for(let t=0;t<4;t++)applyTrackFx(t);
   pads=[...x.pads];pads.forEach(p=>{if(p)p.slipTarget=null;});
   x.srcs.forEach(o=>{const sc=sources.find(y=>y.id===o.id);if(sc&&o.s!=null){sc.sel={s:o.s,e:o.e};sc.slip=o.slip;}});
   if(viewPage>=tbars(editPat,selTrack))viewPage=0;
@@ -2391,9 +2457,9 @@ async function padFromRecord(rec){
   const p={buf,rbuf:reverseOf(buf),cat:m.cat||'TONE',name:m.name||undefined,len,start:m.start||0,slip:m.slip||0,srcId:null,srcName:m.srcName,srcKey:m.srcKey||null,frames,fps:frames.length/len,thumb:frames[0].toDataURL('image/jpeg',0.6)};
   recCache.set(p,rec);return p;
 }
-function stateJSON(){return {bpm:S.bpm,swing:S.swing,format:S.format,trackFx:S.trackFx,trackFxOn:S.trackFxOn,trackFxAmt:S.trackFxAmt,tv:S.tv,duckBy:S.duckBy,patterns:S.patterns,patLen:S.patLen,trkLen:S.trkLen,skip:S.skip,chain:S.chain,padChoke:S.padChoke,padSemi:S.padSemi,padVol:S.padVol,padRev:S.padRev,padFi:S.padFi,padFo:S.padFo,padDecay:S.padDecay,padMode:S.padMode,padFreeze:S.padFreeze};}
+function stateJSON(){return {bpm:S.bpm,swing:S.swing,format:S.format,trackFx:S.trackFx,trackFxOn:S.trackFxOn,trackFxAmt:S.trackFxAmt,tv:S.tv,duckBy:S.duckBy,duckCfg:S.duckCfg,patterns:S.patterns,patLen:S.patLen,trkLen:S.trkLen,skip:S.skip,chain:S.chain,padChoke:S.padChoke,padSemi:S.padSemi,padVol:S.padVol,padRev:S.padRev,padFi:S.padFi,padFo:S.padFo,padDecay:S.padDecay,padMode:S.padMode,padFreeze:S.padFreeze};}
 function applyState(st){
-  const keys=['bpm','swing','format','trackFx','trackFxOn','trackFxAmt','tv','duckBy','patterns','patLen','trkLen','skip','chain','padChoke','padSemi','padVol','padRev','padFi','padFo','padDecay','padMode','padFreeze'];
+  const keys=['bpm','swing','format','trackFx','trackFxOn','trackFxAmt','tv','duckBy','duckCfg','patterns','patLen','trkLen','skip','chain','padChoke','padSemi','padVol','padRev','padFi','padFo','padDecay','padMode','padFreeze'];
   keys.forEach(k=>{if(st[k]!=null)S[k]=st[k];});
   S.patterns.forEach(P=>P.forEach(t=>{while(t.length<MAXST)t.push(null);}));
   if(!Array.isArray(S.patLen)||S.patLen.length!==16)S.patLen=Array(16).fill(1);
