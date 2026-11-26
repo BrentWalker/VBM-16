@@ -1590,6 +1590,8 @@ function duckEnd(msg){
   duckMode=false;duckSel=[];duckPads=[];duckStep=1;
   if(duckPrev)document.querySelectorAll('section.panel[id]').forEach(sec=>{if(sec.id in duckPrev)sec.classList.toggle('min',duckPrev[sec.id]);});duckPrev=null;
   const d=$('duckPop');d.classList.add('bye');setTimeout(()=>d.classList.add('hidden'),350);renderTfx();renderPads();if(msg)toast(msg,2400);
+  /* land back on the tracks, not wherever the panels shifted to */
+  requestAnimationFrame(()=>{const f=$('secFx');if(f)f.scrollIntoView({behavior:'smooth',block:'start'});});
 }
 function duckTrack(t){
   if(duckStep!==1)return;const i=duckSel.indexOf(t);
