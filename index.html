@@ -439,7 +439,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
     </div>
     <div id="est" class="est hidden"><span id="estTxt"></span><div class="bar" id="estBarW"><div id="estBar"></div></div><button id="estBtn" class="hidden">OK</button></div>
     </div><div class="edR">
-    <div class="edH"><span>SEND TO PAD</span><span>tap a pad</span></div>
+    <div class="edH"><span>PADS</span><span>tap to edit · empty gets the slice · hold to replace</span></div>
     <div class="banks" id="edBanks" style="margin-top:6px"></div>
     <div class="mini" id="mini"></div>
     <div class="row"><button id="aAuto">AUTO 16 TO THIS BANK</button><button id="aEven">EVEN 16</button></div>
@@ -1080,7 +1080,7 @@ function finishSource(src,audio){
     return;
   }
   if(src.key)toast(src.name+':'+keyMsg(src).replace(/^ /,' '),3600);
-  estFlash('Drag the edges to set your slice, hold it to slide it, then tap a pad below to send it. AUTO 16 chops the whole video for you.',5000);
+  estFlash('Drag the edges to set your slice, hold it to slide it, then tap an empty pad below to send it. Tap a filled pad to edit it. AUTO 16 chops the whole video for you.',5000);
 }
 /* Real time fallback: play the clip through the audio graph and capture the PCM */
 function listenAudio(url,secs,onProg){
@@ -1160,16 +1160,31 @@ function openEditor(srcIdx,sel,padIdx){
 let editing=null;
 function markEditing(i){const src=cur();if(!src||!pads[i])return;editing={pad:i,srcId:src.id,s:src.sel.s,e:src.sel.e,slip:src.slip||0};$('edDone').textContent='DONE · PAD '+padLabel(i);}
 function editChanged(){const src=cur();return !!(editing&&src&&src.id===editing.srcId&&pads[editing.pad]&&(Math.abs(src.sel.s-editing.s)>1e-4||Math.abs(src.sel.e-editing.e)>1e-4||Math.abs((src.slip||0)-editing.slip)>1e-4));}
-async function doneEditor(){
-  if(edBusy)return;
-  if(editChanged()){
-    const src=cur(),i=editing.pad,old=pads[i];pushUndo();edBusy=true;stopSel();
-    const {s,e}=src.sel;est('Updating pad '+padLabel(i),0);
-    try{const p=await makePad(src,s,e-s,(k,n)=>est('Updating pad '+padLabel(i),k/n),src.slip||0);if(old&&old.name)p.name=old.name;pads[i]=p;save();padsChanged();toast('Pad '+padLabel(i)+' updated.',1400);}
-    catch(e){toast('Could not update pad '+padLabel(i)+'.',2000);}
-    edBusy=false;
-  }
-  closeEditor();
+/* write the edited slice back to its pad (keeps the pad's settings) */
+async function commitEdit(){
+  if(edBusy||!editChanged())return;
+  const src=cur(),i=editing.pad,old=pads[i];pushUndo();edBusy=true;stopSel();
+  const {s,e}=src.sel;est('Updating pad '+padLabel(i),0);
+  try{const p=await makePad(src,s,e-s,(k,n)=>est('Updating pad '+padLabel(i),k/n),src.slip||0);if(old&&old.name)p.name=old.name;pads[i]=p;save();padsChanged();toast('Pad '+padLabel(i)+' updated.',1200);}
+  catch(e){toast('Could not update pad '+padLabel(i)+'.',2000);}
+  edBusy=false;
+}
+async function doneEditor(){if(edBusy)return;await commitEdit();closeEditor();}
+/* slicer pads: tap a filled pad to edit it (the last one is kept first), tap an empty pad to put the slice there, hold any pad to replace it with the slice */
+async function slicerPadTap(li){
+  if(edBusy)return;const i=bank*16+li,p=pads[i];
+  await commitEdit();
+  if(!p){await sendToPad(li);return;}
+  const idx=p.srcId!=null?sources.findIndex(x=>x.id===p.srcId):-1;
+  selPad=i;target=li;
+  if(idx<0){renderMini();renderPads();renderPadPanel();trigger(selTrack,i,0,ctx?ctx.currentTime:0);
+    estFlash('Pad '+padLabel(i)+' was not cut from a video loaded here. Hold it to replace it with this slice.',2600);editing=null;$('edDone').textContent='DONE';return;}
+  if(idx!==curSrc)selectSource(idx);
+  const src=cur();src.sel={s:p.start||0,e:Math.min(src.dur,(p.start||0)+p.len)};src.slip=p.slip||0;
+  try{fitSel(true);previewSeek(src.sel.s);}catch(e){}
+  markEditing(i);renderMini();renderPads();renderPadPanel();waveDirty=true;
+  if(ctx)trigger(selTrack,i,0,ctx.currentTime);
+  estFlash('Editing pad '+padLabel(i)+'. Tap another pad to keep this and move on.',1800);
 }
 function closeEditor(){
   editing=null;$('edDone').textContent='DONE';
@@ -1343,10 +1358,10 @@ async function sendToPad(li){const i=bank*16+li;
   if(edBusy)return;pushUndo();edBusy=true;stopSel();
   const {s,e}=src.sel;est('Sending to pad '+padLabel(i),0);
   const p=await makePad(src,s,e-s,(k,n)=>est('Sending to pad '+padLabel(i),k/n),src.slip||0);
-  const keep=editing&&editing.pad===i;pads[i]=p;if(!keep)typeDefaults(i,src);selPad=i;target=(li+1)%16;edBusy=false;save();padsChanged();
-  if(keep)markEditing(i);
+  const keep=editing&&editing.pad===i;pads[i]=p;if(!keep)typeDefaults(i,src);selPad=i;target=li;edBusy=false;save();padsChanged();
+  markEditing(i);
   previewSeek(src.sel.s);
-  estFlash('Sent to pad '+padLabel(i)+'. Next tap goes to pad '+padLabel(bank*16+target)+'.',1800);
+  estFlash('Sent to pad '+padLabel(i)+'. Adjust it here, or tap another pad to keep it and move on.',1800);
   renderMini();renderPads();renderSteps();renderPadPanel();
   trigger(selTrack,i,0,ctx.currentTime);
 }
@@ -1382,7 +1397,10 @@ function renderEdInfo(){renderEdKey();
 }
 function renderEdBtns(){$('aPlay').textContent=selPlay?'■':'▶';$('aPlay').classList.toggle('on',!!selPlay);$('aLoop').classList.toggle('on',loopMode);$('nStep').textContent=NUDGE[nudgeIdx][1];}
 const miniEls=[];
-function buildMini(){for(let i=0;i<16;i++){const b=document.createElement('button');b.className='mpad';b.innerHTML='<b>'+(i+1)+'</b>';b.onclick=()=>sendToPad(i);$('mini').appendChild(b);miniEls.push(b);}}
+function buildMini(){for(let i=0;i<16;i++){const b=document.createElement('button');b.className='mpad';b.innerHTML='<b>'+(i+1)+'</b>';let tm=null,held=false;
+    b.onpointerdown=e=>{held=false;clearTimeout(tm);tm=setTimeout(async()=>{held=true;try{navigator.vibrate&&navigator.vibrate(20);}catch(_){}await commitEdit();editing=null;await sendToPad(i);},500);};
+    b.onpointerup=()=>{clearTimeout(tm);if(!held)slicerPadTap(i);};b.onpointercancel=b.onpointerleave=()=>clearTimeout(tm);b.oncontextmenu=e=>e.preventDefault();
+    $('mini').appendChild(b);miniEls.push(b);}}
 function renderMini(){miniEls.forEach((b,i)=>{const p=pads[bank*16+i];b.querySelector('b').textContent=padLabel(bank*16+i);b.style.backgroundImage=p?'url('+p.thumb+')':'none';b.classList.toggle('tgt',i===target);});}
 
 /* ---------- demo kit ---------- */
