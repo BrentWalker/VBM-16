@@ -2386,7 +2386,8 @@ function drawTrim(){
   if(has&&!newC){g.fillStyle='rgba(49,48,67,.45)';g.fillRect(0,top,x0,WH);g.fillRect(x1,top,W-x1,WH);}
   if(t.nA!=null){const a=X(t.nA),b=X(t.nB);g.fillStyle='rgba(220,123,120,.35)';g.fillRect(a,top,b-a,WH);g.fillStyle=COL.fire;g.fillRect(a-dpr,top,2*dpr,WH);g.fillRect(b-dpr,top,2*dpr,WH);}
   if(R){g.fillStyle='rgba(38,37,53,.9)';g.fillRect(0,0,W,band);drawRegions(g,W,H,R.regs,R.lanes,X,t.pad,dpr,band);
-    if(span<t.src.dur-1e-6){g.fillStyle='rgba(255,255,255,.08)';g.fillRect(0,H-3*dpr,W,3*dpr);g.fillStyle='rgba(173,207,222,.6)';g.fillRect(t.v0/t.src.dur*W,H-3*dpr,Math.max(2,span/t.src.dur*W),3*dpr);}}
+}
+  {const D=tD();if(span<D-1e-6){g.fillStyle='rgba(255,255,255,.08)';g.fillRect(0,H-3*dpr,W,3*dpr);g.fillStyle='rgba(173,207,222,.6)';g.fillRect(t.v0/D*W,H-3*dpr,Math.max(2,span/D*W),3*dpr);}}
   if(has)[[x0,true],[x1,false]].forEach(([x,st])=>{g.fillStyle=COL.fire;g.fillRect(x-dpr,top,2*dpr,WH);g.beginPath();const w=9*dpr;if(st){g.moveTo(x,top);g.lineTo(x+w,top);g.lineTo(x,top+w*1.3);}else{g.moveTo(x,H);g.lineTo(x-w,H);g.lineTo(x,H-w*1.3);}g.fill();});
   if(pending()){g.font='700 '+(10*dpr)+'px ui-monospace,Menlo,monospace';g.textAlign='left';g.fillStyle='#fff';g.fillText('NEW · HOLD AND DRAG TO A PAD',Math.max(2*dpr,Math.min(x0+4*dpr,W-150*dpr)),top+13*dpr);}
   const steps=has&&t.src&&UI.tsnap?' · '+(+((t.e-t.s)/stepDur()).toFixed(2))+' steps':'';
@@ -2435,13 +2436,14 @@ function dSlip(d){if(!trim||!trim.src)return;if(pending()){trim.slip=d===0?0:cla
 $('tdSlM').onclick=()=>dSlip(-FR);$('tdSlP').onclick=()=>dSlip(FR);$('tdSlV').onclick=()=>dSlip(0);
 $('tzSnap').onclick=()=>{UI.tsnap=!UI.tsnap;saveUI();drawTrim();};
 $('tdLoop').onclick=()=>{loopOn=!loopOn;if(loopOn)trimAudition();else{try{audNode&&audNode.stop();}catch(e){}audNode=null;}drawTrim();};
-function trimZoom(f){if(!trim||!trim.src)return;const z=Math.max(1,Math.min(64,(UI.tz||1)*f));UI.tz=z;saveUI();const D=trim.src.dur,sp=D/z,c=isFinite(trim.s)?(trim.s+trim.e)/2:(trim.v0+trim.v1)/2;
-  trim.v0=Math.max(0,Math.min(D-sp,c-sp/2));trim.v1=trim.v0+sp;tview={id:trim.src.id,v0:trim.v0,v1:trim.v1};drawTrim();}
+function trimZoom(f){if(!trim)return;const D=tD(),z=Math.max(1,Math.min(64,(D/(trim.v1-trim.v0))*f));if(trim.src){UI.tz=z;saveUI();}const sp=D/z,c=isFinite(trim.s)?(trim.s+trim.e)/2:(trim.v0+trim.v1)/2;
+  trim.v0=Math.max(0,Math.min(D-sp,c-sp/2));trim.v1=trim.v0+sp;if(trim.src)tview={id:trim.src.id,v0:trim.v0,v1:trim.v1};drawTrim();}
 $('tzOut').onclick=()=>trimZoom(0.5);$('tzIn').onclick=()=>trimZoom(2);
 $('ptReset').onclick=()=>{if(!trim)return;if(pending()){showSrc(trim.src);return;}if(!trim.empty){trim.s=trim.s0;trim.e=trim.e0;drawTrim();}};
 function openTrimWin(i){selPad=i;trim=null;trimLoad(i);dockOpen();}
 /* touch on the waveform: drag across to slice, drag red lines to trim, hold to lift onto a pad or bank, pinch or double tap to zoom */
-function setSpan(sp,c){const t=trim;if(!t||!t.src)return;const D=t.src.dur;sp=Math.max(Math.min(D,0.05),Math.min(D,sp));UI.tz=D/sp;saveUI();t.v0=Math.max(0,Math.min(D-sp,c-sp/2));t.v1=t.v0+sp;tview={id:t.src.id,v0:t.v0,v1:t.v1};drawTrim();}
+function tD(){return trim?(trim.src?trim.src.dur:trim.p.buf.duration):0;}
+function setSpan(sp,c){const t=trim;if(!t)return;const D=tD();sp=Math.max(Math.min(D,0.02),Math.min(D,sp));if(t.src){UI.tz=D/sp;saveUI();}t.v0=Math.max(0,Math.min(D-sp,c-sp/2));t.v1=t.v0+sp;if(t.src)tview={id:t.src.id,v0:t.v0,v1:t.v1};drawTrim();}
 {const c=$('ptWave');let dr=null,ghost=null,over=null,overB=null,bankT=null,liftH=0,holdT=null,lastTap=0,lastX=0;const P=new Map();let pinch=null;
   const tAt=(x,r)=>trim.v0+(x-r.left)/r.width*(trim.v1-trim.v0);
   const clearOver=()=>{if(over){over.classList.remove('dropT');over=null;}if(overB){overB.classList.remove('dropT');overB=null;}clearTimeout(bankT);};
@@ -2460,13 +2462,13 @@ function setSpan(sp,c){const t=trim;if(!t||!t.src)return;const D=t.src.dur;sp=Ma
     if(d.zone==='band'&&d.pick!=null){const p=pads[d.pick];return p?{src,a:p.start||0,b:(p.start||0)+p.len,slip:p.slip||0,label:'PAD '+padLabel(d.pick)}:null;}
     if(d.inSel)return {src,a:trim.s,b:trim.e,slip:trim.empty?trim.slip||0:slipNow(),label:trim.empty?'NEW SLICE':'PAD '+padLabel(trim.pad)};
     if(d.pick!=null){const p=pads[d.pick];return p?{src,a:p.start||0,b:(p.start||0)+p.len,slip:p.slip||0,label:'PAD '+padLabel(d.pick)}:null;}return null;}
-  function dbl(e,r){if(!trim||!trim.src)return;const D=trim.src.dur,sp=trim.v1-trim.v0,t=tAt(e.clientX,r);
+  function dbl(e,r){if(!trim)return;const D=tD(),sp=trim.v1-trim.v0,t=tAt(e.clientX,r);
     if(sp<D-1e-6){setSpan(D,D/2);return;}
     let tgt=D/4,c=t;if(isFinite(trim.s)&&t>=trim.s&&t<=trim.e){tgt=Math.max((trim.e-trim.s)*2.5,0.05);c=(trim.s+trim.e)/2;}setSpan(Math.min(D/2,tgt),c);}
   c.addEventListener('pointerdown',e=>{if(!trim)return;e.preventDefault();try{c.setPointerCapture(e.pointerId);}catch(_){}
     P.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(P.size===2&&trim.src){clearTimeout(holdT);if(dr&&dr.mode==='lift')liftEnd(false,dr.item);if(dr&&dr.mode==='new'){trim.nA=trim.nB=null;}dr=null;
-      const [a,b]=[...P.values()],r=c.getBoundingClientRect();pinch={d:Math.max(20,Math.abs(a.x-b.x)),sp:trim.v1-trim.v0,c:tAt((a.x+b.x)/2,r),r};drawTrim();return;}
+    if(P.size===2){clearTimeout(holdT);if(dr&&dr.mode==='lift')liftEnd(false,dr.item);if(dr&&dr.mode==='new'){trim.nA=trim.nB=null;}dr=null;
+      const [a,b]=[...P.values()],r=c.getBoundingClientRect();pinch={d:Math.max(20,Math.hypot(a.x-b.x,a.y-b.y)),sp:trim.v1-trim.v0,c:tAt((a.x+b.x)/2,r),r};drawTrim();return;}
     if(P.size>2)return;
     const r=c.getBoundingClientRect(),{band,R}=bandOf(r.height,1),px=t=>r.left+(t-trim.v0)/(trim.v1-trim.v0)*r.width,y=e.clientY-r.top,t=tAt(e.clientX,r),has=isFinite(trim.s);
     let which=null,pick=null,zone='wave';
@@ -2476,17 +2478,17 @@ function setSpan(sp,c){const t=trim;if(!t||!t.src)return;const D=t.src.dur;sp=Ma
     dr={which,pick,zone,x:e.clientX,y:e.clientY,t0:t,v0:trim.v0,inSel:has&&t>=trim.s&&t<=trim.e,mode:null,r};
     clearTimeout(holdT);const d0=dr;holdT=setTimeout(()=>{if(dr!==d0||dr.mode)return;const it=itemAt(d0);if(it)lift(it);},380);});
   c.addEventListener('pointermove',e=>{if(P.has(e.pointerId))P.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(pinch&&P.size>=2&&trim&&trim.src){const [a,b]=[...P.values()];const d=Math.max(20,Math.abs(a.x-b.x));setSpan(pinch.sp*pinch.d/d,pinch.c);return;}
+    if(pinch&&P.size>=2&&trim){const [a,b]=[...P.values()];const d=Math.max(20,Math.hypot(a.x-b.x,a.y-b.y));setSpan(pinch.sp*pinch.d/d,pinch.c);return;}
     if(!dr||!trim)return;
     if(dr.mode==='lift'){liftMove(e);return;}
     const dx=e.clientX-dr.x,dy=e.clientY-dr.y;
     if(!dr.mode){if(Math.hypot(dx,dy)<7)return;clearTimeout(holdT);const src=trim.src;
-      dr.mode=dr.which?'edge':dr.zone==='band'?'pan':src?'new':'none';
+      dr.mode=dr.which?'edge':dr.zone==='band'?'pan':src?'new':'pan';
       if(dr.mode==='new'&&!trim.empty){trimCommit();}}
-    const src=trim.src,t=Math.max(src?0:trim.v0,Math.min(src?src.dur:trim.v1,tAt(e.clientX,dr.r)));
-    const follow=()=>{if(!src)return;const sp=trim.v1-trim.v0,edge=sp*0.04;if(t<trim.v0+edge&&trim.v0>0){trim.v0=Math.max(0,trim.v0-sp*0.02);trim.v1=trim.v0+sp;}else if(t>trim.v1-edge&&trim.v1<src.dur){trim.v1=Math.min(src.dur,trim.v1+sp*0.02);trim.v0=trim.v1-sp;}tview={id:src.id,v0:trim.v0,v1:trim.v1};};
-    if(dr.mode==='edge'){if(dr.which==='s')trim.s=Math.min(snapLen(trim.e,t,-1),trim.e-0.02);else trim.e=Math.max(snapLen(trim.s,t,1),trim.s+0.02);trim.s=Math.max(0,trim.s);if(src)trim.e=Math.min(src.dur,trim.e);follow();drawTrim();}
-    else if(dr.mode==='pan'){if(src&&trim.v1-trim.v0<src.dur-1e-6){const sp=trim.v1-trim.v0,dt=(e.clientX-dr.x)/dr.r.width*sp;trim.v0=Math.max(0,Math.min(src.dur-sp,dr.v0-dt));trim.v1=trim.v0+sp;tview={id:src.id,v0:trim.v0,v1:trim.v1};drawTrim();}}
+    const src=trim.src,D=tD(),t=Math.max(0,Math.min(D,tAt(e.clientX,dr.r)));
+    const follow=()=>{const sp=trim.v1-trim.v0,edge=sp*0.04;if(t<trim.v0+edge&&trim.v0>0){trim.v0=Math.max(0,trim.v0-sp*0.02);trim.v1=trim.v0+sp;}else if(t>trim.v1-edge&&trim.v1<D){trim.v1=Math.min(D,trim.v1+sp*0.02);trim.v0=trim.v1-sp;}if(src)tview={id:src.id,v0:trim.v0,v1:trim.v1};};
+    if(dr.mode==='edge'){if(dr.which==='s')trim.s=Math.min(snapLen(trim.e,t,-1),trim.e-0.02);else trim.e=Math.max(snapLen(trim.s,t,1),trim.s+0.02);trim.s=Math.max(0,trim.s);trim.e=Math.min(D,trim.e);follow();drawTrim();}
+    else if(dr.mode==='pan'){if(trim.v1-trim.v0<D-1e-6){const sp=trim.v1-trim.v0,dt=(e.clientX-dr.x)/dr.r.width*sp;trim.v0=Math.max(0,Math.min(D-sp,dr.v0-dt));trim.v1=trim.v0+sp;if(src)tview={id:src.id,v0:trim.v0,v1:trim.v1};drawTrim();}}
     else if(dr.mode==='new'){let a=Math.min(dr.t0,t),b=Math.max(dr.t0,t);if(UI.tsnap){if(t>=dr.t0)b=snapLen(dr.t0,t,1);else a=snapLen(dr.t0,t,-1);a=Math.max(0,a);b=Math.min(src.dur,b);}trim.nA=a;trim.nB=b;follow();drawTrim();}});
   const up=e=>{P.delete(e.pointerId);clearTimeout(holdT);
     if(pinch){if(P.size<2)pinch=null;dr=null;lastTap=0;return;}
@@ -2501,6 +2503,7 @@ function setSpan(sp,c){const t=trim;if(!t||!t.src)return;const D=t.src.dur;sp=Ma
 {const d=$('trimDock');d.insertBefore($('est'),$('tdWaveW'));d.style.height=(UI.dockH||300)+'px';
   try{new ResizeObserver(()=>{dockSize();drawTrim();}).observe(d);}catch(e){}dockSize();window.addEventListener('resize',()=>{setDockH(d.offsetHeight,false,true);});}
 document.addEventListener('visibilitychange',()=>{if(document.hidden)trimCommit();});
+['gesturestart','gesturechange'].forEach(n=>$('trimDock').addEventListener(n,e=>e.preventDefault()));
 
 function renderPadPanel(){
   const p=pads[selPad];trimLoad(selPad);
