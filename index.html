@@ -185,6 +185,9 @@ select{font:inherit;font-size:12px;background:var(--slate);color:var(--w);border
 .tfx button b{font-size:11px}
 .tfx button.set{background:var(--slate)}
 .tfx button.on{background:var(--air);color:var(--ink)}
+/* track level meter: lights up along the bottom of each AUDIO FX slot in the track color */
+#tfx button{position:relative;overflow:hidden}
+#tfx .mt{position:absolute;left:0;bottom:0;height:5px;width:0;background:var(--mc);box-shadow:0 0 8px var(--mc);border-radius:0 3px 3px 0;pointer-events:none;transition:width .05s linear}
 #tfxAmts .ctl output{width:56px}
 #tfxAmts .ctl label{width:74px}
 .tvLab{font-size:10px;letter-spacing:.1em;opacity:.8;margin:9px 0 0}
@@ -632,7 +635,8 @@ function initAudio(){
     lb.type='lowshelf';lb.frequency.value=110;lb.gain.value=0;hb.type='highshelf';hb.frequency.value=6000;hb.gain.value=0;
     g.connect(lo);lo.connect(hi);hi.connect(lb);lb.connect(hb);hb.connect(dr);dr.connect(out);out.connect(bus);
     dr.connect(es);es.connect(de);de.connect(ef);ef.connect(de);de.connect(out);dr.connect(vs);vs.connect(verb);
-    trackG.push(g);TN.push({lo,hi,lb,hb,dr,out,es,de,vs});
+    const an=ctx.createAnalyser();an.fftSize=256;an.smoothingTimeConstant=0;out.connect(an);/* level meter tap, plays nothing */
+    trackG.push(g);TN.push({lo,hi,lb,hb,dr,out,es,de,vs,an});
   }
   for(let i=0;i<4;i++)applyTrackFx(i);
   const b=ctx.createBuffer(1,1,22050),s=ctx.createBufferSource();s.buffer=b;s.connect(ctx.destination);s.start(0);
@@ -1513,8 +1517,16 @@ function post(W,H){
   if(fx.HPF){g2.globalCompositeOperation='difference';g2.fillStyle='#fff';g2.fillRect(0,0,W,H);g2.globalCompositeOperation='source-over';}
   if(fx.REV){g2.globalCompositeOperation='color';g2.fillStyle='rgba(126,179,210,.4)';g2.fillRect(0,0,W,H);g2.globalCompositeOperation='source-over';}
 }
+const meterLv=[0,0,0,0],meterBuf=new Float32Array(256);
+function meters(){
+  if(!ctx||!TN.length||$('secFx').classList.contains('min'))return;
+  for(let t=0;t<4;t++){const n=TN[t],b=tfxEls[t];if(!n||!n.an||!b)continue;
+    n.an.getFloatTimeDomainData(meterBuf);let pk=0;for(let i=0;i<meterBuf.length;i++){const a=Math.abs(meterBuf[i]);if(a>pk)pk=a;}
+    meterLv[t]=Math.max(pk,meterLv[t]*0.86);const el=b.querySelector('.mt');if(el){el.style.setProperty('--mc',TCOL[t]);el.style.width=Math.min(100,Math.sqrt(meterLv[t])*110)+'%';}
+    b.classList.toggle('live',meterLv[t]>0.02);}
+}
 function loop(){
-  requestAnimationFrame(loop);
+  requestAnimationFrame(loop);meters();
   if(edOpen&&!exporting)return;
   const now=ctx?ctx.currentTime:0;
   while(uiQ.length&&uiQ[0].t<=now){const u=uiQ.shift();
@@ -1921,7 +1933,7 @@ function openTv(t){tvEdit=t;renderTv();$('tvWin').classList.remove('hidden');}
 function openTfx(t){tfxEdit=t;$('tfxTitle').textContent='TRACK '+TL[t]+' FX';renderTfx();$('tfxWin').classList.remove('hidden');}
 function renderTfx(){
   tfxEls.forEach((b,t)=>{const a=S.trackFx[t],lab=a.map(k=>TFX.find(x=>x[0]===k)[1]);
-    b.innerHTML='<b>'+TL[t]+'</b><span>'+(lab.length?lab.join(' + '):'HOLD')+'</span>';
+    b.innerHTML='<b>'+TL[t]+'</b><span>'+(lab.length?lab.join(' + '):'HOLD')+'</span><i class="mt"></i>';
     b.classList.toggle('set',a.length>0);b.classList.toggle('on',a.length>0&&S.trackFxOn[t]);});
   [...$('tfxGrid').children].forEach(b=>b.classList.toggle('on',S.trackFx[tfxEdit].includes(b.dataset.k)));
   const box=$('tfxAmts');if(!box)return;box.innerHTML='';
