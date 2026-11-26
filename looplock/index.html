@@ -290,7 +290,7 @@ input,select,textarea{font-size:16px}
   <div class="sitem"><b>Start, End</b>Jump to the start or the end of the loop.</div>
   <div class="sitem"><b>XF</b>Crossfade while you listen: blends the end of the loop into the start so it doesn't click. Tap to change.</div>
   <div class="sitem"><b>Metronome</b>Hold for on or off. Tap to pick 1, 2, 4, 8 or 16 ticks a bar, shown as the small number. Each tick gets a faint line on the waveform.</div>
-  <div class="sitem"><b>Pull a line in from the edge</b>Start line off the left side? Drag in from the left edge and it comes to your finger. End line off the right side? Drag in from the right edge.</div>
+  <div class="sitem"><b>Pull a line in from the edge</b>Start line off the left side? Drag in from the left edge and it comes to your finger. End line off the right side? Drag in from the right edge. Only that line moves, so the loop gets shorter or longer, even when it's locked.</div>
   <div class="sitem"><b>Framing</b>IG, YT and TT make vertical video. Whole picture (the starting setting) keeps everything you see in the video window and adds bars where it doesn't fill the screen. Fill screen crops the sides or top to fill it. Hold the button to choose.</div>
   <div class="sitem"><b>Export buttons</b>Tap one to export, then pick where it goes in the share sheet. IG, YT and TT come out vertical 9:16, the first button keeps the video's shape. Hold any of them for its own settings. The small label shows them: offset·crossfade, Q for Seam Quietest, M for Master.</div>
   <div class="sitem"><b>EQ tab</b>Low shelf 150 Hz and high shelf 8 kHz go 18 dB either way, mid bell 2.5 kHz goes 12. Press and hold a knob's name to change its frequency. Drag a knob up or down, double tap to reset. You hear it while playing and it goes into every export.</div>
@@ -2622,7 +2622,7 @@ function edited(showStart){
 // a bar count from the tempo; only changes the divisions when the loop grows or shrinks by a whole bar
 function barsNow(){ if(!S.bpm||!S.n) return null; const b=ln()/(240/S.bpm); if(b<0.75) return null;
   const P=[1,2,4,8,16,32,64,128]; for(const p of P) if(Math.abs(b-p)/p<0.12) return p; return clamp(Math.round(b),1,128); }
-function autoDiv(){ if(S.locked) return; const nb=barsNow(); if(nb==null||nb===S.autoBars) return;
+function autoDiv(force){ if(S.locked&&!force) return; const nb=barsNow(); if(nb==null||nb===S.autoBars) return;
   S.autoBars=nb; S.div=nb; if(S.pb) S.pb.marks=null; }
 let rsT=null; function restartSoon(){ clearTimeout(rsT); rsT=setTimeout(()=>{ if(S.mode&&S.mode!=='all') play(S.mode,{keep:true}); },40); }
 
@@ -2995,8 +2995,8 @@ function drawSeam(g,W,top,wh,mid,amp,dpr){
     const [a,b]=S.view, X=t=>(t-a)/(b-a)*r.width, ds=Math.abs(x-X(st())), de=Math.abs(x-X(en())), hit=24;
     const EDGE=24, xS=X(st()), xE=X(en());
     // the start line is off the left edge, or the end line off the right: a drag in from that edge pulls it in
-    if(x<EDGE&&xS<0){ drag={k:'S',edge:true,off:0}; navigator.vibrate&&navigator.vibrate(8); }
-    else if(x>r.width-EDGE&&xE>r.width){ drag=S.locked?{k:'Lslide',edge:true}:{k:'L',edge:true}; navigator.vibrate&&navigator.vibrate(8); }
+    if(x<EDGE&&xS<0){ drag={k:'Sedge',edge:true}; navigator.vibrate&&navigator.vibrate(8); }
+    else if(x>r.width-EDGE&&xE>r.width){ drag={k:'L',edge:true}; navigator.vibrate&&navigator.vibrate(8); }
     else if(ds<hit&&ds<=de) drag={k:'S'};
     else if(de<hit) drag={k:S.locked?'S':'L', fromL:S.locked};
     else { drag={k:'pan',x0:e.clientX,view:S.view.slice(),moved:false};
@@ -3024,7 +3024,8 @@ function drawSeam(g,W,top,wh,mid,amp,dpr){
       if(!S.mode){ vA().currentTime=st()+0.002; S.head=st(); }  return; }
     if(drag.k==='pan'){ const [a,b]=drag.view, dt=-(e.clientX-drag.x0)/r.width*(b-a); if(Math.abs(e.clientX-drag.x0)>5) drag.moved=true; setView(a+dt,b+dt); return; }
     const s=Math.round(clamp(tAt(e.clientX),0,S.dur)*S.sr);
-    if(drag.k==='S'){ if(S.locked) S.s0=clamp(s-(drag.off||0),0,total()-S.n); else { const end=S.s0+S.n; const ns=clamp(s,0,end-minN()); S.n=end-ns; S.s0=ns; }
+    if(drag.k==='Sedge'){ const end=S.s0+S.n; const ns=clamp(s,0,end-minN()); S.n=end-ns; S.s0=ns; }
+    else if(drag.k==='S'){ if(S.locked) S.s0=clamp(s-(drag.off||0),0,total()-S.n); else { const end=S.s0+S.n; const ns=clamp(s,0,end-minN()); S.n=end-ns; S.s0=ns; }
       if(!S.mode){ vA().currentTime=st(); S.head=st(); } }
     else if(drag.k==='Lslide'){ S.s0=clamp(s-S.n,0,total()-S.n); if(!S.mode){ const t=Math.max(0,en()-0.5/S.fps); vA().currentTime=t; S.head=t; } }
     else if(drag.k==='L'){ S.n=clamp(s-S.s0,minN(),total()-S.s0); if(!S.mode){ const t=Math.max(0,en()-0.5/S.fps); vA().currentTime=t; S.head=t; } }
@@ -3040,7 +3041,7 @@ function drawSeam(g,W,top,wh,mid,amp,dpr){
       lastTap={t:now,x:e.clientX}; }
     if(d.k==='pan'&&!d.moved){ const t=clamp(tAt(e.clientX),0,S.dur); S.head=t; if(S.mode==='all') play('all'); else if(!S.mode) vA().currentTime=t; }
     if(d.k==='T'){ render(); if(S.mode==='loop') restartSoon(); return; }
-    if(d.k==='S'||d.k==='L'||d.k==='Lslide'||((d.k==='seamL'||d.k==='seamR')&&d.moved)){ autoDiv(); render(); if(S.mode&&S.mode!=='all') restartSoon(); }
+    if(d.k==='S'||d.k==='Sedge'||d.k==='L'||d.k==='Lslide'||((d.k==='seamL'||d.k==='seamR')&&d.moved)){ autoDiv(!!d.edge); render(); if(S.mode&&S.mode!=='all') restartSoon(); }
   };
   cv.addEventListener('pointerup',up); cv.addEventListener('pointercancel',up);
   cv.addEventListener('wheel',e=>{ if(!S.buf) return; e.preventDefault();
