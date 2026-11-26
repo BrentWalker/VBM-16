@@ -513,7 +513,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
 </div>
 <div id="trimDock"><div id="tdGrip"><span id="tdName"></span></div>
 <div class="tdCtl"><div class="sl"><button id="tdSlM" aria-label="Slip video earlier"><svg width="10" height="12" viewBox="0 0 10 12"><path d="M7.5 1.5 3 6l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><i id="tdSlV">SLIP 0 f</i><button id="tdSlP" aria-label="Slip video later"><svg width="10" height="12" viewBox="0 0 10 12"><path d="M2.5 1.5 7 6l-4.5 4.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div><button id="tzSnap">SNAP</button><button id="tzOut" aria-label="Zoom out">−</button><button id="tzIn" aria-label="Zoom in">+</button><button id="tdLoop">LOOP</button><button id="ptReset">RESET</button></div>
-<div id="tdHead"><div id="tdTabs"></div></div>
+<div id="tdHead" class="solo"><div id="tdTabs"></div></div>
 <div id="tdWaveW"><canvas id="ptWave"></canvas></div>
 <div class="trimBar"><span id="ptInfo"></span></div>
 </div>
@@ -2330,7 +2330,8 @@ function showSrc(src){if(trim&&!trim.empty)trimCommit();if(!src){trim=null;rende
   trim={pad:-1,p:null,src,empty:true,s:NaN,e:NaN,s0:NaN,e0:NaN,slip:src.slip||0,v0:0,v1:src.dur,from:selPad};tzFit();renderDockTabs();drawTrim();}
 function trimLoad(i){
   const p=pads[i];
-  if(!p){if(trim&&trim.empty){drawTrim();return;}showSrc(lastSrc());return;}
+  if(!p){const unused=sources.filter(x=>x.audio&&!pads.some(q=>q&&q.srcId===x.id)).slice(-1)[0];
+    if(trim&&trim.empty&&(!unused||trim.src===unused)){drawTrim();return;}showSrc(unused||lastSrc());return;}
   if(trim&&trim.pad===i&&p===trim.p)return;
   if(pending()&&trim.from===i)return;
   if(trim&&!trim.empty)trimCommit();
@@ -2434,7 +2435,7 @@ function dockOpen(){if(dockFolded()||$('trimDock').offsetHeight<190)setDockH(Mat
     const h=d.offsetHeight;if(h<120){trimCommit();setDockH(mn,true);}else if(h<190)setDockH(190,true);else setDockH(h);});
   gp.addEventListener('pointercancel',()=>st=null);}
 /* video chips */
-function renderDockTabs(){const el=$('tdTabs');if(!el)return;el.innerHTML='';const cs=trim&&trim.src;$('tdHead').classList.toggle('solo',sources.filter(x=>x.audio).length<2);
+function renderDockTabs(){const el=$('tdTabs');if(!el)return;el.innerHTML='';const cs=trim&&trim.src;$('tdHead').classList.add('solo');
   sources.forEach((src,i)=>{if(!src.audio)return;const b=document.createElement('button');b.textContent=src.name;if(src.thumb)b.style.backgroundImage='url('+src.thumb+')';b.classList.toggle('on',src===cs);
     b.onclick=()=>{if(src===cs)return;if(i!==curSrc&&!edBusy)selectSource(i);showSrc(src);};el.appendChild(b);});}
 /* auto chop from the drawer: pick a type, it fills the next empty bank */
