@@ -2023,7 +2023,7 @@ function drawRegions(g,W,H,regs,lanes,X,selI,dpr,bandH){const lh=Math.min(14*dpr
     if(x1-x0>g.measureText(lb).width+4*dpr){g.fillStyle=lightCol(c)?COL.ink:'#fff';g.textAlign='left';g.fillText(lb,Math.max(x0,0)+2*dpr,y+lh-3.5*dpr);}
     if(on){g.strokeStyle='#fff';g.lineWidth=dpr;g.strokeRect(x0+.5,y+dpr+.5,Math.max(2*dpr,x1-x0-dpr)-1,lh-2*dpr-1);}}
   return lh;}
-function bandOf(H,dpr){if(!trim||!trim.src)return {band:0,R:null};const R=srcRegions(trim.src,trim.empty?-1:trim.pad,trim.empty?null:trim.s,trim.e);return {R,band:Math.min(H*0.34,R.lanes*14*dpr)};}
+function bandOf(H,dpr){if(!trim||!trim.src)return {band:0,R:null};const R=srcRegions(trim.src,trim.empty?-1:trim.pad,trim.empty?null:trim.s,trim.e);if(!R.regs.length)return {band:0,R:null};return {R,band:Math.min(H*0.34,R.lanes*14*dpr)};}
 function slipNow(){if(!trim)return 0;if(trim.empty)return trim.slip||0;const p=pads[trim.pad];return p?(p.slipTarget!=null?p.slipTarget:p.slip||0):0;}
 function drawTrim(){
   const c=$('ptWave');if(!c)return;
