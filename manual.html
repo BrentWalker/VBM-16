@@ -67,7 +67,7 @@ a{color:var(--air)}
 <div class="hero"><p>VBM-16 turns any video into a drum kit. Chop your clips onto pads, sequence a beat, and every hit plays its own piece of video. Export it as a music video that loops clean.</p></div>
 
 <nav>
-  <a href="#install">Install</a><a href="#beat">Make a beat</a><a href="#screen">The screen</a><a href="#types">Video types</a><a href="#slicer">Slicer</a><a href="#banks">Banks and pads</a><a href="#seq">Sequencer</a><a href="#fx">FX</a><a href="#video">Video</a><a href="#save">Save and export</a><a href="#tips">Tips</a><a href="#help">Fixes</a>
+  <a href="#install">Install</a><a href="#beat">Make a beat</a><a href="#screen">The screen</a><a href="#types">Video types</a><a href="#slicer">Waveform</a><a href="#banks">Banks and pads</a><a href="#seq">Sequencer</a><a href="#fx">FX</a><a href="#video">Video</a><a href="#save">Save and export</a><a href="#tips">Tips</a><a href="#help">Fixes</a>
 </nav>
 
 <section id="install">
@@ -91,10 +91,10 @@ a{color:var(--air)}
 
 <section id="screen">
   <h2>The screen, top to bottom</h2>
-  <div class="card"><b>iPad sideways</b><p>On an iPad (or any wide screen) held sideways, VBM-16 splits into two columns that scroll on their own. Left: the top bar, video, transport, VIDEO FX and FX. Right: sequencer, banks and the rest. Hold any panel title and drag to move it within a column or across to the other one. Hold the VIDEO title and drag left or right to swap the video to the other side; the top bar and transport go with it and stay on top. The slicer splits too: video, waveform and controls on the left, PADS on the right. Turn it upright and it goes back to one column.</p></div>
+  <div class="card"><b>iPad sideways</b><p>On an iPad (or any wide screen) held sideways, VBM-16 splits into two columns that scroll on their own. Left: the top bar, video, transport, VIDEO FX and FX. Right: sequencer, banks and the rest. Hold any panel title and drag to move it within a column or across to the other one. Hold the VIDEO title and drag left or right to swap the video to the other side; the top bar and transport go with it and stay on top. The waveform drawer runs across the bottom. Turn it upright and it goes back to one column.</p></div>
   <div class="card"><b>Top bar</b><p>Floppy disk opens the save window, with this guide at the top. Camera adds a video. <span class="btn">↶</span> undo and <span class="btn">↷</span> redo cover your last 60 changes. <span class="btn s">EXPORT</span> opens the export window.</p></div>
   <div class="card"><b>Video</b><p>Shows your hits as they play. Pinch to zoom in, drag to look around, double tap to zoom back out. Drag the bar under it to resize, double tap the bar for small, medium, large and tall.</p></div>
-  <div class="card"><b>Transport</b><p><span class="btn">▶</span> play, red dot live record, tempo, metronome, <strong>pizza</strong> opens the slicer, <strong>keyboard</strong> turns on KEYS, <strong>eye</strong> picks the video view, and the red <strong>speaker with an X</strong> stops every sound at once (the beat, held pads, loops and echo or reverb tails). The slicer has the same button up top.</p></div>
+  <div class="card"><b>Transport</b><p><span class="btn">▶</span> play, red dot live record, tempo, metronome, <strong>keyboard</strong> turns on KEYS, <strong>eye</strong> picks the video view, and the red <strong>speaker with an X</strong> stops every sound at once (the beat, held pads, loops and echo or reverb tails). The slicer has the same button up top.</p></div>
   <div class="card"><b>VIDEO FX</b><p>FIT or FILL, MIX layout, WAVE, TAG, and the picture effects ZOOM, SHK, VHS and DUO.</p></div>
   <div class="card"><b>AUDIO FX and track FX</b><p>The top row punches effects into everything. The row under it holds 2 effects per track.</p></div>
   <div class="card"><b>STEP SEQUENCER</b><p>Tracks A to D with mute, LNGTH, bar pages, FOLLOW, the 16 steps and the nudge row.</p></div>
@@ -115,18 +115,19 @@ a{color:var(--air)}
     <tr><td>TRANSIENT</td><td>Finds every hit in the video, divides them by 16 and keeps every Nth one, so the chops spread across the whole clip. Each chop runs to the next.</td></tr>
     <tr><td>EQUAL</td><td>Cuts the whole video into 16 equal parts</td></tr>
   </table>
-  <p class="note"><strong>AUTO CHOP</strong> fills the next empty bank and never overwrites one. <strong>JUST UPLOAD</strong> opens the slicer so you chop it yourself.</p>
+  <p class="note"><strong>AUTO CHOP</strong> fills the next empty bank and never overwrites one. <strong>JUST UPLOAD</strong> puts it in the waveform drawer so you chop it yourself.</p>
   <p class="note"><strong>Scale reader:</strong> every video gets its key read, like <span class="mono">V1 Cm</span> on its tab. Pads with a clear pitch also show their note.</p>
 </section>
 
 <section id="slicer">
-  <h2>Chop it yourself (the slicer)</h2>
-  <div class="step"><div class="n">1</div><div><b>Open the slicer</b><p>Tap the <strong>pizza</strong>. Each video is a tab across the top. <span class="btn">+ VIDEO</span> adds another.</p></div></div>
-  <div class="step"><div class="n">2</div><div><b>Set the slice</b><p>Drag either edge on the waveform. Edges can pass each other, whichever is on the left is the start. Tap the wave to hear a spot, pinch to zoom.</p></div></div>
-  <div class="step"><div class="n">3</div><div><b>Slide it</b><p>Hold inside the selection until it lights up, then drag to move the whole slice. Zoomed in with an edge off screen? Slide in from the left side to pull the start, from the right side to pull the end.</p></div></div>
-  <div class="step"><div class="n">4</div><div><b>Check the loop</b><p>Press the big <span class="btn">▶</span> with <span class="btn l">LOOP</span> on. Nudge with <span class="btn">[</span> and <span class="btn">]</span>. The middle button sets 1 ms, 10 ms or 1 frame. <span class="btn">½</span>, <span class="btn">×2</span> and the note buttons set the length to the beat.</p></div></div>
-  <div class="step"><div class="n">5</div><div><b>Line up the picture</b><p><span class="btn">VIDEO SLIP</span> moves the picture up to 1 second earlier or later while the sound stays put. The red bar shows where the video now comes from.</p></div></div>
-  <div class="step"><div class="n">6</div><div><b>Send it</b><p>Tap an empty pad under <strong>PADS</strong> and the slice drops in. Tap a filled pad to edit its slice right there; tapping the next pad keeps your change and moves on, so you can tune every pad one by one without leaving the slicer. Hold a pad to replace it with the current slice. The bank blocks above pick which bank you fill.</p></div></div>
+  <h2>The waveform drawer</h2>
+  <div class="step"><div class="n">1</div><div><b>One waveform per video</b><p>The drawer at the bottom of the screen shows a video's whole sound. Every pad cut from that video is a colored region across the top, so pads are just pieces of the same waveform. Each video is a chip at the top of the drawer: tap one to switch. The camera and + buttons add a video.</p></div></div>
+  <div class="step"><div class="n">2</div><div><b>Size it</b><p>Drag the handle at the top of the drawer up to make it tall, or all the way down to tuck it away. Tap the handle to fold it or bring it back.</p></div></div>
+  <div class="step"><div class="n">3</div><div><b>Make a slice</b><p>Drag across the sound. It turns red with NEW on it and plays. Drag the red lines to fine tune it. <span class="btn">SNAP</span> keeps the length to whole sequencer steps, <span class="btn">LOOP</span> repeats it while you listen.</p></div></div>
+  <div class="step"><div class="n">4</div><div><b>Put it on a pad</b><p>Press inside the slice and drag it up. The drawer slides down out of the way. Drop it on any pad. A full pad gets replaced (Undo brings it back). Rest on a bank block to switch banks while dragging.</p></div></div>
+  <div class="step"><div class="n">5</div><div><b>Edit a pad</b><p>Tap its region (or tap the pad) and drag its red lines, anywhere in the video, even past where it was first cut. Picking another pad saves it. Drag a region up onto another pad to copy it there.</p></div></div>
+  <div class="step"><div class="n">6</div><div><b>Line up the picture</b><p><span class="btn">SLIP</span> moves the picture a frame earlier or later while the sound stays put. On a new slice it is remembered for that video, so every slice after lines up too.</p></div></div>
+  <div class="step"><div class="n">7</div><div><b>Zoom</b><p><span class="btn">−</span> and <span class="btn">+</span> zoom and stay put from pad to pad. Drag along the row of regions to slide. <span class="btn l">AUTO CHOP</span> fills the next empty bank from the video in the drawer.</p></div></div>
 </section>
 
 <section id="banks">
@@ -137,7 +138,7 @@ a{color:var(--air)}
   <div class="card"><b>Play modes</b><p><span class="btn">ONE SHOT</span> plays the whole chop. <span class="btn">GATE</span> stops when you let go, one step in the sequencer. <span class="btn">LOOP</span> repeats while held, and in the sequencer until that pad plays again.</p></div>
   <div class="card"><b>Mute groups</b><p>Pads ring over each other. Put pads in the same <span class="btn">MUTE GRP</span> 1 to 4 to make them cut each other off, like an open and closed hat. To set a whole bank at once, hold its block in the bank strip and tap a <span class="btn">MUTE GRP</span> button, or change any PAD EDIT setting (PITCH, LEVEL, REVERSE, ONE SHOT, GATE or LOOP, FADE IN, FADE OUT, DECAY, FREEZE): all 16 pads take that setting. VIDEO SLIP stays per pad.</p></div>
   <div class="card"><b>Make and trim pads</b><p>The TRIM strip at the bottom of the screen is always there. For pads cut from a loaded video it shows that video's whole sound, with every pad cut from it drawn as a colored region across the top. Regions can overlap: a pad that covers others gets its own row.</p><p><b>Make a pad:</b> drag across the sound. The new region goes to the selected pad if it is empty, otherwise to the next empty pad in the bank (or the next bank with room). No pad tapping needed. Move it later with hold and drag in PAD BANKS.</p><p><b>Trim:</b> tap a region to pick that pad and hear it. Drag the red lines to move its start and end anywhere in the video, even past where it was first cut. Picking another pad saves the last one. RESET puts it back, Undo too.</p><p><b>SNAP</b> makes lengths whole sequencer steps. <b>−</b> and <b>+</b> zoom, and the zoom stays the same pad to pad. Drag along the row of regions to slide. Tap the TRIM bar to fold it to a thin bar (that saves too). If a pad's video is not loaded (old sessions saved without videos, demo pads), the strip shows just that pad and it can only be trimmed shorter.</p></div>
-  <div class="card"><b>Shape a pad</b><p>Pitch, level, reverse, fade in, fade out, decay, freeze frame and video slip. <span class="btn">EDIT SLICE</span> reopens it in the slicer while its video is loaded. Move or resize the slice, then tap <span class="btn l">DONE · PAD</span> and the pad updates, keeping its pitch, level and other settings.</p></div>
+  <div class="card"><b>Shape a pad</b><p>Pitch, level, reverse, fade in, fade out, decay, freeze frame and video slip. <span class="btn">EDIT SLICE</span> opens the waveform drawer on that pad. Changing its start and end keeps its pitch, level and other settings.</p></div>
 </section>
 
 <section id="seq">
@@ -208,17 +209,17 @@ a{color:var(--air)}
   <div class="card"><b>Match keys</b><p>Check the key on each video's tab before mixing samples, so your chops sit together.</p></div>
   <div class="card"><b>Hats in a mute group</b><p>Put the open and closed hat in the same group so the closed one chokes the open one.</p></div>
   <div class="card"><b>Fatten the low end</b><p>LBST on the 808 track and LCUT on the sample track keeps the bass clear.</p></div>
-  <div class="card"><b>Fix late video once</b><p>Phone cameras often show the picture a few frames late. Set VIDEO SLIP in the slicer and every chop from that video comes out lined up.</p></div>
+  <div class="card"><b>Fix late video once</b><p>Phone cameras often show the picture a few frames late. Set SLIP in the drawer on a new slice and every chop after it from that video comes out lined up.</p></div>
   <div class="card"><b>Brand every export</b><p>Turn on TAG and every video you post carries your name.</p></div>
 </section>
 
 <section id="help">
   <h2>Fixes</h2>
-  <div class="card"><b>EDIT SLICE is empty on an old session</b><p>Sessions saved before INCLUDE VIDEOS, or with it off, keep every chop but not the full videos. Tap EDIT SLICE on the pad, then + VIDEO and pick the same video again. That pad and every pad cut from the same video link back, so EDIT SLICE and VIDEO SLIP work again.</p></div>
+  <div class="card"><b>A pad shows only itself in the drawer</b><p>Sessions saved before INCLUDE VIDEOS, or with it off, keep every chop but not the full videos. Add the same video again with the + button in the drawer. That pad and every pad cut from the same video link back, so EDIT SLICE and VIDEO SLIP work again.</p></div>
   <div class="card"><b>Export picture freezes partway</b><p>The picture stops if the screen dims or locks while recording, even though the sound keeps going. VBM-16 now asks the phone to stay awake during exports. If it still happens on long exports, set Settings, Display and Brightness, Auto-Lock to a longer time, and keep VBM-16 on screen until the clip appears.</p></div>
   <div class="card"><b>No sound after recording with the camera</b><p>Recording turns on the iPhone mic, which can interrupt VBM-16's sound. If a clip comes in silent, tap <span class="btn">TRY AGAIN</span>. Still silent: make sure the ring switch isn't on silent, or record in the Camera app and add the clip with the camera icon.</p></div>
   <div class="card"><b>"Listening to the audio" takes a while</b><p>On iPhone, VBM-16 plays the clip silently once to grab the sound, about as long as the clip, up to the first 60 seconds.</p></div>
-  <div class="card"><b>The finger lands late on the hit</b><p>Use VIDEO SLIP in the slicer and tap <span class="btn">◀</span> one frame at a time until it lines up.</p></div>
+  <div class="card"><b>The finger lands late on the hit</b><p>Use SLIP in the drawer (or VIDEO SLIP in PAD EDIT) one frame at a time until it lines up.</p></div>
   <div class="card"><b>"All 8 banks are full"</b><p>Auto chop never overwrites. Clear a bank with the red button in PAD BANKS, then add the video again.</p></div>
   <div class="card"><b>A click at the start or end of a chop</b><p>Raise FADE IN or FADE OUT on that pad a few ms.</p></div>
   <div class="card"><b>The key reads wrong</b><p>Busy drums and noisy clips are hard to read. Trust your ears and use the second choice it shows when it isn't sure.</p></div>
