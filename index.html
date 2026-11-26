@@ -1985,7 +1985,7 @@ function trimLoad(i){
   if(trim&&!trim.empty)trimCommit();
   const src=trimSrc(p);
   if(src){const s0=p.start||0,e0=Math.min(src.dur,s0+p.len);trim={pad:i,p,src,s:s0,e:e0,s0,e0,v0:0,v1:src.dur};tzFit();}
-  else{const L=p.buf.duration;trim={pad:i,p,src:null,s:0,e:L,s0:0,e0:L,v0:0,v1:L};}
+  else{const L=p.buf.duration;trim={pad:i,p,src:null,s:0,e:L,s0:0,e0:L,v0:-L*0.35,v1:L*1.35};}
   drawTrim();
 }
 function trimRefresh(){if(!trim){trimLoad(selPad);return;}if(trim.empty){drawTrim();return;}if(pads[trim.pad]!==trim.p){const i=trim.pad;trim=null;trimLoad(i);}else drawTrim();}
@@ -2005,9 +2005,11 @@ async function trimCommit(){
 }
 /* region map */
 let tview={id:null,v0:0,v1:0};
-function tzFit(){const t=trim;if(!t||!t.src)return;const D=t.src.dur,z=Math.max(1,UI.tz||1),span=D/z;
+function tzFit(){const t=trim;if(!t||!t.src)return;const D=t.src.dur,z=Math.max(1,UI.tz||1);let span=D/z;
   if(tview.id===t.src.id&&Math.abs((tview.v1-tview.v0)-span)<1e-6){t.v0=tview.v0;t.v1=tview.v1;}else{t.v0=0;t.v1=span;}
-  if(isFinite(t.s)&&(t.s<t.v0||t.e>t.v1)){const c=(t.s+t.e)/2;t.v0=Math.max(0,Math.min(D-span,c-span/2));t.v1=t.v0+span;}
+  if(isFinite(t.s)){const len=t.e-t.s;
+    if(len>span*0.6){span=Math.min(D,len/0.6);UI.tz=D/span;}
+    if(len>span*0.6||t.s<t.v0+span*0.1||t.e>t.v1-span*0.1){const c=(t.s+t.e)/2;t.v0=Math.max(0,Math.min(D-span,c-span/2));t.v1=t.v0+span;}}
   tview={id:t.src.id,v0:t.v0,v1:t.v1};}
 function srcRegions(src,selI,liveS,liveE){const out=[];for(let k=0;k<NP;k++){const p=pads[k];if(!p||p.srcId!==src.id)continue;let a=p.start||0,b=a+p.len;if(k===selI&&liveS!=null){a=liveS;b=liveE;}out.push({k,a,b});}
   out.sort((x,y)=>x.a-y.a||y.b-x.b);const ends=[];for(const r of out){let l=ends.findIndex(e=>e<=r.a+1e-4);if(l<0){l=ends.length;ends.push(0);}ends[l]=r.b;r.lane=l;}
@@ -2042,11 +2044,12 @@ function drawTrim(){
     if(P&&(b-a)>=P.B){for(let k=Math.floor(a/P.B);k<Math.ceil(b/P.B)&&k<P.min.length;k++){if(P.min[k]<lo)lo=P.min[k];if(P.max[k]>hi)hi=P.max[k];}}
     else for(let k=a;k<b&&k<d.length;k+=Math.max(1,Math.floor((b-a)/64))){const v=d[k];if(v<lo)lo=v;if(v>hi)hi=v;}
     g.fillStyle=has&&x>=x0&&x<=x1?(newC?COL.fire:COL.air):(has?'rgba(173,207,222,.35)':'rgba(173,207,222,.7)');const y0=mid-Math.min(1,hi*nrm)*WH*0.46,y1=mid-Math.max(-1,lo*nrm)*WH*0.46;g.fillRect(x,y0,1,Math.max(1,y1-y0));}
+  if(!t.src){const L=t.p.buf.duration;g.fillStyle='rgba(49,48,67,.7)';g.fillRect(0,top,Math.max(0,X(0)),WH);g.fillRect(X(L),top,W-X(L),WH);}
   if(has&&!newC){g.fillStyle='rgba(49,48,67,.45)';g.fillRect(0,top,x0,WH);g.fillRect(x1,top,W-x1,WH);}
   if(t.nA!=null){const a=X(t.nA),b=X(t.nB);g.fillStyle='rgba(220,123,120,.35)';g.fillRect(a,top,b-a,WH);g.fillStyle=COL.fire;g.fillRect(a-dpr,top,2*dpr,WH);g.fillRect(b-dpr,top,2*dpr,WH);}
   if(R){g.fillStyle='rgba(66,76,96,.9)';g.fillRect(0,0,W,band);drawRegions(g,W,H,R.regs,R.lanes,X,t.pad,dpr,band);
 }
-  {const D=tD();if(span<D-1e-6){g.fillStyle='rgba(255,255,255,.08)';g.fillRect(0,H-3*dpr,W,3*dpr);g.fillStyle='rgba(173,207,222,.6)';g.fillRect(t.v0/D*W,H-3*dpr,Math.max(2,span/D*W),3*dpr);}}
+  {const D=tD();if(span<D-1e-6){g.fillStyle='rgba(255,255,255,.08)';g.fillRect(0,H-3*dpr,W,3*dpr);g.fillStyle='rgba(173,207,222,.6)';g.fillRect((t.v0-vLo())/D*W,H-3*dpr,Math.max(2,span/D*W),3*dpr);}}
   if(has)[[x0,true],[x1,false]].forEach(([x,st])=>{g.fillStyle=COL.fire;g.fillRect(x-dpr,top,2*dpr,WH);g.beginPath();const w=9*dpr;if(st){g.moveTo(x,top);g.lineTo(x+w,top);g.lineTo(x,top+w*1.3);}else{g.moveTo(x,H);g.lineTo(x-w,H);g.lineTo(x,H-w*1.3);}g.fill();});
   if(pending()){g.font='700 '+(10*dpr)+'px ui-monospace,Menlo,monospace';g.textAlign='left';g.fillStyle='#fff';g.fillText('NEW · HOLD AND DRAG TO A PAD',Math.max(2*dpr,Math.min(x0+4*dpr,W-150*dpr)),top+13*dpr);}
   const steps=has&&t.src&&UI.tsnap?' · '+(+((t.e-t.s)/stepDur()).toFixed(2))+' steps':'';
@@ -2087,13 +2090,17 @@ function dSlip(d){if(!trim||!trim.src)return;if(pending()){trim.slip=d===0?0:cla
 $('tdSlM').onclick=()=>dSlip(-FR);$('tdSlP').onclick=()=>dSlip(FR);$('tdSlV').onclick=()=>dSlip(0);
 $('tzSnap').onclick=()=>{UI.tsnap=!UI.tsnap;saveUI();drawTrim();};
 $('tdLoop').onclick=()=>{loopOn=!loopOn;if(loopOn)trimAudition();else{try{audNode&&audNode.stop();}catch(e){}audNode=null;}drawTrim();};
-function trimZoom(f){if(!trim)return;const D=tD(),z=Math.max(1,Math.min(64,(D/(trim.v1-trim.v0))*f));if(trim.src){UI.tz=z;saveUI();}const sp=D/z,c=isFinite(trim.s)?(trim.s+trim.e)/2:(trim.v0+trim.v1)/2;
-  trim.v0=Math.max(0,Math.min(D-sp,c-sp/2));trim.v1=trim.v0+sp;if(trim.src)tview={id:trim.src.id,v0:trim.v0,v1:trim.v1};drawTrim();}
+function trimZoom(f){if(!trim)return;const c=isFinite(trim.s)?(trim.s+trim.e)/2:(trim.v0+trim.v1)/2;setSpan((trim.v1-trim.v0)/f,c);}
 $('tzOut').onclick=()=>trimZoom(0.5);$('tzIn').onclick=()=>trimZoom(2);
 $('ptReset').onclick=()=>{if(!trim)return;if(pending()){showSrc(trim.src);return;}if(!trim.empty){trim.s=trim.s0;trim.e=trim.e0;drawTrim();}};
 /* touch on the waveform: drag across to slice, drag red lines to trim, hold to lift onto a pad or bank, pinch or double tap to zoom */
-function tD(){return trim?(trim.src?trim.src.dur:trim.p.buf.duration):0;}
-function setSpan(sp,c){const t=trim;if(!t)return;const D=tD();sp=Math.max(Math.min(D,0.02),Math.min(D,sp));if(t.src){UI.tz=D/sp;saveUI();}t.v0=Math.max(0,Math.min(D-sp,c-sp/2));t.v1=t.v0+sp;if(t.src)tview={id:t.src.id,v0:t.v0,v1:t.v1};drawTrim();}
+/* the view can run a little past a pad's ends when its video is not loaded, so its lines never sit on the edge */
+function vLo(){return trim&&!trim.src?-trim.p.buf.duration*0.35:0;}
+function vHi(){return trim?(trim.src?trim.src.dur:trim.p.buf.duration*1.35):0;}
+function tD(){return vHi()-vLo();}
+function dEnd(){return trim?(trim.src?trim.src.dur:trim.p.buf.duration):0;}
+/* fx: where on screen (0 left, 1 right) time c should sit, so zoom stays under your fingers */
+function setSpan(sp,c,fx){const t=trim;if(!t)return;const lo=vLo(),D=tD();fx=fx==null?0.5:fx;sp=Math.max(Math.min(D,0.02),Math.min(D,sp));if(t.src){UI.tz=D/sp;saveUI();}t.v0=Math.max(lo,Math.min(lo+D-sp,c-fx*sp));t.v1=t.v0+sp;if(t.src)tview={id:t.src.id,v0:t.v0,v1:t.v1};drawTrim();}
 {const c=$('ptWave');let dr=null,ghost=null,over=null,overB=null,bankT=null,liftH=0,holdT=null,lastTap=0,lastX=0;const P=new Map();let pinch=null;
   const tAt=(x,r)=>trim.v0+(x-r.left)/r.width*(trim.v1-trim.v0);
   const clearOver=()=>{if(over){over.classList.remove('dropT');over=null;}if(overB){overB.classList.remove('dropT');overB=null;}clearTimeout(bankT);};
@@ -2113,8 +2120,8 @@ function setSpan(sp,c){const t=trim;if(!t)return;const D=tD();sp=Math.max(Math.m
     if(d.inSel)return {src,a:trim.s,b:trim.e,slip:trim.empty?trim.slip||0:slipNow(),label:trim.empty?'NEW SLICE':'PAD '+padLabel(trim.pad)};
     if(d.pick!=null){const p=pads[d.pick];return p?{src,a:p.start||0,b:(p.start||0)+p.len,slip:p.slip||0,label:'PAD '+padLabel(d.pick)}:null;}return null;}
   function dbl(e,r){if(!trim)return;const D=tD(),sp=trim.v1-trim.v0,t=tAt(e.clientX,r);
-    if(sp<D-1e-6){setSpan(D,D/2);return;}
-    let tgt=D/4,c=t;if(isFinite(trim.s)&&t>=trim.s&&t<=trim.e){tgt=Math.max((trim.e-trim.s)*2.5,0.05);c=(trim.s+trim.e)/2;}setSpan(Math.min(D/2,tgt),c);}
+    if(sp<D-1e-6){setSpan(D,vLo()+D/2);return;}
+    const fx=(e.clientX-r.left)/r.width;if(isFinite(trim.s)&&t>=trim.s&&t<=trim.e){setSpan(Math.min(D/2,Math.max((trim.e-trim.s)*2.5,0.05)),(trim.s+trim.e)/2);return;}setSpan(D/4,t,fx);}
   c.addEventListener('pointerdown',e=>{if(!trim)return;e.preventDefault();try{c.setPointerCapture(e.pointerId);}catch(_){}
     P.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(P.size===2){clearTimeout(holdT);if(dr&&dr.mode==='lift')liftEnd(false,dr.item);if(dr&&dr.mode==='new'){trim.nA=trim.nB=null;}dr=null;
@@ -2128,17 +2135,17 @@ function setSpan(sp,c){const t=trim;if(!t)return;const D=tD();sp=Math.max(Math.m
     dr={which,pick,zone,x:e.clientX,y:e.clientY,t0:t,v0:trim.v0,inSel:has&&t>=trim.s&&t<=trim.e,mode:null,r};
     clearTimeout(holdT);const d0=dr;holdT=setTimeout(()=>{if(dr!==d0||dr.mode)return;const it=itemAt(d0);if(it)lift(it);},380);});
   c.addEventListener('pointermove',e=>{if(P.has(e.pointerId))P.set(e.pointerId,{x:e.clientX,y:e.clientY});
-    if(pinch&&P.size>=2&&trim){const [a,b]=[...P.values()];const d=Math.max(20,Math.hypot(a.x-b.x,a.y-b.y));setSpan(pinch.sp*pinch.d/d,pinch.c);return;}
+    if(pinch&&P.size>=2&&trim){const [a,b]=[...P.values()];const d=Math.max(20,Math.hypot(a.x-b.x,a.y-b.y));const fx=(((a.x+b.x)/2)-pinch.r.left)/pinch.r.width;setSpan(pinch.sp*pinch.d/d,pinch.c,fx);return;}
     if(!dr||!trim)return;
     if(dr.mode==='lift'){liftMove(e);return;}
     const dx=e.clientX-dr.x,dy=e.clientY-dr.y;
     if(!dr.mode){if(Math.hypot(dx,dy)<7)return;clearTimeout(holdT);const src=trim.src;
       dr.mode=dr.which?'edge':dr.zone==='band'?'pan':src?'new':'pan';
       if(dr.mode==='new'&&!trim.empty){trimCommit();}}
-    const src=trim.src,D=tD(),t=Math.max(0,Math.min(D,tAt(e.clientX,dr.r)));
-    const follow=()=>{const sp=trim.v1-trim.v0,edge=sp*0.04;if(t<trim.v0+edge&&trim.v0>0){trim.v0=Math.max(0,trim.v0-sp*0.02);trim.v1=trim.v0+sp;}else if(t>trim.v1-edge&&trim.v1<D){trim.v1=Math.min(D,trim.v1+sp*0.02);trim.v0=trim.v1-sp;}if(src)tview={id:src.id,v0:trim.v0,v1:trim.v1};};
+    const src=trim.src,D=dEnd(),lo=vLo(),hi=vHi(),t=Math.max(0,Math.min(D,tAt(e.clientX,dr.r)));
+    const follow=()=>{const sp=trim.v1-trim.v0,edge=sp*0.04;if(t<trim.v0+edge&&trim.v0>lo){trim.v0=Math.max(lo,trim.v0-sp*0.02);trim.v1=trim.v0+sp;}else if(t>trim.v1-edge&&trim.v1<hi){trim.v1=Math.min(hi,trim.v1+sp*0.02);trim.v0=trim.v1-sp;}if(src)tview={id:src.id,v0:trim.v0,v1:trim.v1};};
     if(dr.mode==='edge'){if(dr.which==='s')trim.s=Math.min(snapLen(trim.e,t,-1),trim.e-0.02);else trim.e=Math.max(snapLen(trim.s,t,1),trim.s+0.02);trim.s=Math.max(0,trim.s);trim.e=Math.min(D,trim.e);follow();drawTrim();}
-    else if(dr.mode==='pan'){if(trim.v1-trim.v0<D-1e-6){const sp=trim.v1-trim.v0,dt=(e.clientX-dr.x)/dr.r.width*sp;trim.v0=Math.max(0,Math.min(D-sp,dr.v0-dt));trim.v1=trim.v0+sp;if(src)tview={id:src.id,v0:trim.v0,v1:trim.v1};drawTrim();}}
+    else if(dr.mode==='pan'){if(trim.v1-trim.v0<hi-lo-1e-6){const sp=trim.v1-trim.v0,dt=(e.clientX-dr.x)/dr.r.width*sp;trim.v0=Math.max(lo,Math.min(hi-sp,dr.v0-dt));trim.v1=trim.v0+sp;if(src)tview={id:src.id,v0:trim.v0,v1:trim.v1};drawTrim();}}
     else if(dr.mode==='new'){let a=Math.min(dr.t0,t),b=Math.max(dr.t0,t);if(UI.tsnap){if(t>=dr.t0)b=snapLen(dr.t0,t,1);else a=snapLen(dr.t0,t,-1);a=Math.max(0,a);b=Math.min(src.dur,b);}trim.nA=a;trim.nB=b;follow();drawTrim();}});
   const up=e=>{P.delete(e.pointerId);clearTimeout(holdT);
     if(pinch){if(P.size<2)pinch=null;dr=null;lastTap=0;return;}
