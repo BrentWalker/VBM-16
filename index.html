@@ -912,6 +912,8 @@ async function makePad(src,s,len,onProg,slip){
 let pendingVid=null;
 async function addVideo(file){
   if(!file)return;initAudio();if(playing)stop();dockOpen();
+  /* ask the browser to keep saved videos even when the phone is low on space */
+  try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist();}catch(e){}
   if(edBusy){estFlash('Hang on, still working on the last video.',2000);return;}
   edBusy=true;est('Opening video',0.03);
   const url=URL.createObjectURL(file);
