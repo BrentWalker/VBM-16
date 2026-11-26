@@ -28,10 +28,11 @@ button:disabled{opacity:.35}
 /* iPad and other wide screens held sideways: two columns. Left: title bar, video, transport and its panels. Right: the rest. */
 body.wide .wrap{max-width:1500px}
 body.wide .cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:16px;align-items:start}
-body.wide #colL,body.wide #colR{position:sticky;top:0;max-height:100vh;max-height:100dvh;overflow-y:auto;overscroll-behavior:contain;padding:calc(10px + env(safe-area-inset-top)) 10px calc(40px + var(--dockH));margin:calc(-10px - env(safe-area-inset-top)) -10px 0;scrollbar-width:none}
+body.wide #colL,body.wide #colR{position:sticky;top:0;max-height:100vh;max-height:100dvh;overflow-y:auto;overscroll-behavior:contain;padding:calc(10px + env(safe-area-inset-top)) 10px 0;margin:calc(-10px - env(safe-area-inset-top)) -10px 0;scrollbar-width:none}
 body.wide #colL::-webkit-scrollbar,body.wide #colR::-webkit-scrollbar{display:none}
 body.wide #vidBlock.lifted{opacity:.6;outline:2px dashed var(--air);outline-offset:4px;border-radius:14px}
 body.wide #panelsL:empty{min-height:40px}
+body.wide #panelsL,body.wide #colR>:last-child{margin-bottom:calc(40px + var(--dockH))}
 #stage{touch-action:pan-y;position:relative;height:36vh;min-height:200px;background:#000;border-radius:14px;overflow:hidden;display:flex;align-items:center;justify-content:center}
 #ovc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 #cv{display:block;width:100%;height:100%}
@@ -159,6 +160,11 @@ body{padding-bottom:calc(10px + var(--dockH))}
 .panel.min>*:not(h3){display:none!important}
 .panel.tight{margin-top:8px;padding:8px 10px}
 #vidBlock .transport{margin-top:8px}
+section.panel{scroll-margin-top:calc(var(--vbH,0px) + 8px)}
+/* title bar, video and transport stay locked at the top while the panels scroll under */
+body:not(.wide) #colL{position:sticky;top:0;z-index:9}
+#vidBlock{position:relative;z-index:9;background:var(--ink);margin:calc(-8px - env(safe-area-inset-top)) -10px 10px;padding:calc(8px + env(safe-area-inset-top)) 10px 8px;box-shadow:0 10px 14px -10px rgba(0,0,0,.6)}
+body.wide #vidBlock{position:sticky;top:0;margin-top:0;padding-top:0}
 .panel.tight .fx{margin-top:0}
 .panel.tight .steps{margin-top:6px}
 #secVid{padding:6px}
@@ -2407,15 +2413,19 @@ async function dropRegion(k,src,a,b,slip){
 /* drawer height: drag the handle, tap it to fold or open */
 const DMIN=()=>30+(parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sab'))||0);
 function dockSize(){const d=$('trimDock');document.documentElement.style.setProperty('--dockH',d.offsetHeight+'px');}
-function setDockH(h,anim,keep){const d=$('trimDock'),mx=Math.round(window.innerHeight*0.88),mn=d.querySelector('#tdGrip').offsetHeight+2;h=Math.max(mn,Math.min(mx,h));
+function setDockH(h,anim,keep){const d=$('trimDock'),mx=dockMax(),mn=foldH();h=Math.max(mn,Math.min(mx,h));
   d.classList.toggle('anim',!!anim);d.style.height=h+'px';if(!keep){UI.dockH=h;if(h>mn+20)UI.dockLast=h;saveUI();}
   setTimeout(()=>{dockSize();drawTrim();},anim?240:0);}
-function dockFolded(){return $('trimDock').offsetHeight<=$('tdGrip').offsetHeight+6;}
+function sab(){let p=document.getElementById('sabProbe');if(!p){p=document.createElement('div');p.id='sabProbe';p.style.cssText='position:fixed;left:0;bottom:0;width:1px;height:env(safe-area-inset-bottom);visibility:hidden;pointer-events:none';document.body.appendChild(p);}return p.offsetHeight||0;}
+/* folded, the handle stays above the iPhone home bar so a swipe on it never turns into swiping the app away */
+function foldH(){return $('tdGrip').offsetHeight+Math.max(sab(),8)+18;}
+function dockMax(){const vb=$('vidBlock').getBoundingClientRect();return Math.max(200,Math.round(window.innerHeight-Math.max(0,vb.bottom)-8));}
+function dockFolded(){return $('trimDock').offsetHeight<=foldH()+4;}
 function dockOpen(){if(dockFolded()||$('trimDock').offsetHeight<190)setDockH(Math.max(240,UI.dockLast||300),true);}
 {const gp=$('tdGrip');let st=null;
   gp.addEventListener('pointerdown',e=>{e.preventDefault();try{gp.setPointerCapture(e.pointerId);}catch(_){}st={y:e.clientY,h:$('trimDock').offsetHeight,moved:false};});
   gp.addEventListener('pointermove',e=>{if(!st)return;const dy=st.y-e.clientY;if(!st.moved&&Math.abs(dy)<5)return;st.moved=true;setDockH(st.h+dy,false,true);});
-  gp.addEventListener('pointerup',()=>{if(!st)return;const s0=st;st=null;const d=$('trimDock'),mn=$('tdGrip').offsetHeight+2;
+  gp.addEventListener('pointerup',()=>{if(!st)return;const s0=st;st=null;const d=$('trimDock'),mn=foldH();
     if(!s0.moved){if(dockFolded())setDockH(UI.dockLast||300,true);else{trimCommit();setDockH(mn,true);}return;}
     const h=d.offsetHeight;if(h<120){trimCommit();setDockH(mn,true);}else if(h<190)setDockH(190,true);else setDockH(h);});
   gp.addEventListener('pointercancel',()=>st=null);}
@@ -2447,7 +2457,7 @@ function setSpan(sp,c){const t=trim;if(!t)return;const D=tD();sp=Math.max(Math.m
 {const c=$('ptWave');let dr=null,ghost=null,over=null,overB=null,bankT=null,liftH=0,holdT=null,lastTap=0,lastX=0;const P=new Map();let pinch=null;
   const tAt=(x,r)=>trim.v0+(x-r.left)/r.width*(trim.v1-trim.v0);
   const clearOver=()=>{if(over){over.classList.remove('dropT');over=null;}if(overB){overB.classList.remove('dropT');overB=null;}clearTimeout(bankT);};
-  function lift(item){dr.mode='lift';dr.item=item;liftH=$('trimDock').offsetHeight;setDockH($('tdGrip').offsetHeight+2,true,true);try{navigator.vibrate&&navigator.vibrate(15);}catch(_){}
+  function lift(item){dr.mode='lift';dr.item=item;liftH=$('trimDock').offsetHeight;setDockH(foldH(),true,true);try{navigator.vibrate&&navigator.vibrate(15);}catch(_){}
     ghost=document.createElement('div');ghost.className='regGhost';ghost.textContent=item.label;ghost.style.left=dr.x+'px';ghost.style.top=dr.y+'px';document.body.appendChild(ghost);
     try{const sp=$('secPads');if(sp.classList.contains('min'))sp.querySelector('h3').click();sp.scrollIntoView({block:'center',behavior:'smooth'});}catch(e){}}
   function liftMove(e){ghost.style.left=e.clientX+'px';ghost.style.top=e.clientY+'px';const el=document.elementFromPoint(e.clientX,e.clientY);
@@ -2503,6 +2513,7 @@ function setSpan(sp,c){const t=trim;if(!t)return;const D=tD();sp=Math.max(Math.m
 {const d=$('trimDock');d.insertBefore($('est'),$('tdWaveW'));d.style.height=(UI.dockH||300)+'px';
   try{new ResizeObserver(()=>{dockSize();drawTrim();}).observe(d);}catch(e){}dockSize();window.addEventListener('resize',()=>{setDockH(d.offsetHeight,false,true);});}
 document.addEventListener('visibilitychange',()=>{if(document.hidden)trimCommit();});
+try{new ResizeObserver(()=>{const h=$('vidBlock').offsetHeight;document.documentElement.style.setProperty('--vbH',h+'px');const d=$('trimDock');if(d.offsetHeight>dockMax())setDockH(dockMax(),false,true);}).observe($('vidBlock'));}catch(e){}
 ['gesturestart','gesturechange'].forEach(n=>$('trimDock').addEventListener(n,e=>e.preventDefault()));
 
 function renderPadPanel(){
