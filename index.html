@@ -198,9 +198,16 @@ select{font:inherit;font-size:12px;background:var(--slate);color:var(--w);border
 #duckPop .duck svg{width:100%;height:100%}
 #duckPop .dtxt{flex:1;display:flex;flex-direction:column;gap:2px;font-size:12px}
 #duckPop .dtxt b{letter-spacing:.14em;color:var(--air)}
-#duckPop{flex-wrap:wrap;max-height:calc(100vh - 20px);overflow-y:auto}
+#duckPop{max-height:calc(100vh - 20px);overflow-y:auto}
 #duckPop>button{flex:0 0 auto;padding:10px 12px;font-size:11px}
-#duckCard{flex:1 0 100%;padding:4px 4px 2px}
+#duckCard{margin-top:12px;padding-top:10px;border-top:1px solid rgba(173,207,222,.2)}
+#duckCard .dkHead{display:flex;align-items:center;gap:6px;font-size:12px;letter-spacing:.1em}
+#duckCard .dkHead .dk{width:18px;height:18px;color:var(--air)}
+#duckCard .dkHead span{margin-left:auto;font-size:10px;opacity:.75;letter-spacing:.04em}
+#duckPop #duckOk:disabled{opacity:.4}
+.pad.duckPick{animation:duckBlinkP .6s steps(2,end) infinite}
+.pad.duckPad{outline:3px solid var(--air);outline-offset:-3px}
+@keyframes duckBlinkP{50%{box-shadow:inset 0 0 0 3px var(--fire)}}
 #duckCard .dkH{font-size:10px;letter-spacing:.12em;opacity:.8;margin:8px 0 5px}
 #duckCard .dkRow{display:flex;gap:6px;margin-top:6px}
 #duckCard .dkRow button{flex:1;padding:10px 0;font-size:11px;font-weight:700}
@@ -468,16 +475,8 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
 <ellipse cx="0" cy="0" rx="40" ry="24" fill="#ADCFDE"/><path d="M-38-4c-12-4-18-14-14-22 8 7 14 9 22 10z" fill="#ADCFDE"/>
 <path d="M-20 2c10 12 28 12 38 2" fill="none" stroke="#7EB3D2" stroke-width="5" stroke-linecap="round"/>
 <g id="dkHead"><circle cx="16" cy="-30" r="20" fill="#ADCFDE"/><path d="M33-31c8-3 16-1 20 4-5 5-13 6-20 3z" fill="#DC7B78"/><circle cx="22" cy="-36" r="3.8" fill="#313043"/><circle cx="23.2" cy="-37.3" r="1.3" fill="#fff"/></g>
-</g></g><path d="M0 74q7.5-6 15 0t15 0 15 0 15 0 15 0 15 0 15 0 15 0V110H0z" fill="#7EB3D2"/></svg></div><div class="dtxt"><b>DUCKER</b><span class="dmsg"></span></div><button id="duckX" aria-label="Close ducker">CLOSE</button>
-  <div id="duckCard" class="hidden">
-    <div class="dkH">SHAPE</div><div class="dkRow" id="dkPre"></div>
-    <canvas id="dkCurve"></canvas>
-    <div class="ctl"><label>DEPTH</label><input type="range" id="dkDepth" min="0" max="100" step="1"><output id="dkDepthV"></output></div>
-    <div class="ctl"><label>HOLD</label><input type="range" id="dkHold" min="0" max="200" step="1"><output id="dkHoldV"></output></div>
-    <div class="ctl"><label>RELEASE</label><input type="range" id="dkRel" min="20" max="1000" step="5"><output id="dkRelV"></output></div>
-    <div class="dkH">SYNC RELEASE TO THE BEAT</div><div class="dkRow" id="dkSync"></div>
-    <div class="dkRow"><button id="dkTry">TRY IT</button><button id="dkRemove">REMOVE</button><button id="dkDone" class="hl">DONE</button></div>
-  </div></div>
+</g></g><path d="M0 74q7.5-6 15 0t15 0 15 0 15 0 15 0 15 0 15 0 15 0V110H0z" fill="#7EB3D2"/></svg></div><div class="dtxt"><b>DUCKER</b><span class="dmsg"></span></div><button id="duckOk" class="hl">OK</button><button id="duckX" aria-label="Close ducker">CLOSE</button>
+</div>
 <div id="padMoveWin" class="modal hidden">
   <div class="mbox sw">
     <div class="swT"><span>MOVE PAD</span></div>
@@ -515,6 +514,15 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
     <div class="help"><p>Pick up to 2 effects for this track, then set how much with the sliders. Tap the track's slot to turn them on and off.</p></div>
     <div class="tfxGrid" id="tfxGrid"></div>
     <div id="tfxAmts"></div>
+  <div id="duckCard" class="hidden">
+    <div class="dkHead"><svg class="dk" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="16" rx="8.5" ry="5.5" fill="currentColor"/><circle cx="15.5" cy="8" r="4.5" fill="currentColor"/><path d="M19.5 8.2l4-0.4-3.8 2.4z" fill="#DC7B78"/></svg><b>DUCK</b><span id="dkBy"></span></div>
+    <div class="dkH">SHAPE</div><div class="dkRow" id="dkPre"></div>
+    <canvas id="dkCurve"></canvas>
+    <div class="ctl"><label>DEPTH</label><input type="range" id="dkDepth" min="0" max="100" step="1"><output id="dkDepthV"></output></div>
+    <div class="ctl"><label>HOLD</label><input type="range" id="dkHold" min="0" max="200" step="1"><output id="dkHoldV"></output></div>
+    <div class="ctl"><label>RELEASE</label><input type="range" id="dkRel" min="20" max="1000" step="5"><output id="dkRelV"></output></div>
+    <div class="dkH">SYNC RELEASE TO THE BEAT</div><div class="dkRow" id="dkSync"></div>
+    <div class="dkRow"><button id="dkTry">TRY IT</button><button id="dkRemove">REMOVE DUCK</button></div>
     <div class="row"><button id="tfxClear">CLEAR</button><button id="tfxDone" class="hl">DONE</button></div>
   </div>
 </div>
@@ -615,7 +623,7 @@ const fixTv=()=>{if(!Array.isArray(S.tv)||S.tv.length!==4)S.tv=[0,1,2,3].map(TV_
 fixTv();
 const tvOf=v=>S.tv[v&&v.tr!=null?v.tr:selTrack];
 const DUCK_PRE={tight:{depth:45,hold:0,rel:90},pump:{depth:85,hold:30,rel:260},breathe:{depth:65,hold:60,rel:700}};
-const fixDuck=()=>{if(!Array.isArray(S.duckBy)||S.duckBy.length!==4)S.duckBy=[null,null,null,null];
+const fixDuck=()=>{if(!Array.isArray(S.duckBy)||S.duckBy.length!==4)S.duckBy=[[],[],[],[]];S.duckBy=S.duckBy.map(x=>Array.isArray(x)?x:x==null?[]:[x]);
   if(!Array.isArray(S.duckCfg)||S.duckCfg.length!==4)S.duckCfg=[0,1,2,3].map(()=>({preset:'pump',sync:null,...DUCK_PRE.pump}));};fixDuck();
 const duckRel=c=>c.sync?stepDur()*(16/c.sync)*1000:c.rel;
 /* skipped steps: grayed out per pattern, the playhead jumps over them so the bar gets shorter */
@@ -729,7 +737,7 @@ function applyTrackFx(t){
 function trigger(tr,pi,semi,t,live){
   const p=pads[pi];if(!p||!ctx)return null;
   /* secret ducker: this pad pushes down any track it is set to duck */
-  if(S.duckBy)for(let d=0;d<4;d++)if(S.duckBy[d]===pi&&d!==tr&&TN[d]&&TN[d].dk){const gn=TN[d].dk.gain,at=Math.max(t,ctx.currentTime);
+  if(S.duckBy)for(let d=0;d<4;d++)if(S.duckBy[d].includes(pi)&&d!==tr&&TN[d]&&TN[d].dk){const gn=TN[d].dk.gain,at=Math.max(t,ctx.currentTime);
     const c=S.duckCfg[d];gn.cancelScheduledValues(at);gn.setTargetAtTime(1-c.depth/100,at,0.004);gn.setTargetAtTime(1,at+0.012+c.hold/1000,Math.max(0.005,duckRel(c)/1000/3));}
   const rev=fx.REV||S.padRev[pi],mode=S.padMode[pi]||'one';
   const src=ctx.createBufferSource();src.buffer=rev?p.rbuf:p.buf;
@@ -1566,28 +1574,36 @@ function post(W,H){
 var duckMode=false,duckSel=[],duckPrev=null;
 function duckZone(h3,x){const r=h3.getBoundingClientRect(),rg=document.createRange();const tn=[...h3.childNodes].find(n=>n.nodeType===3&&n.textContent.trim());
   let tEnd=r.left+90;if(tn){rg.selectNodeContents(tn);tEnd=rg.getBoundingClientRect().right;}return x>tEnd+10&&x<r.right-48;}
+/* step 1: tap tracks to duck (they blink, a duck lands on each one picked), OK. Step 2: tap the pads that duck them, DONE. */
+var duckStep=1,duckPads=[];
 function duckStart(){
-  duckMode=true;duckSel=[];duckPrev={};
+  duckMode=true;duckSel=[];duckPads=[];duckStep=1;duckPrev={};
   document.querySelectorAll('section.panel[id]').forEach(sec=>{duckPrev[sec.id]=sec.classList.contains('min');const keep=sec.id==='secFx'||sec.id==='secPads'||sec.id==='secVid';if(!keep)sec.classList.add('min');else if(sec.id!=='secVid')sec.classList.remove('min');});
-  const d=$('duckPop');d.classList.remove('hidden','bye');$('duckCard').classList.add('hidden');duckCard=null;d.querySelector('.dmsg').textContent=S.duckBy.some(x=>x!=null)?'Tap a track to duck, or a ducked one to tune it':'Tap the track to duck';
+  const d=$('duckPop');d.classList.remove('hidden','bye');duckMsg();
   try{navigator.vibrate&&navigator.vibrate([30,40,30]);}catch(_){}
-  renderTfx();$('secFx').scrollIntoView({behavior:'smooth',block:'start'});
+  renderTfx();renderPads();$('secFx').scrollIntoView({behavior:'smooth',block:'start'});
 }
+function duckMsg(){const m=$('duckPop').querySelector('.dmsg'),ok=$('duckOk');
+  if(duckStep===1){m.textContent=duckSel.length?'Ducking '+duckSel.map(x=>TL[x]).join(' + ')+'. Tap OK.':'Tap the tracks to duck';ok.textContent='OK';ok.disabled=!duckSel.length;}
+  else{m.textContent=duckPads.length?'Ducker pads: '+duckPads.map(padLabel).join(', ')+'. Tap DONE.':'Now tap the pads that duck '+duckSel.map(x=>TL[x]).join(' + ');ok.textContent='DONE';ok.disabled=!duckPads.length;}}
 function duckEnd(msg){
-  duckMode=false;duckSel=[];duckCard=null;$('duckCard').classList.add('hidden');
+  duckMode=false;duckSel=[];duckPads=[];duckStep=1;
   if(duckPrev)document.querySelectorAll('section.panel[id]').forEach(sec=>{if(sec.id in duckPrev)sec.classList.toggle('min',duckPrev[sec.id]);});duckPrev=null;
-  const d=$('duckPop');d.classList.add('bye');setTimeout(()=>d.classList.add('hidden'),350);renderTfx();if(msg)toast(msg,2000);
+  const d=$('duckPop');d.classList.add('bye');setTimeout(()=>d.classList.add('hidden'),350);renderTfx();renderPads();if(msg)toast(msg,2400);
 }
 function duckTrack(t){
-  if(S.duckBy[t]!=null&&!duckSel.includes(t)&&!duckSel.length){openDuckCard([t]);return;}
-  const i=duckSel.indexOf(t);if(i>=0)duckSel.splice(i,1);else duckSel.push(t);
-  $('duckPop').querySelector('.dmsg').textContent=duckSel.length?'Now tap the pad that ducks '+duckSel.map(x=>TL[x]).join(' + '):'Tap the track to duck';renderTfx();
+  if(duckStep!==1)return;const i=duckSel.indexOf(t);if(i>=0)duckSel.splice(i,1);else duckSel.push(t);
+  try{navigator.vibrate&&navigator.vibrate(12);}catch(_){}duckMsg();renderTfx();
 }
 function duckPad(pi){
-  if(!duckSel.length){toast('Pick a track to duck first.',1200);return;}
-  if(!pads[pi]){toast('That pad is empty.',1200);return;}
-  pushUndo();const tr=[...duckSel];tr.forEach(t=>S.duckBy[t]=pi);save();duckSel=[];renderTfx();
-  toast('Pad '+padLabel(pi)+' now ducks track'+(tr.length>1?'s ':' ')+tr.map(x=>TL[x]).join(' + ')+'.',1600);openDuckCard(tr);
+  if(duckStep!==2)return;if(!pads[pi]){toast('That pad is empty.',1200);return;}
+  const i=duckPads.indexOf(pi);if(i>=0)duckPads.splice(i,1);else duckPads.push(pi);duckMsg();renderPads();
+}
+function duckOk(){
+  if(duckStep===1){if(!duckSel.length)return;duckStep=2;duckPads=[...new Set(duckSel.flatMap(t=>S.duckBy[t]))];duckMsg();renderTfx();renderPads();
+    $('secPads').scrollIntoView({behavior:'smooth',block:'start'});return;}
+  if(!duckPads.length)return;pushUndo();const tr=[...duckSel];tr.forEach(t=>S.duckBy[t]=[...duckPads]);save();
+  duckEnd('Pad'+(duckPads.length>1?'s ':' ')+duckPads.map(padLabel).join(', ')+' now duck'+(duckPads.length>1?'':'s')+' track'+(tr.length>1?'s ':' ')+tr.map(x=>TL[x]).join(' + ')+'. Hold a track slot to tune it.');
 }
 {const h3=$('secFx').querySelector('h3');let tm=null;
   h3.addEventListener('pointerdown',e=>{if(!duckZone(h3,e.clientX))return;clearTimeout(tm);tm=setTimeout(()=>{duckMode?duckEnd('Ducker closed.'):duckStart();},1000);});
@@ -1596,10 +1612,10 @@ function duckPad(pi){
 $('tfx').addEventListener('pointerdown',e=>{if(!duckMode)return;const b=e.target.closest('button');if(!b)return;e.stopImmediatePropagation();e.preventDefault();duckTrack(tfxEls.indexOf(b));},true);
 $('tfx').addEventListener('pointerup',e=>{if(duckMode)e.stopImmediatePropagation();},true);
 $('pads').addEventListener('pointerdown',e=>{if(!duckMode)return;const b=e.target.closest('.pad');if(!b)return;e.stopImmediatePropagation();e.preventDefault();duckPad(bank*16+padEls.indexOf(b));},true);
-$('duckX').onclick=()=>duckEnd('Ducker closed.');
+$('duckX').onclick=()=>duckEnd('Ducker closed.');$('duckOk').onclick=duckOk;
 /* duck settings: presets, a curve to drag, exact sliders, tempo sync */
 var duckCard=null;
-function openDuckCard(tr){duckCard=tr;$('duckCard').classList.remove('hidden');$('duckPop').querySelector('.dmsg').textContent='Track '+tr.map(x=>TL[x]).join(' + ')+' ducked by pad '+padLabel(S.duckBy[tr[0]]);renderDuckCard();}
+function openDuckCard(tr){duckCard=tr;$('duckCard').classList.remove('hidden');$('dkBy').textContent='DUCKED BY PAD'+(S.duckBy[tr[0]].length>1?'S ':' ')+S.duckBy[tr[0]].map(padLabel).join(', ');renderDuckCard();}
 function setDuck(o){if(!duckCard)return;pushUndo('duckcfg');duckCard.forEach(t=>Object.assign(S.duckCfg[t],o));save();renderDuckCard();}
 function renderDuckCard(){
   if(!duckCard)return;const c=S.duckCfg[duckCard[0]];
@@ -1638,14 +1654,13 @@ function drawDuckCurve(){
 $('dkDepth').oninput=e=>setDuck({depth:+e.target.value,preset:null});
 $('dkHold').oninput=e=>setDuck({hold:+e.target.value,preset:null});
 $('dkRel').oninput=e=>setDuck({rel:+e.target.value,preset:null});
-$('dkTry').onclick=()=>{if(!duckCard)return;initAudio();const pi=S.duckBy[duckCard[0]];if(pi!=null)trigger(selTrack,pi,0,ctx.currentTime+0.01,true);};
-$('dkRemove').onclick=()=>{if(!duckCard)return;pushUndo();const tr=duckCard;tr.forEach(t=>S.duckBy[t]=null);save();duckEnd('Track'+(tr.length>1?'s ':' ')+tr.map(x=>TL[x]).join(' + ')+' not ducked anymore.');};
-$('dkDone').onclick=()=>duckEnd('Ducker set.');
+$('dkTry').onclick=()=>{if(!duckCard)return;initAudio();const pi=S.duckBy[duckCard[0]][0];if(pi!=null)trigger(selTrack,pi,0,ctx.currentTime+0.01,true);};
+$('dkRemove').onclick=()=>{if(!duckCard)return;pushUndo();const tr=duckCard;tr.forEach(t=>S.duckBy[t]=[]);save();$('duckCard').classList.add('hidden');duckCard=null;renderTfx();toast('Track'+(tr.length>1?'s ':' ')+tr.map(x=>TL[x]).join(' + ')+' not ducked anymore.',1600);};
 /* the bath duck dips with the real ducker: reads the duck gain of the tracks being ducked */
 let dkIdle=0;
 function duckAnim(){
   const pop=$('duckPop');if(pop.classList.contains('hidden'))return;
-  let g=1;const tr=duckCard&&duckCard.length?duckCard:[0,1,2,3].filter(t=>S.duckBy[t]!=null);
+  let g=1;const tr=duckSel.length?duckSel:[0,1,2,3].filter(t=>S.duckBy[t].length);
   if(ctx&&TN.length)tr.forEach(t=>{if(TN[t]&&TN[t].dk)g=Math.min(g,TN[t].dk.gain.value);});
   dkIdle+=0.05;const d=1-g,float=Math.sin(dkIdle)*1.6;
   $('dkBob').setAttribute('transform','translate(0 '+(d*22+float).toFixed(2)+') rotate('+(-d*8).toFixed(2)+' 60 66)');
@@ -1994,6 +2009,7 @@ function renderPads(){layoutStage();
     const p=keys?pads[selPad]:pads[bank*16+i];
     b.style.backgroundImage=p?'url('+p.thumb+')':'none';
     b.classList.toggle('erasing',eraseHeld.has(keys?selPad:bank*16+i));
+    b.classList.toggle('duckPad',!!(duckMode&&duckStep===2&&!keys&&duckPads.includes(bank*16+i)));b.classList.toggle('duckPick',!!(duckMode&&duckStep===2&&!keys&&pads[bank*16+i]&&!duckPads.includes(bank*16+i)));
     b.querySelector('.n').textContent=keys?'':(i+1);
     const ic=b.querySelector('.i'),ck=p&&!keys?CATS[p.cat]:null;ic.innerHTML=ck?ck.i:'';ic.style.background=ck?ck.c:'';ic.style.display=ck?'':'none';
     const r=Math.floor(i/4),c=i%4,semi=(3-r)*4+c;
@@ -2064,11 +2080,12 @@ function buildTv(){
   renderTv();
 }
 function openTv(t){tvEdit=t;renderTv();$('tvWin').classList.remove('hidden');}
-function openTfx(t){tfxEdit=t;$('tfxTitle').textContent='TRACK '+TL[t]+' FX';renderTfx();$('tfxWin').classList.remove('hidden');}
+function openTfx(t){tfxEdit=t;$('tfxTitle').textContent='TRACK '+TL[t]+' FX';renderTfx();$('tfxWin').classList.remove('hidden');
+  if(S.duckBy[t].length)openDuckCard([t]);else{duckCard=null;$('duckCard').classList.add('hidden');}}
 function renderTfx(){
   tfxEls.forEach((b,t)=>{const a=S.trackFx[t],lab=a.map(k=>TFX.find(x=>x[0]===k)[1]);
-    const dp=S.duckBy[t];b.innerHTML='<b>'+TL[t]+(dp!=null?'<svg class="dk" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="16" rx="8.5" ry="5.5" fill="currentColor"/><circle cx="15.5" cy="8" r="4.5" fill="currentColor"/><path d="M19.5 8.2l4-0.4-3.8 2.4z" fill="#DC7B78"/></svg>':'')+'</b><span>'+(lab.length?lab.join(' + '):'HOLD')+'</span>'+(dp!=null?'<span class="dkp">DUCK '+padLabel(dp)+'</span>':'')+'<i class="mt"></i>';
-    b.classList.toggle('duckPick',duckMode&&!duckSel.includes(t));b.classList.toggle('duckOn',duckMode&&duckSel.includes(t));
+    const dp=S.duckBy[t],dkOn=dp.length||(duckMode&&duckSel.includes(t));b.innerHTML='<b>'+TL[t]+(dkOn?'<svg class="dk" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="16" rx="8.5" ry="5.5" fill="currentColor"/><circle cx="15.5" cy="8" r="4.5" fill="currentColor"/><path d="M19.5 8.2l4-0.4-3.8 2.4z" fill="#DC7B78"/></svg>':'')+'</b><span>'+(lab.length?lab.join(' + '):'HOLD')+'</span>'+(dp.length?'<span class="dkp">DUCK '+dp.map(padLabel).join(' ')+'</span>':'')+'<i class="mt"></i>';
+    b.classList.toggle('duckPick',duckMode&&duckStep===1&&!duckSel.includes(t));b.classList.toggle('duckOn',duckMode&&duckSel.includes(t));
     b.classList.toggle('set',a.length>0);b.classList.toggle('on',a.length>0&&S.trackFxOn[t]);});
   [...$('tfxGrid').children].forEach(b=>b.classList.toggle('on',S.trackFx[tfxEdit].includes(b.dataset.k)));
   const box=$('tfxAmts');if(!box)return;box.innerHTML='';
