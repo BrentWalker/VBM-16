@@ -187,6 +187,21 @@ select{font:inherit;font-size:12px;background:var(--slate);color:var(--w);border
 .tfx button.on{background:var(--air);color:var(--ink)}
 /* track level meter: lights up along the bottom of each AUDIO FX slot in the track color */
 #tfx button{position:relative;overflow:hidden}
+#tfx .dk{width:11px;height:11px;margin-left:3px;vertical-align:-1px;color:currentColor}
+#tfx .dkp{font-size:8px;opacity:.85}
+#tfx button.duckPick{animation:duckBlink .6s steps(2,end) infinite}
+#tfx button.duckOn{background:var(--air)!important;color:var(--ink)}
+@keyframes duckBlink{50%{background:var(--fire);color:var(--ink)}}
+#duckPop{position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top));transform:translateX(-50%);z-index:40;display:flex;align-items:center;gap:10px;background:var(--ink);border-radius:18px;padding:8px 10px 8px 6px;box-shadow:0 10px 30px rgba(0,0,0,.5),0 0 0 2px var(--air);width:min(94vw,420px);animation:duckIn .45s cubic-bezier(.3,1.6,.5,1)}
+#duckPop.bye{animation:duckOut .35s ease-in forwards}
+#duckPop .duck{width:64px;height:58px;flex:0 0 auto;animation:duckBob 1.1s ease-in-out infinite}
+#duckPop .duck svg{width:100%;height:100%}
+#duckPop .dtxt{flex:1;display:flex;flex-direction:column;gap:2px;font-size:12px}
+#duckPop .dtxt b{letter-spacing:.14em;color:var(--air)}
+#duckPop button{flex:0 0 auto;padding:10px 12px;font-size:11px}
+@keyframes duckIn{0%{transform:translate(-50%,-140%) scale(.6)}100%{transform:translate(-50%,0) scale(1)}}
+@keyframes duckOut{to{transform:translate(-50%,-140%) scale(.7);opacity:0}}
+@keyframes duckBob{50%{transform:translateY(-4px) rotate(-4deg)}}
 #tfx .mt{position:absolute;left:0;bottom:0;height:5px;width:0;background:var(--mc);box-shadow:0 0 8px var(--mc);border-radius:0 3px 3px 0;pointer-events:none;transition:width .05s linear}
 #tfxAmts .ctl output{width:56px}
 #tfxAmts .ctl label{width:74px}
@@ -440,6 +455,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
     <div class="row"><button id="bExpGo" class="hl">RECORD</button><button id="expClose">CLOSE</button></div>
   </div>
 </div>
+<div id="duckPop" class="hidden"><div class="duck"><svg viewBox="0 0 120 110" aria-hidden="true"><ellipse cx="62" cy="76" rx="42" ry="26" fill="#ADCFDE"/><path d="M28 70c-12-2-20-12-18-22 8 6 16 8 24 8z" fill="#ADCFDE"/><circle cx="78" cy="38" r="22" fill="#ADCFDE"/><path d="M96 38c8-3 17-2 22 3-5 6-14 8-22 5z" fill="#DC7B78"/><circle cx="84" cy="32" r="4.2" fill="#313043"/><circle cx="85.4" cy="30.6" r="1.4" fill="#fff"/><path d="M46 74c8 10 24 12 34 4" fill="none" stroke="#7EB3D2" stroke-width="5" stroke-linecap="round"/><path d="M52 100l-6 8h14zM74 100l-6 8h14z" fill="#DC7B78"/></svg></div><div class="dtxt"><b>DUCKER</b><span class="dmsg"></span></div><button id="duckX" aria-label="Close ducker">CLOSE</button></div>
 <div id="padMoveWin" class="modal hidden">
   <div class="mbox sw">
     <div class="swT"><span>MOVE PAD</span></div>
@@ -576,6 +592,7 @@ const TV_DEF=()=>({fit:'fill',z:1,x:0,y:0,pos:'auto',fx:[],blend:'normal',op:100
 const fixTv=()=>{if(!Array.isArray(S.tv)||S.tv.length!==4)S.tv=[0,1,2,3].map(TV_DEF);S.tv=S.tv.map(t=>Object.assign(TV_DEF(),t||{}));};
 fixTv();
 const tvOf=v=>S.tv[v&&v.tr!=null?v.tr:selTrack];
+const fixDuck=()=>{if(!Array.isArray(S.duckBy)||S.duckBy.length!==4)S.duckBy=[null,null,null,null];};fixDuck();
 /* skipped steps: grayed out per pattern, the playhead jumps over them so the bar gets shorter */
 const isSkip=(p,s)=>!!(S.skip&&S.skip[p]&&S.skip[p].includes(s));
 const actSteps=p=>{let n=0;for(let i=0;i<plen(p);i++)if(!isSkip(p,i))n++;return n||plen(p);};
@@ -633,10 +650,10 @@ function initAudio(){
     lo.type='lowpass';lo.frequency.value=20000;lo.Q.value=3;hi.type='highpass';hi.frequency.value=10;hi.Q.value=2;
     es.gain.value=0;ef.gain.value=0.42;vs.gain.value=0;
     lb.type='lowshelf';lb.frequency.value=110;lb.gain.value=0;hb.type='highshelf';hb.frequency.value=6000;hb.gain.value=0;
-    g.connect(lo);lo.connect(hi);hi.connect(lb);lb.connect(hb);hb.connect(dr);dr.connect(out);out.connect(bus);
+    const dk=ctx.createGain();g.connect(lo);lo.connect(hi);hi.connect(lb);lb.connect(hb);hb.connect(dr);dr.connect(out);out.connect(dk);dk.connect(bus);
     dr.connect(es);es.connect(de);de.connect(ef);ef.connect(de);de.connect(out);dr.connect(vs);vs.connect(verb);
-    const an=ctx.createAnalyser();an.fftSize=256;an.smoothingTimeConstant=0;out.connect(an);/* level meter tap, plays nothing */
-    trackG.push(g);TN.push({lo,hi,lb,hb,dr,out,es,de,vs,an});
+    const an=ctx.createAnalyser();an.fftSize=256;an.smoothingTimeConstant=0;dk.connect(an);/* level meter tap, plays nothing */
+    trackG.push(g);TN.push({lo,hi,lb,hb,dr,out,es,de,vs,an,dk});
   }
   for(let i=0;i<4;i++)applyTrackFx(i);
   const b=ctx.createBuffer(1,1,22050),s=ctx.createBufferSource();s.buffer=b;s.connect(ctx.destination);s.start(0);
@@ -686,6 +703,9 @@ function applyTrackFx(t){
 }
 function trigger(tr,pi,semi,t,live){
   const p=pads[pi];if(!p||!ctx)return null;
+  /* secret ducker: this pad pushes down any track it is set to duck */
+  if(S.duckBy)for(let d=0;d<4;d++)if(S.duckBy[d]===pi&&d!==tr&&TN[d]&&TN[d].dk){const gn=TN[d].dk.gain,at=Math.max(t,ctx.currentTime);
+    gn.cancelScheduledValues(at);gn.setTargetAtTime(0.2,at,0.005);gn.setTargetAtTime(1,at+0.07,0.11);}
   const rev=fx.REV||S.padRev[pi],mode=S.padMode[pi]||'one';
   const src=ctx.createBufferSource();src.buffer=rev?p.rbuf:p.buf;
   let rate=Math.pow(2,(S.padSemi[pi]+(semi||0))/12);
@@ -1517,6 +1537,41 @@ function post(W,H){
   if(fx.HPF){g2.globalCompositeOperation='difference';g2.fillStyle='#fff';g2.fillRect(0,0,W,H);g2.globalCompositeOperation='source-over';}
   if(fx.REV){g2.globalCompositeOperation='color';g2.fillStyle='rgba(126,179,210,.4)';g2.fillRect(0,0,W,H);g2.globalCompositeOperation='source-over';}
 }
+/* ---------- the secret ducker ---------- */
+var duckMode=false,duckSel=[],duckPrev=null;
+function duckZone(h3,x){const r=h3.getBoundingClientRect(),rg=document.createRange();const tn=[...h3.childNodes].find(n=>n.nodeType===3&&n.textContent.trim());
+  let tEnd=r.left+90;if(tn){rg.selectNodeContents(tn);tEnd=rg.getBoundingClientRect().right;}return x>tEnd+10&&x<r.right-48;}
+function duckStart(){
+  duckMode=true;duckSel=[];duckPrev={};
+  document.querySelectorAll('section.panel[id]').forEach(sec=>{duckPrev[sec.id]=sec.classList.contains('min');const keep=sec.id==='secFx'||sec.id==='secPads'||sec.id==='secVid';if(!keep)sec.classList.add('min');else if(sec.id!=='secVid')sec.classList.remove('min');});
+  const d=$('duckPop');d.classList.remove('hidden','bye');d.querySelector('.dmsg').textContent='Tap the track to duck';
+  try{navigator.vibrate&&navigator.vibrate([30,40,30]);}catch(_){}
+  renderTfx();$('secFx').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function duckEnd(msg){
+  duckMode=false;duckSel=[];
+  if(duckPrev)document.querySelectorAll('section.panel[id]').forEach(sec=>{if(sec.id in duckPrev)sec.classList.toggle('min',duckPrev[sec.id]);});duckPrev=null;
+  const d=$('duckPop');d.classList.add('bye');setTimeout(()=>d.classList.add('hidden'),350);renderTfx();if(msg)toast(msg,2000);
+}
+function duckTrack(t){
+  if(S.duckBy[t]!=null&&!duckSel.includes(t)){pushUndo();S.duckBy[t]=null;save();renderTfx();toast('Track '+TL[t]+' is not ducked anymore.',1400);return;}
+  const i=duckSel.indexOf(t);if(i>=0)duckSel.splice(i,1);else duckSel.push(t);
+  $('duckPop').querySelector('.dmsg').textContent=duckSel.length?'Now tap the pad that ducks '+duckSel.map(x=>TL[x]).join(' + '):'Tap the track to duck';renderTfx();
+}
+function duckPad(pi){
+  if(!duckSel.length){toast('Pick a track to duck first.',1200);return;}
+  if(!pads[pi]){toast('That pad is empty.',1200);return;}
+  pushUndo();const tr=[...duckSel];tr.forEach(t=>S.duckBy[t]=pi);save();
+  duckEnd('Pad '+padLabel(pi)+' now ducks track'+(tr.length>1?'s ':' ')+tr.map(x=>TL[x]).join(' + ')+'.');
+}
+{const h3=$('secFx').querySelector('h3');let tm=null;
+  h3.addEventListener('pointerdown',e=>{if(!duckZone(h3,e.clientX))return;clearTimeout(tm);tm=setTimeout(()=>{duckMode?duckEnd('Ducker closed.'):duckStart();},1000);});
+  ['pointerup','pointercancel','pointerleave'].forEach(ev=>h3.addEventListener(ev,()=>clearTimeout(tm)));
+  h3.addEventListener('contextmenu',e=>e.preventDefault());}
+$('tfx').addEventListener('pointerdown',e=>{if(!duckMode)return;const b=e.target.closest('button');if(!b)return;e.stopImmediatePropagation();e.preventDefault();duckTrack(tfxEls.indexOf(b));},true);
+$('tfx').addEventListener('pointerup',e=>{if(duckMode)e.stopImmediatePropagation();},true);
+$('pads').addEventListener('pointerdown',e=>{if(!duckMode)return;const b=e.target.closest('.pad');if(!b)return;e.stopImmediatePropagation();e.preventDefault();duckPad(bank*16+padEls.indexOf(b));},true);
+$('duckX').onclick=()=>duckEnd('Ducker closed.');
 const meterLv=[0,0,0,0],meterBuf=new Float32Array(256);
 function meters(){
   if(!ctx||!TN.length||$('secFx').classList.contains('min'))return;
@@ -1933,7 +1988,8 @@ function openTv(t){tvEdit=t;renderTv();$('tvWin').classList.remove('hidden');}
 function openTfx(t){tfxEdit=t;$('tfxTitle').textContent='TRACK '+TL[t]+' FX';renderTfx();$('tfxWin').classList.remove('hidden');}
 function renderTfx(){
   tfxEls.forEach((b,t)=>{const a=S.trackFx[t],lab=a.map(k=>TFX.find(x=>x[0]===k)[1]);
-    b.innerHTML='<b>'+TL[t]+'</b><span>'+(lab.length?lab.join(' + '):'HOLD')+'</span><i class="mt"></i>';
+    const dp=S.duckBy[t];b.innerHTML='<b>'+TL[t]+(dp!=null?'<svg class="dk" viewBox="0 0 24 24" aria-hidden="true"><ellipse cx="12" cy="16" rx="8.5" ry="5.5" fill="currentColor"/><circle cx="15.5" cy="8" r="4.5" fill="currentColor"/><path d="M19.5 8.2l4-0.4-3.8 2.4z" fill="#DC7B78"/></svg>':'')+'</b><span>'+(lab.length?lab.join(' + '):'HOLD')+'</span>'+(dp!=null?'<span class="dkp">DUCK '+padLabel(dp)+'</span>':'')+'<i class="mt"></i>';
+    b.classList.toggle('duckPick',duckMode&&!duckSel.includes(t));b.classList.toggle('duckOn',duckMode&&duckSel.includes(t));
     b.classList.toggle('set',a.length>0);b.classList.toggle('on',a.length>0&&S.trackFxOn[t]);});
   [...$('tfxGrid').children].forEach(b=>b.classList.toggle('on',S.trackFx[tfxEdit].includes(b.dataset.k)));
   const box=$('tfxAmts');if(!box)return;box.innerHTML='';
@@ -2230,7 +2286,7 @@ $('aRemove').onclick=removeSource;
 
 /* ---------- undo ---------- */
 const undoS=[],redoS=[];let lastPush={k:null,t:0};
-function snap(){return {tv:JSON.stringify(S.tv),pat:JSON.stringify(S.patterns),len:[...S.patLen],tlen:JSON.stringify(S.trkLen),skip:JSON.stringify(S.skip),chain:[...S.chain],
+function snap(){return {tv:JSON.stringify(S.tv),duck:JSON.stringify(S.duckBy),pat:JSON.stringify(S.patterns),len:[...S.patLen],tlen:JSON.stringify(S.trkLen),skip:JSON.stringify(S.skip),chain:[...S.chain],
   pp:JSON.stringify({trackFx:S.trackFx,trackFxOn:S.trackFxOn,trackFxAmt:S.trackFxAmt,padChoke:S.padChoke,padSemi:S.padSemi,padVol:S.padVol,padRev:S.padRev,padFi:S.padFi,padFo:S.padFo,padDecay:S.padDecay,padMode:S.padMode,padFreeze:S.padFreeze}),
   pads:[...pads],srcs:sources.map(x=>({id:x.id,s:x.sel?x.sel.s:null,e:x.sel?x.sel.e:null,slip:x.slip||0}))};}
 function pushUndo(k){
@@ -2239,7 +2295,7 @@ function pushUndo(k){
   lastPush={k,t:n};undoS.push(snap());if(undoS.length>60)undoS.shift();redoS.length=0;renderUndo();
 }
 function restore(x){
-  if(x.tv)S.tv=JSON.parse(x.tv);fixTv();S.patterns=JSON.parse(x.pat);S.patLen=[...x.len];S.trkLen=x.tlen?JSON.parse(x.tlen):null;fixTrkLen();S.skip=x.skip?JSON.parse(x.skip):Array.from({length:16},()=>[]);S.chain=[...x.chain];Object.assign(S,JSON.parse(x.pp));for(let t=0;t<4;t++)applyTrackFx(t);
+  if(x.tv)S.tv=JSON.parse(x.tv);fixTv();if(x.duck)S.duckBy=JSON.parse(x.duck);fixDuck();S.patterns=JSON.parse(x.pat);S.patLen=[...x.len];S.trkLen=x.tlen?JSON.parse(x.tlen):null;fixTrkLen();S.skip=x.skip?JSON.parse(x.skip):Array.from({length:16},()=>[]);S.chain=[...x.chain];Object.assign(S,JSON.parse(x.pp));for(let t=0;t<4;t++)applyTrackFx(t);
   pads=[...x.pads];pads.forEach(p=>{if(p)p.slipTarget=null;});
   x.srcs.forEach(o=>{const sc=sources.find(y=>y.id===o.id);if(sc&&o.s!=null){sc.sel={s:o.s,e:o.e};sc.slip=o.slip;}});
   if(viewPage>=tbars(editPat,selTrack))viewPage=0;
@@ -2335,14 +2391,14 @@ async function padFromRecord(rec){
   const p={buf,rbuf:reverseOf(buf),cat:m.cat||'TONE',name:m.name||undefined,len,start:m.start||0,slip:m.slip||0,srcId:null,srcName:m.srcName,srcKey:m.srcKey||null,frames,fps:frames.length/len,thumb:frames[0].toDataURL('image/jpeg',0.6)};
   recCache.set(p,rec);return p;
 }
-function stateJSON(){return {bpm:S.bpm,swing:S.swing,format:S.format,trackFx:S.trackFx,trackFxOn:S.trackFxOn,trackFxAmt:S.trackFxAmt,tv:S.tv,patterns:S.patterns,patLen:S.patLen,trkLen:S.trkLen,skip:S.skip,chain:S.chain,padChoke:S.padChoke,padSemi:S.padSemi,padVol:S.padVol,padRev:S.padRev,padFi:S.padFi,padFo:S.padFo,padDecay:S.padDecay,padMode:S.padMode,padFreeze:S.padFreeze};}
+function stateJSON(){return {bpm:S.bpm,swing:S.swing,format:S.format,trackFx:S.trackFx,trackFxOn:S.trackFxOn,trackFxAmt:S.trackFxAmt,tv:S.tv,duckBy:S.duckBy,patterns:S.patterns,patLen:S.patLen,trkLen:S.trkLen,skip:S.skip,chain:S.chain,padChoke:S.padChoke,padSemi:S.padSemi,padVol:S.padVol,padRev:S.padRev,padFi:S.padFi,padFo:S.padFo,padDecay:S.padDecay,padMode:S.padMode,padFreeze:S.padFreeze};}
 function applyState(st){
-  const keys=['bpm','swing','format','trackFx','trackFxOn','trackFxAmt','tv','patterns','patLen','trkLen','skip','chain','padChoke','padSemi','padVol','padRev','padFi','padFo','padDecay','padMode','padFreeze'];
+  const keys=['bpm','swing','format','trackFx','trackFxOn','trackFxAmt','tv','duckBy','patterns','patLen','trkLen','skip','chain','padChoke','padSemi','padVol','padRev','padFi','padFo','padDecay','padMode','padFreeze'];
   keys.forEach(k=>{if(st[k]!=null)S[k]=st[k];});
   S.patterns.forEach(P=>P.forEach(t=>{while(t.length<MAXST)t.push(null);}));
   if(!Array.isArray(S.patLen)||S.patLen.length!==16)S.patLen=Array(16).fill(1);
   if(!Array.isArray(S.skip)||S.skip.length!==16)S.skip=Array.from({length:16},()=>[]);
-  fixTrkLen();fixTv();
+  fixTrkLen();fixTv();fixDuck();
   fixPadArrays();if(!Array.isArray(S.trackFx)||S.trackFx.length!==4)S.trackFx=[[],[],[],[]];if(!Array.isArray(S.trackFxOn)||S.trackFxOn.length!==4)S.trackFxOn=[true,true,true,true];fixTrackFx();
   for(let t=0;t<4;t++)applyTrackFx(t);viewPage=0;save();applyFormat();
 }
@@ -2598,7 +2654,7 @@ document.addEventListener('touchmove',e=>{if((pDrag&&pDrag.lifted)||(pd&&pd.arme
 document.querySelectorAll('section.panel[id]').forEach(sec=>{
   sec.classList.toggle('min',!!UI[sec.id]);
   const h3=sec.querySelector('h3');
-  h3.addEventListener('click',()=>{if(sec._skipClick){sec._skipClick=false;return;}const m=!sec.classList.contains('min');sec.classList.toggle('min',m);UI[sec.id]=m;saveUI();});
+  h3.addEventListener('click',e=>{if(sec._skipClick){sec._skipClick=false;return;}if(sec.id==='secFx'&&duckZone(h3,e.clientX))return;const m=!sec.classList.contains('min');sec.classList.toggle('min',m);UI[sec.id]=m;saveUI();});
   if(sec.id==='secVid'){
     /* VIDEO stays on top with the title bar and transport. Sideways on a wide screen, hold its title and drag left or right to switch columns. */
     h3.addEventListener('pointerdown',e=>{
@@ -2618,6 +2674,7 @@ document.querySelectorAll('section.panel[id]').forEach(sec=>{
   }
   /* window-level listeners, because moving the panel in the page would drop a pointer capture */
   h3.addEventListener('pointerdown',e=>{
+    if(sec.id==='secFx'&&duckZone(h3,e.clientX))return;
     if(!sec.classList.contains('min')&&!wideOn)return;
     const st={sec,y0:e.clientY,lifted:false,moved:false};pDrag=st;
     const move=ev=>{
