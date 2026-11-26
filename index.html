@@ -2897,13 +2897,19 @@ $('initWin').addEventListener('click',e=>{if(e.target.id==='initWin')closeInit()
 const idb={db:null,
   open(){return new Promise(res=>{try{const r=indexedDB.open('vbm16',1);r.onupgradeneeded=()=>r.result.createObjectStore('kv');r.onsuccess=()=>{this.db=r.result;res(r.result);};r.onerror=()=>res(null);}catch(e){res(null);}});},
   async put(k,v){const db=this.db||await this.open();if(!db)return false;return new Promise(res=>{try{const tx=db.transaction('kv','readwrite');tx.objectStore('kv').put(v,k);tx.oncomplete=()=>res(true);tx.onerror=tx.onabort=()=>res(false);}catch(e){res(false);}});},
+  async del(k){const db=this.db||await this.open();if(!db)return;return new Promise(res=>{try{const tx=db.transaction('kv','readwrite');tx.objectStore('kv').delete(k);tx.oncomplete=tx.onerror=tx.onabort=()=>res();}catch(e){res();}});},
   async get(k){const db=this.db||await this.open();if(!db)return null;return new Promise(res=>{try{const r=db.transaction('kv').objectStore('kv').get(k);r.onsuccess=()=>res(r.result||null);r.onerror=()=>res(null);}catch(e){res(null);}});}
 };
 let autoT=null,restoring=false;
 function padsChanged(){layoutStage();try{if(!trimBusy)trimRefresh();}catch(e){}if(restoring)return;clearTimeout(autoT);autoT=setTimeout(autosave,2500);}
+/* loaded videos are kept in this browser too, so pads stay regions of their video after the app reopens */
 async function autosave(){
-  try{const recs=[];for(let i=0;i<NP;i++){const p=pads[i];recs.push(p?await padRecord(p):null);}
-    await idb.put('pads',{recs,name:$('sessName').value});}catch(e){}
+  try{const recs=[],refs=[];for(let i=0;i<NP;i++){const p=pads[i];recs.push(p?await padRecord(p):null);refs.push(p&&p.srcId!=null?p.srcId:null);}
+    const live=sources.filter(x=>x.audio&&x.file);
+    for(const x of live)if(!x.stored){if(await idb.put('v:'+x.id,{file:x.file,wav:encodeWav(x.audio),vm:{name:x.name,type:x.type,slip:x.slip||0}}))x.stored=true;}
+    const old=(await idb.get('vids'))||[];for(const id of old)if(!live.some(x=>x.id===id))await idb.del('v:'+id);
+    await idb.put('vids',live.map(x=>x.id));
+    await idb.put('pads',{recs,refs,name:$('sessName').value});}catch(e){}
 }
 async function restoreAutosave(){
   try{
@@ -2911,7 +2917,13 @@ async function restoreAutosave(){
     restoring=true;initAudio();
     const np=Array(NP).fill(null);
     for(let i=0;i<d.recs.length&&i<NP;i++)if(d.recs[i])np[i]=await padFromRecord(d.recs[i]);
-    if(!hasPads()){pads=np;if(d.name)$('sessName').value=d.name;$('empty').classList.add('hidden');renderAll();renderMini();toast('Your last session is back.');}
+    if(hasPads())return;
+    pads=np;if(d.name)$('sessName').value=d.name;$('empty').classList.add('hidden');renderAll();renderMini();toast('Your last session is back.');
+    const ids=(await idb.get('vids'))||[];let n=0;srcSeq=Math.max(srcSeq,...ids.map(Number).filter(isFinite),0);
+    for(const id of ids){const v=await idb.get('v:'+id);if(!v||!v.file||!v.wav)continue;toast('Loading video '+(++n)+' of '+ids.length+'…',0);
+      try{const ns=await restoreSource(v.file,await v.wav.arrayBuffer(),v.vm||{});if(!ns)continue;ns.stored=true;await idb.del('v:'+id);await idb.put('v:'+ns.id,v);
+        if(Array.isArray(d.refs))d.refs.forEach((r,i)=>{if(r===id&&pads[i])pads[i].srcId=ns.id;});}catch(e){}}
+    if(n){await idb.put('vids',sources.filter(x=>x.stored).map(x=>x.id));if(curSrc<0&&sources.length)selectSource(0);trim=null;trimLoad(selPad);renderDockTabs();toast('Your last session is back, videos too.',1600);}
   }catch(e){}finally{restoring=false;}
 }
 $('bDisk').onclick=()=>$('saveWin').classList.remove('hidden');
