@@ -140,6 +140,7 @@ button.hold.flash{background:var(--fire)!important;color:var(--ink)}
 /* the one waveform: a drawer at the bottom, drag its handle to size it */
 :root{--dockH:0px}
 #trimDock{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:min(100vw,900px);z-index:12;background:var(--ink);border-radius:16px 16px 0 0;box-shadow:0 -6px 22px rgba(0,0,0,.45),0 0 0 1px rgba(173,207,222,.25);padding:0 10px env(safe-area-inset-bottom);display:flex;flex-direction:column;overflow:hidden;height:300px}
+#trimDock{touch-action:none;overscroll-behavior:contain}
 #trimDock.anim{transition:height .22s ease}
 #tdGrip{flex:0 0 30px;display:flex;align-items:center;gap:8px;touch-action:none;cursor:ns-resize;user-select:none;-webkit-user-select:none;position:relative}
 #tdGrip::before{content:"";position:absolute;left:50%;top:7px;width:44px;height:5px;margin-left:-22px;border-radius:3px;background:rgba(173,207,222,.55)}
@@ -2181,6 +2182,9 @@ function setSpan(sp,c,fx){const t=trim;if(!t)return;const lo=vLo(),D=tD();fx=fx=
 document.addEventListener('visibilitychange',()=>{if(document.hidden)trimCommit();});
 try{new ResizeObserver(()=>{const h=$('vidBlock').offsetHeight;document.documentElement.style.setProperty('--vbH',h+'px');const d=$('trimDock');if(d.offsetHeight>dockMax())setDockH(dockMax(),false,true);}).observe($('vidBlock'));}catch(e){}
 ['gesturestart','gesturechange'].forEach(n=>$('trimDock').addEventListener(n,e=>e.preventDefault()));
+/* touches in the drawer never scroll the page behind it */
+$('trimDock').addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+$('trimDock').addEventListener('wheel',e=>e.preventDefault(),{passive:false});
 
 function renderPadPanel(){
   const p=pads[selPad];trimLoad(selPad);
