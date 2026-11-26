@@ -28,7 +28,7 @@ button:disabled{opacity:.35}
 /* iPad and other wide screens held sideways: two columns. Left: title bar, video, transport and its panels. Right: the rest. */
 body.wide .wrap{max-width:1500px}
 body.wide .cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);column-gap:16px;align-items:start}
-body.wide #colL,body.wide #colR{position:sticky;top:0;max-height:100vh;max-height:100dvh;overflow-y:auto;overscroll-behavior:contain;padding:calc(10px + env(safe-area-inset-top)) 10px 40px;margin:calc(-10px - env(safe-area-inset-top)) -10px 0;scrollbar-width:none}
+body.wide #colL,body.wide #colR{position:sticky;top:0;max-height:100vh;max-height:100dvh;overflow-y:auto;overscroll-behavior:contain;padding:calc(10px + env(safe-area-inset-top)) 10px calc(40px + var(--dockH));margin:calc(-10px - env(safe-area-inset-top)) -10px 0;scrollbar-width:none}
 body.wide #colL::-webkit-scrollbar,body.wide #colR::-webkit-scrollbar{display:none}
 body.wide #vidBlock.lifted{opacity:.6;outline:2px dashed var(--air);outline-offset:4px;border-radius:14px}
 body.wide #panelsL:empty{min-height:40px}
@@ -131,12 +131,22 @@ button.hold.flash{background:var(--fire)!important;color:var(--ink)}
 .trimBar{display:flex;align-items:center;gap:8px;margin-top:5px;font-size:10px;opacity:.9}
 .trimBar span{flex:1;letter-spacing:.04em}
 .trimBar button{padding:6px 10px;font-size:10px}
-#trimWin{z-index:30}
-#trimWin #ptWave{height:120px}
-.trimPads{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin:8px 0}
-.trimPads button{aspect-ratio:1.7;padding:0;border-radius:8px;background:var(--slate) center/cover no-repeat;position:relative;font-size:10px;font-weight:800;color:#fff;text-shadow:0 1px 2px #000}
-.trimPads button.on{box-shadow:inset 0 0 0 3px var(--fire)}
-.trimPads button:disabled{opacity:.25}
+/* trim dock: always on screen, folds to a thin bar */
+:root{--dockH:0px}
+#trimDock{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:min(100vw,900px);z-index:12;background:var(--ink);border-radius:16px 16px 0 0;box-shadow:0 -6px 22px rgba(0,0,0,.45),0 0 0 1px rgba(173,207,222,.25);padding:0 10px calc(8px + env(safe-area-inset-bottom))}
+#tdBar{display:flex;align-items:center;gap:8px;height:38px;cursor:pointer;user-select:none;-webkit-user-select:none}
+#tdBar b{font-size:11px;letter-spacing:.14em;font-weight:600;opacity:.9}
+#tdBar span{flex:1;font-size:10px;letter-spacing:.04em;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#tdMin{width:34px;height:28px;padding:0;display:flex;align-items:center;justify-content:center;background:var(--slate);border-radius:8px}
+#tdMin svg{transition:transform .2s}
+#trimDock.min #tdMin svg{transform:rotate(180deg)}
+#trimDock.min #tdBody{display:none}
+#trimDock.min{padding-bottom:calc(4px + env(safe-area-inset-bottom))}
+#tdBody .trim{margin:0}
+#trimDock.flash{box-shadow:0 -6px 22px rgba(0,0,0,.45),0 0 0 2px var(--fire)}
+body{padding-bottom:calc(10px + var(--dockH))}
+.sheet{padding-bottom:var(--dockH)}
+#toast{bottom:calc(18px + var(--dockH))!important}
 /* every closed panel is the same height with the same gap */
 .panel.min{padding:0 12px!important;height:44px;display:flex;align-items:center}
 .panel.min h3{margin:0;padding:0!important;width:100%;height:44px;line-height:1;-webkit-user-select:none;user-select:none}
@@ -376,7 +386,6 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
   </section>
   <section class="panel" id="secPad">
     <h3>PAD EDIT <span id="padName"></span></h3>
-    <div class="trim" id="ptBox"><canvas id="ptWave"></canvas><div class="trimBar"><span id="ptInfo"></span><button id="ptReset">RESET</button></div></div>
     <div class="ctl"><label>PITCH</label><input type="range" id="pPitch" min="-12" max="12" step="1" value="0"><output id="oPitch">0</output></div>
     <div class="ctl"><label>LEVEL</label><input type="range" id="pVol" min="0" max="150" step="1" value="100"><output id="oVol">100</output></div>
     <div class="row"><button id="pRev">REVERSE OFF</button><button id="pAud">AUDITION</button></div>
@@ -489,15 +498,8 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
 <g id="dkHead"><circle cx="16" cy="-30" r="20" fill="#ADCFDE"/><path d="M33-31c8-3 16-1 20 4-5 5-13 6-20 3z" fill="#DC7B78"/><circle cx="22" cy="-36" r="3.8" fill="#313043"/><circle cx="23.2" cy="-37.3" r="1.3" fill="#fff"/></g>
 </g></g><path d="M0 74q7.5-6 15 0t15 0 15 0 15 0 15 0 15 0 15 0 15 0V110H0z" fill="#7EB3D2"/></svg></div><div class="dtxt"><b>DUCKER</b><span class="dmsg"></span></div><button id="duckOk" class="hl">OK</button><button id="duckX" aria-label="Close ducker">CLOSE</button>
 </div>
-<div id="trimWin" class="modal hidden">
-  <div class="mbox sw">
-    <div class="swT"><span id="trimTitle">TRIM PAD</span></div>
-    <div id="trimSlot"></div>
-    <div class="help"><p>Drag the red lines to trim, tap the waveform to hear it. Tap another pad to save this one and trim that one.</p></div>
-    <div class="trimPads" id="trimPads"></div>
-    <div class="row"><button id="trimDone" class="hl">DONE</button></div>
-  </div>
-</div>
+<div id="trimDock"><div id="tdBar"><b>TRIM</b><span id="tdName"></span><button id="tdMin" aria-label="Fold or open the trim"><svg width="14" height="9" viewBox="0 0 14 9"><path d="M1.5 1.5 7 7l5.5-5.5" fill="none" stroke="#F4F3EE" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+<div id="tdBody"><div class="trim" id="ptBox"><canvas id="ptWave"></canvas><div class="trimBar"><span id="ptInfo"></span><button id="ptReset">RESET</button></div></div></div></div>
 <div id="padMoveWin" class="modal hidden">
   <div class="mbox sw">
     <div class="swT"><span>MOVE PAD</span></div>
@@ -2328,9 +2330,9 @@ async function trimCommit(){
   trimBusy=false;
 }
 function drawTrim(){
-  const c=$('ptWave');if(!c)return;const dpr=Math.min(2,window.devicePixelRatio||1),W=Math.round(c.clientWidth*dpr),H=Math.round(c.clientHeight*dpr);if(!W)return;
+  const c=$('ptWave');if(!c)return;if(trim)$('tdName').textContent='PAD '+padLabel(trim.pad)+' · '+Math.round((trim.e-trim.s)*1000)+' ms'+(trimChanged()?' · edited':'');else $('tdName').textContent='tap a pad';const dpr=Math.min(2,window.devicePixelRatio||1),W=Math.round(c.clientWidth*dpr),H=Math.round(c.clientHeight*dpr);if(!W)return;
   if(c.width!==W||c.height!==H){c.width=W;c.height=H;}const g=c.getContext('2d');g.clearRect(0,0,W,H);
-  if(!trim){g.fillStyle='rgba(244,243,238,.5)';g.font=(11*dpr)+'px ui-monospace,Menlo,monospace';g.textAlign='center';g.fillText('Tap a pad to trim it',W/2,H/2+4*dpr);$('ptInfo').textContent='';return;}
+  if(!trim){g.fillStyle='rgba(244,243,238,.5)';g.font=(11*dpr)+'px ui-monospace,Menlo,monospace';g.textAlign='center';g.fillText('Tap a pad to trim it',W/2,H/2+4*dpr);$('ptInfo').textContent='';$('tdName').textContent='tap a pad';return;}
   const t=trim,span=t.v1-t.v0,X=x=>(x-t.v0)/span*W;
   const buf=t.src?t.src.audio:t.p.buf,sr=buf.sampleRate,d=t.src?t.src.mono:buf.getChannelData(0),nrm=t.src?(t.src.norm||1):1,mid=H/2;
   const x0=Math.max(0,X(t.s)),x1=Math.min(W,X(t.e));
@@ -2339,7 +2341,8 @@ function drawTrim(){
     g.fillStyle=x>=x0&&x<=x1?'#ADCFDE':'rgba(173,207,222,.35)';const y0=mid-Math.min(1,hi*nrm)*H*0.46,y1=mid-Math.max(-1,lo*nrm)*H*0.46;g.fillRect(x,y0,1,Math.max(1,y1-y0));}
   g.fillStyle='rgba(49,48,67,.55)';g.fillRect(0,0,x0,H);g.fillRect(x1,0,W-x1,H);
   [[x0,true],[x1,false]].forEach(([x,st])=>{g.fillStyle=COL.fire;g.fillRect(x-dpr,0,2*dpr,H);g.beginPath();const w=9*dpr;if(st){g.moveTo(x,0);g.lineTo(x+w,0);g.lineTo(x,w*1.3);}else{g.moveTo(x,H);g.lineTo(x-w,H);g.lineTo(x,H-w*1.3);}g.fill();});
-  $('ptInfo').textContent='PAD '+padLabel(t.pad)+' · '+Math.round((t.e-t.s)*1000)+' ms'+(trimChanged()?' · saves when you pick another pad':'')+(t.src?'':' · trims inside the chop');
+  $('ptInfo').textContent=Math.round((t.e-t.s)*1000)+' ms'+(trimChanged()?' · saves when you pick another pad':'')+(t.src?'':' · trims inside the chop');
+  $('tdName').textContent='PAD '+padLabel(t.pad)+' · '+Math.round((t.e-t.s)*1000)+' ms'+(trimChanged()?' · edited':'');
 }
 {const c=$('ptWave');let dr=null;
   const tAt=x=>{const r=c.getBoundingClientRect();return trim.v0+(x-r.left)/r.width*(trim.v1-trim.v0);};
@@ -2350,20 +2353,13 @@ function drawTrim(){
     const t=Math.max(trim.v0,Math.min(trim.v1,tAt(e.clientX)));
     if(dr.which==='s')trim.s=Math.min(t,trim.e-0.02);else trim.e=Math.max(t,trim.s+0.02);drawTrim();});
   const up=()=>{if(!dr)return;if(!dr.moved&&trim)trimAudition();dr=null;};c.addEventListener('pointerup',up);c.addEventListener('pointercancel',()=>dr=null);}
-/* trim window: pops up over the slicer for pads whose video is not loaded */
-function openTrimWin(i){
-  $('trimSlot').appendChild($('ptBox'));$('trimWin').classList.remove('hidden');
-  selPad=i;trimLoad(i);renderTrimWin();setTimeout(drawTrim,20);
-}
-function renderTrimWin(){
-  $('trimTitle').textContent='TRIM PAD '+padLabel(selPad);const g=$('trimPads');g.innerHTML='';
-  for(let k=0;k<16;k++){const i=bank*16+k,p=pads[i],b=document.createElement('button');b.textContent=padLabel(i);b.disabled=!p;
-    if(p)b.style.backgroundImage='url('+p.thumb+')';b.classList.toggle('on',i===selPad);
-    b.onclick=async()=>{if(i===selPad)return trimAudition();await trimCommit();selPad=i;trimLoad(i);renderTrimWin();drawTrim();trimAudition();};g.appendChild(b);}
-}
-async function closeTrimWin(){await trimCommit();$('trimWin').classList.add('hidden');const pe=$('secPad'),h=pe.querySelector('h3');h.after($('ptBox'));renderMini();renderPads();renderPadPanel();setTimeout(drawTrim,20);}
-$('trimDone').onclick=closeTrimWin;
-$('trimWin').addEventListener('click',e=>{if(e.target.id==='trimWin')closeTrimWin();});
+/* trim dock: never closes, only folds; follows the selected pad */
+function dockSize(){const d=$('trimDock');document.documentElement.style.setProperty('--dockH',d.offsetHeight+'px');}
+function setDockMin(m){$('trimDock').classList.toggle('min',m);UI.trimMin=m;saveUI();if(m)trimCommit();dockSize();if(!m)setTimeout(drawTrim,20);}
+function openTrimWin(i){selPad=i;trimLoad(i);if($('trimDock').classList.contains('min'))setDockMin(false);const d=$('trimDock');d.classList.add('flash');setTimeout(()=>d.classList.remove('flash'),500);renderMini();renderPads();renderPadPanel();drawTrim();}
+$('tdBar').onclick=()=>setDockMin(!$('trimDock').classList.contains('min'));
+$('trimDock').classList.toggle('min',!!UI.trimMin);
+try{new ResizeObserver(dockSize).observe($('trimDock'));}catch(e){}dockSize();window.addEventListener('resize',dockSize);
 function trimAudition(){if(!trim)return;initAudio();const t=trim,buf=t.src?t.src.audio:t.p.buf,s=ctx.createBufferSource(),g=ctx.createGain();s.buffer=buf;g.gain.value=S.padVol[t.pad];s.connect(g);g.connect(trackG[selTrack]||ctx.destination);s.start(ctx.currentTime+0.01,t.s,t.e-t.s);}
 $('ptReset').onclick=()=>{if(!trim)return;trim.s=trim.s0;trim.e=trim.e0;drawTrim();};
 document.addEventListener('visibilitychange',()=>{if(document.hidden)trimCommit();});
@@ -2765,7 +2761,7 @@ const idb={db:null,
   async get(k){const db=this.db||await this.open();if(!db)return null;return new Promise(res=>{try{const r=db.transaction('kv').objectStore('kv').get(k);r.onsuccess=()=>res(r.result||null);r.onerror=()=>res(null);}catch(e){res(null);}});}
 };
 let autoT=null,restoring=false;
-function padsChanged(){layoutStage();if(restoring)return;clearTimeout(autoT);autoT=setTimeout(autosave,2500);}
+function padsChanged(){layoutStage();try{if(!trimBusy)trimLoad(selPad);}catch(e){}if(restoring)return;clearTimeout(autoT);autoT=setTimeout(autosave,2500);}
 async function autosave(){
   try{const recs=[];for(let i=0;i<NP;i++){const p=pads[i];recs.push(p?await padRecord(p):null);}
     await idb.put('pads',{recs,name:$('sessName').value});}catch(e){}
@@ -2861,7 +2857,7 @@ document.addEventListener('touchmove',e=>{if((pDrag&&pDrag.lifted)||(pd&&pd.arme
 document.querySelectorAll('section.panel[id]').forEach(sec=>{
   sec.classList.toggle('min',!!UI[sec.id]);
   const h3=sec.querySelector('h3');
-  h3.addEventListener('click',e=>{if(sec._skipClick){sec._skipClick=false;return;}if(sec.id==='secPad'&&!sec.classList.contains('min'))trimCommit();if(sec.id==='secPad')setTimeout(drawTrim,30);if(sec.id==='secFx'&&duckZone(h3,e.clientX))return;const m=!sec.classList.contains('min');sec.classList.toggle('min',m);UI[sec.id]=m;saveUI();});
+  h3.addEventListener('click',e=>{if(sec._skipClick){sec._skipClick=false;return;}if(sec.id==='secFx'&&duckZone(h3,e.clientX))return;const m=!sec.classList.contains('min');sec.classList.toggle('min',m);UI[sec.id]=m;saveUI();});
   if(sec.id==='secVid'){
     /* VIDEO stays on top with the title bar and transport. Sideways on a wide screen, hold its title and drag left or right to switch columns. */
     h3.addEventListener('pointerdown',e=>{
