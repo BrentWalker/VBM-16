@@ -194,7 +194,7 @@ select{font:inherit;font-size:12px;background:var(--slate);color:var(--w);border
 @keyframes duckBlink{50%{background:var(--fire);color:var(--ink)}}
 #duckPop{position:fixed;left:50%;top:calc(10px + env(safe-area-inset-top));transform:translateX(-50%);z-index:40;display:flex;align-items:center;gap:10px;background:var(--ink);border-radius:18px;padding:8px 10px 8px 6px;box-shadow:0 10px 30px rgba(0,0,0,.5),0 0 0 2px var(--air);width:min(94vw,420px);animation:duckIn .45s cubic-bezier(.3,1.6,.5,1)}
 #duckPop.bye{animation:duckOut .35s ease-in forwards}
-#duckPop .duck{width:64px;height:58px;flex:0 0 auto;animation:duckBob 1.1s ease-in-out infinite}
+#duckPop .duck{width:64px;height:58px;flex:0 0 auto;border-radius:12px;overflow:hidden;background:#28273a}
 #duckPop .duck svg{width:100%;height:100%}
 #duckPop .dtxt{flex:1;display:flex;flex-direction:column;gap:2px;font-size:12px}
 #duckPop .dtxt b{letter-spacing:.14em;color:var(--air)}
@@ -211,7 +211,6 @@ select{font:inherit;font-size:12px;background:var(--slate);color:var(--w);border
 #duckCard input:disabled{opacity:.35}
 @keyframes duckIn{0%{transform:translate(-50%,-140%) scale(.6)}100%{transform:translate(-50%,0) scale(1)}}
 @keyframes duckOut{to{transform:translate(-50%,-140%) scale(.7);opacity:0}}
-@keyframes duckBob{50%{transform:translateY(-4px) rotate(-4deg)}}
 #tfx .mt{position:absolute;left:0;bottom:0;height:5px;width:0;background:var(--mc);box-shadow:0 0 8px var(--mc);border-radius:0 3px 3px 0;pointer-events:none;transition:width .05s linear}
 #tfxAmts .ctl output{width:56px}
 #tfxAmts .ctl label{width:74px}
@@ -465,7 +464,11 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
     <div class="row"><button id="bExpGo" class="hl">RECORD</button><button id="expClose">CLOSE</button></div>
   </div>
 </div>
-<div id="duckPop" class="hidden"><div class="duck"><svg viewBox="0 0 120 110" aria-hidden="true"><ellipse cx="62" cy="76" rx="42" ry="26" fill="#ADCFDE"/><path d="M28 70c-12-2-20-12-18-22 8 6 16 8 24 8z" fill="#ADCFDE"/><circle cx="78" cy="38" r="22" fill="#ADCFDE"/><path d="M96 38c8-3 17-2 22 3-5 6-14 8-22 5z" fill="#DC7B78"/><circle cx="84" cy="32" r="4.2" fill="#313043"/><circle cx="85.4" cy="30.6" r="1.4" fill="#fff"/><path d="M46 74c8 10 24 12 34 4" fill="none" stroke="#7EB3D2" stroke-width="5" stroke-linecap="round"/><path d="M52 100l-6 8h14zM74 100l-6 8h14z" fill="#DC7B78"/></svg></div><div class="dtxt"><b>DUCKER</b><span class="dmsg"></span></div><button id="duckX" aria-label="Close ducker">CLOSE</button>
+<div id="duckPop" class="hidden"><div class="duck"><svg viewBox="0 0 120 110" aria-hidden="true"><g id="dkBob"><g transform="translate(60 66)">
+<ellipse cx="0" cy="0" rx="40" ry="24" fill="#ADCFDE"/><path d="M-38-4c-12-4-18-14-14-22 8 7 14 9 22 10z" fill="#ADCFDE"/>
+<path d="M-20 2c10 12 28 12 38 2" fill="none" stroke="#7EB3D2" stroke-width="5" stroke-linecap="round"/>
+<g id="dkHead"><circle cx="16" cy="-30" r="20" fill="#ADCFDE"/><path d="M33-31c8-3 16-1 20 4-5 5-13 6-20 3z" fill="#DC7B78"/><circle cx="22" cy="-36" r="3.8" fill="#313043"/><circle cx="23.2" cy="-37.3" r="1.3" fill="#fff"/></g>
+</g></g><path d="M0 74q7.5-6 15 0t15 0 15 0 15 0 15 0 15 0 15 0 15 0V110H0z" fill="#7EB3D2"/></svg></div><div class="dtxt"><b>DUCKER</b><span class="dmsg"></span></div><button id="duckX" aria-label="Close ducker">CLOSE</button>
   <div id="duckCard" class="hidden">
     <div class="dkH">SHAPE</div><div class="dkRow" id="dkPre"></div>
     <canvas id="dkCurve"></canvas>
@@ -1638,6 +1641,16 @@ $('dkRel').oninput=e=>setDuck({rel:+e.target.value,preset:null});
 $('dkTry').onclick=()=>{if(!duckCard)return;initAudio();const pi=S.duckBy[duckCard[0]];if(pi!=null)trigger(selTrack,pi,0,ctx.currentTime+0.01,true);};
 $('dkRemove').onclick=()=>{if(!duckCard)return;pushUndo();const tr=duckCard;tr.forEach(t=>S.duckBy[t]=null);save();duckEnd('Track'+(tr.length>1?'s ':' ')+tr.map(x=>TL[x]).join(' + ')+' not ducked anymore.');};
 $('dkDone').onclick=()=>duckEnd('Ducker set.');
+/* the bath duck dips with the real ducker: reads the duck gain of the tracks being ducked */
+let dkIdle=0;
+function duckAnim(){
+  const pop=$('duckPop');if(pop.classList.contains('hidden'))return;
+  let g=1;const tr=duckCard&&duckCard.length?duckCard:[0,1,2,3].filter(t=>S.duckBy[t]!=null);
+  if(ctx&&TN.length)tr.forEach(t=>{if(TN[t]&&TN[t].dk)g=Math.min(g,TN[t].dk.gain.value);});
+  dkIdle+=0.05;const d=1-g,float=Math.sin(dkIdle)*1.6;
+  $('dkBob').setAttribute('transform','translate(0 '+(d*22+float).toFixed(2)+') rotate('+(-d*8).toFixed(2)+' 60 66)');
+  $('dkHead').setAttribute('transform','rotate('+(d*14).toFixed(2)+' 10 -18)');
+}
 const meterLv=[0,0,0,0],meterBuf=new Float32Array(256);
 function meters(){
   if(!ctx||!TN.length||$('secFx').classList.contains('min'))return;
@@ -1647,7 +1660,7 @@ function meters(){
     b.classList.toggle('live',meterLv[t]>0.02);}
 }
 function loop(){
-  requestAnimationFrame(loop);meters();
+  requestAnimationFrame(loop);meters();duckAnim();
   if(edOpen&&!exporting)return;
   const now=ctx?ctx.currentTime:0;
   while(uiQ.length&&uiQ[0].t<=now){const u=uiQ.shift();
