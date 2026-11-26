@@ -212,7 +212,7 @@ button.hl{background:var(--water);color:var(--ink);font-weight:700}
 select{font:inherit;font-size:12px;background:var(--slate);color:var(--w);border:0;border-radius:10px;padding:8px}
 .help{font-size:11px;line-height:1.6;opacity:.85}
 .help p{margin:4px 0}
-.modal{position:fixed;inset:0;background:rgba(49,48,67,.92);display:flex;align-items:center;justify-content:center;z-index:20;padding:16px}
+.modal{overscroll-behavior:contain;position:fixed;inset:0;background:rgba(49,48,67,.92);display:flex;align-items:center;justify-content:center;z-index:20;padding:16px}
 .mbox{background:var(--ink);border:1px solid var(--purple);border-radius:16px;padding:14px;width:100%;max-width:420px;text-align:center}
 #saveWin,#expWin,#initWin,#tfxWin,#padMoveWin{z-index:15}
 .pad.lift{opacity:.35;outline:2px dashed var(--air);outline-offset:-2px}
@@ -273,7 +273,7 @@ select{font:inherit;font-size:12px;background:var(--slate);color:var(--w);border
 .tfxGrid button.on{background:var(--air);color:var(--ink)}
 button.danger{background:var(--fire);color:var(--ink);font-weight:700}
 #eLoops button{padding:8px 0;font-size:11px}
-.sw{text-align:left;max-height:90vh;overflow-y:auto}
+.sw{text-align:left;max-height:90vh;overflow-y:auto;overscroll-behavior:contain}
 .swT{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;letter-spacing:.12em;color:var(--air)}
 .sw .help{margin-top:8px}
 #mTxt{font-size:12px;margin-bottom:8px;line-height:1.5}
@@ -2183,7 +2183,17 @@ document.addEventListener('visibilitychange',()=>{if(document.hidden)trimCommit(
 try{new ResizeObserver(()=>{const h=$('vidBlock').offsetHeight;document.documentElement.style.setProperty('--vbH',h+'px');const d=$('trimDock');if(d.offsetHeight>dockMax())setDockH(dockMax(),false,true);}).observe($('vidBlock'));}catch(e){}
 ['gesturestart','gesturechange'].forEach(n=>$('trimDock').addEventListener(n,e=>e.preventDefault()));
 /* touches in the drawer never scroll the page behind it */
-$('trimDock').addEventListener('touchmove',e=>e.preventDefault(),{passive:false});
+/* a touch that starts on the locked top (title bar, transport, video), in the drawer, or in a popup never scrolls the page behind it.
+   Popups that are taller than the screen still scroll inside themselves. */
+let tmScroll=null;
+document.addEventListener('touchstart',e=>{const t=e.target;tmScroll=null;
+  const m=t.closest&&t.closest('.modal:not(.hidden),#duckPop:not(.hidden)');
+  if(m){const box=t.closest('.mbox,#duckPop');tmScroll=box&&box.scrollHeight>box.clientHeight+1?{box,y:e.touches[0].clientY}:'block';return;}
+  if(t.closest&&t.closest('#vidBlock,#trimDock'))tmScroll='block';},{passive:true,capture:true});
+document.addEventListener('touchmove',e=>{if(!tmScroll)return;
+  if(tmScroll==='block'){e.preventDefault();return;}
+  const {box}=tmScroll,y=e.touches[0].clientY,dy=y-tmScroll.y;tmScroll.y=y;
+  if((dy>0&&box.scrollTop<=0)||(dy<0&&box.scrollTop+box.clientHeight>=box.scrollHeight-1))e.preventDefault();},{passive:false,capture:true});
 $('trimDock').addEventListener('wheel',e=>e.preventDefault(),{passive:false});
 
 function renderPadPanel(){
