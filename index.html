@@ -126,6 +126,11 @@ button.hold.flash{background:var(--fire)!important;color:var(--ink)}
 .panel h3{margin:0 0 6px;font-size:11px;letter-spacing:.14em;opacity:.85;font-weight:600;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px}
 .panel h3::after{content:"▾";font-size:12px;opacity:.8}
 .panel h3>span{margin-left:auto}
+.trim{margin:2px 0 8px}
+#ptWave{display:block;width:100%;height:84px;border-radius:10px;background:#28273a;touch-action:none}
+.trimBar{display:flex;align-items:center;gap:8px;margin-top:5px;font-size:10px;opacity:.9}
+.trimBar span{flex:1;letter-spacing:.04em}
+.trimBar button{padding:6px 10px;font-size:10px}
 /* every closed panel is the same height with the same gap */
 .panel.min{padding:0 12px!important;height:44px;display:flex;align-items:center}
 .panel.min h3{margin:0;padding:0!important;width:100%;height:44px;line-height:1;-webkit-user-select:none;user-select:none}
@@ -365,6 +370,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
   </section>
   <section class="panel" id="secPad">
     <h3>PAD EDIT <span id="padName"></span></h3>
+    <div class="trim" id="ptBox"><canvas id="ptWave"></canvas><div class="trimBar"><span id="ptInfo"></span><button id="ptReset">RESET</button></div></div>
     <div class="ctl"><label>PITCH</label><input type="range" id="pPitch" min="-12" max="12" step="1" value="0"><output id="oPitch">0</output></div>
     <div class="ctl"><label>LEVEL</label><input type="range" id="pVol" min="0" max="150" step="1" value="100"><output id="oVol">100</output></div>
     <div class="row"><button id="pRev">REVERSE OFF</button><button id="pAud">AUDITION</button></div>
@@ -1144,7 +1150,7 @@ function estErr(txt){edBusy=false;est(txt);const b=$('estBtn');b.textContent='OK
 const wave=$('wave'),wg=wave.getContext('2d');
 let selPlay=null;
 function firstEmpty(){for(let i=0;i<16;i++)if(!pads[bank*16+i])return i;return selPad%16;}
-function openEditor(srcIdx,sel,padIdx){
+function openEditor(srcIdx,sel,padIdx){trimCommit();
   if(playing)stop();
   $('ed').classList.remove('hidden');edOpen=true;document.body.style.overflow='hidden';
   if(srcIdx!=null&&srcIdx>=0){
@@ -2281,8 +2287,61 @@ function renderTransport(){
   $('bView').innerHTML=(view==='focus'?ICON_EYE_FOCUS:ICON_EYE)+'<span class="vb">'+(view==='mix'?'MIX':view==='focus'?TL[selTrack]:view)+'</span>';$('bView').classList.toggle('focus',view==='focus');$('bpmV').textContent=S.bpm;$('gBpm').value=S.bpm;$('oBpm').textContent=S.bpm;
   $('gSw').value=Math.round(S.swing*100);$('oSw').textContent=Math.round(S.swing*100)+'%';$('eFmt').value=S.format;
 }
+/* ---------- pad trim in PAD EDIT: drag the start or end, tap to hear it; it saves when you pick another pad or close PAD EDIT ---------- */
+let trim=null,trimBusy=false;
+function trimSrc(p){return p&&p.srcId!=null?sources.find(x=>x.id===p.srcId)||null:null;}
+function trimLoad(i){
+  if(trim&&trim.pad===i&&pads[i]===trim.p)return;
+  if(trim&&trim.pad!==i)trimCommit();
+  const p=pads[i];if(!p){trim=null;drawTrim();return;}
+  const src=trimSrc(p);
+  if(src){const s0=p.start||0,e0=Math.min(src.dur,s0+p.len),pad=Math.max(0.5,p.len);trim={pad:i,p,src,s:s0,e:e0,s0,e0,v0:Math.max(0,s0-pad),v1:Math.min(src.dur,e0+pad)};}
+  else{const L=p.buf.duration;trim={pad:i,p,src:null,s:0,e:L,s0:0,e0:L,v0:0,v1:L};}
+  drawTrim();
+}
+function trimChanged(){return !!(trim&&(Math.abs(trim.s-trim.s0)>1e-4||Math.abs(trim.e-trim.e0)>1e-4));}
+async function trimCommit(){
+  if(!trimChanged()||trimBusy)return;const t=trim,i=t.pad,old=pads[i];if(old!==t.p)return;
+  trimBusy=true;pushUndo();
+  try{let np;
+    if(t.src)np=await makePad(t.src,t.s,t.e-t.s,null,old.slip||0);
+    else{const c=cutBuffer(old.buf,t.s,t.e-t.s),L=old.buf.duration,n=old.frames.length,a=Math.min(n-1,Math.floor(t.s/L*n)),b=Math.max(a+1,Math.ceil(t.e/L*n)),fr=old.frames.slice(a,b);
+      np={...old,...c,cat:old.cat,start:(old.start||0)+t.s,len:t.e-t.s,frames:fr,fps:fr.length/(t.e-t.s),thumb:fr[0]?fr[0].toDataURL('image/jpeg',0.6):old.thumb};}
+    if(old.name)np.name=old.name;if(old.cat&&!t.src)np.cat=old.cat;
+    pads[i]=np;save();padsChanged();renderPads();toast('Pad '+padLabel(i)+' trimmed.',1000);
+    if(trim&&trim.pad===i){trim=null;if(selPad===i)trimLoad(i);}
+  }catch(e){toast('Could not trim pad '+padLabel(i)+'.',1600);}
+  trimBusy=false;
+}
+function drawTrim(){
+  const c=$('ptWave');if(!c)return;const dpr=Math.min(2,window.devicePixelRatio||1),W=Math.round(c.clientWidth*dpr),H=Math.round(c.clientHeight*dpr);if(!W)return;
+  if(c.width!==W||c.height!==H){c.width=W;c.height=H;}const g=c.getContext('2d');g.clearRect(0,0,W,H);
+  if(!trim){g.fillStyle='rgba(244,243,238,.5)';g.font=(11*dpr)+'px ui-monospace,Menlo,monospace';g.textAlign='center';g.fillText('Tap a pad to trim it',W/2,H/2+4*dpr);$('ptInfo').textContent='';return;}
+  const t=trim,span=t.v1-t.v0,X=x=>(x-t.v0)/span*W;
+  const buf=t.src?t.src.audio:t.p.buf,sr=buf.sampleRate,d=t.src?t.src.mono:buf.getChannelData(0),nrm=t.src?(t.src.norm||1):1,mid=H/2;
+  const x0=Math.max(0,X(t.s)),x1=Math.min(W,X(t.e));
+  g.fillStyle='rgba(173,207,222,.12)';g.fillRect(x0,0,x1-x0,H);
+  for(let x=0;x<W;x++){const a=Math.floor((t.v0+x/W*span)*sr),b=Math.floor((t.v0+(x+1)/W*span)*sr);let lo=0,hi=0;for(let k=a;k<b&&k<d.length;k+=Math.max(1,Math.floor((b-a)/64))){const v=d[k];if(v<lo)lo=v;if(v>hi)hi=v;}
+    g.fillStyle=x>=x0&&x<=x1?'#ADCFDE':'rgba(173,207,222,.35)';const y0=mid-Math.min(1,hi*nrm)*H*0.46,y1=mid-Math.max(-1,lo*nrm)*H*0.46;g.fillRect(x,y0,1,Math.max(1,y1-y0));}
+  g.fillStyle='rgba(49,48,67,.55)';g.fillRect(0,0,x0,H);g.fillRect(x1,0,W-x1,H);
+  [[x0,true],[x1,false]].forEach(([x,st])=>{g.fillStyle=COL.fire;g.fillRect(x-dpr,0,2*dpr,H);g.beginPath();const w=9*dpr;if(st){g.moveTo(x,0);g.lineTo(x+w,0);g.lineTo(x,w*1.3);}else{g.moveTo(x,H);g.lineTo(x-w,H);g.lineTo(x,H-w*1.3);}g.fill();});
+  $('ptInfo').textContent='PAD '+padLabel(t.pad)+' · '+Math.round((t.e-t.s)*1000)+' ms'+(trimChanged()?' · saves when you pick another pad':'')+(t.src?'':' · trims inside the chop');
+}
+{const c=$('ptWave');let dr=null;
+  const tAt=x=>{const r=c.getBoundingClientRect();return trim.v0+(x-r.left)/r.width*(trim.v1-trim.v0);};
+  c.addEventListener('pointerdown',e=>{if(!trim)return;e.preventDefault();try{c.setPointerCapture(e.pointerId);}catch(_){}
+    const r=c.getBoundingClientRect(),px=t=>r.left+(t-trim.v0)/(trim.v1-trim.v0)*r.width,ds=Math.abs(e.clientX-px(trim.s)),de=Math.abs(e.clientX-px(trim.e));
+    dr={which:Math.min(ds,de)<34?(ds<de?'s':'e'):null,x:e.clientX,moved:false};});
+  c.addEventListener('pointermove',e=>{if(!dr||!dr.which)return;if(!dr.moved&&Math.abs(e.clientX-dr.x)<3)return;dr.moved=true;
+    const t=Math.max(trim.v0,Math.min(trim.v1,tAt(e.clientX)));
+    if(dr.which==='s')trim.s=Math.min(t,trim.e-0.02);else trim.e=Math.max(t,trim.s+0.02);drawTrim();});
+  const up=()=>{if(!dr)return;if(!dr.moved&&trim)trimAudition();dr=null;};c.addEventListener('pointerup',up);c.addEventListener('pointercancel',()=>dr=null);}
+function trimAudition(){if(!trim)return;initAudio();const t=trim,buf=t.src?t.src.audio:t.p.buf,s=ctx.createBufferSource(),g=ctx.createGain();s.buffer=buf;g.gain.value=S.padVol[t.pad];s.connect(g);g.connect(trackG[selTrack]||ctx.destination);s.start(ctx.currentTime+0.01,t.s,t.e-t.s);}
+$('ptReset').onclick=()=>{if(!trim)return;trim.s=trim.s0;trim.e=trim.e0;drawTrim();};
+document.addEventListener('visibilitychange',()=>{if(document.hidden)trimCommit();});
+window.addEventListener('resize',()=>drawTrim());
 function renderPadPanel(){
-  const p=pads[selPad];
+  const p=pads[selPad];trimLoad(selPad);
   const pn=p?padNote(p):null;
   $('padName').textContent=padLabel(selPad)+(p?' · '+(p.name||p.cat)+(pn!=null?' · '+noteName(pn+S.padSemi[selPad]):'')+(p.srcKey?' · KEY '+p.srcKey.replace(' major','').replace(' minor','m'):''):' · empty');
   $('pPitch').value=S.padSemi[selPad];$('oPitch').textContent=S.padSemi[selPad];
@@ -2775,7 +2834,7 @@ document.addEventListener('touchmove',e=>{if((pDrag&&pDrag.lifted)||(pd&&pd.arme
 document.querySelectorAll('section.panel[id]').forEach(sec=>{
   sec.classList.toggle('min',!!UI[sec.id]);
   const h3=sec.querySelector('h3');
-  h3.addEventListener('click',e=>{if(sec._skipClick){sec._skipClick=false;return;}if(sec.id==='secFx'&&duckZone(h3,e.clientX))return;const m=!sec.classList.contains('min');sec.classList.toggle('min',m);UI[sec.id]=m;saveUI();});
+  h3.addEventListener('click',e=>{if(sec._skipClick){sec._skipClick=false;return;}if(sec.id==='secPad'&&!sec.classList.contains('min'))trimCommit();if(sec.id==='secPad')setTimeout(drawTrim,30);if(sec.id==='secFx'&&duckZone(h3,e.clientX))return;const m=!sec.classList.contains('min');sec.classList.toggle('min',m);UI[sec.id]=m;saveUI();});
   if(sec.id==='secVid'){
     /* VIDEO stays on top with the title bar and transport. Sideways on a wide screen, hold its title and drag left or right to switch columns. */
     h3.addEventListener('pointerdown',e=>{
