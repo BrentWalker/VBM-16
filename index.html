@@ -134,6 +134,8 @@ button.hold.flash{background:var(--fire)!important;color:var(--ink)}
 #tdGrip::before{content:"";position:absolute;left:50%;top:7px;width:44px;height:5px;margin-left:-22px;border-radius:3px;background:rgba(173,207,222,.55)}
 #tdName{font-size:10px;letter-spacing:.06em;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:10px;max-width:100%}
 #tdHead{flex:0 0 auto;display:flex;align-items:center;gap:6px;margin-bottom:6px}
+#tdHead.solo{display:none}
+.trimBar{margin-bottom:8px}
 #tdTabs{flex:1;display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;min-width:0}
 #tdTabs::-webkit-scrollbar{display:none}
 #tdTabs button{flex:0 0 auto;height:32px;min-width:52px;padding:0 8px;border-radius:8px;background:var(--slate) center/cover no-repeat;font-size:10px;font-weight:800;color:#fff;text-shadow:0 1px 2px #000}
@@ -144,7 +146,7 @@ button.hold.flash{background:var(--fire)!important;color:var(--ink)}
 #ptWave{position:absolute;inset:0;display:block;width:100%;height:100%;border-radius:10px;background:#28273a;touch-action:none}
 .trimBar{display:flex;align-items:center;gap:8px;margin-top:5px;font-size:10px;opacity:.9;flex:0 0 auto}
 .trimBar span{flex:1;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tdCtl{flex:0 0 auto;display:flex;gap:4px;align-items:center;margin:6px 0 8px}
+.tdCtl{flex:0 0 auto;display:flex;gap:4px;align-items:center;margin:0 0 6px}
 .tdCtl button{height:34px;padding:0 8px;font-size:10px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
 .tdCtl .sl{flex:1;display:flex;gap:3px;min-width:0}
 .tdCtl .sl i{flex:1;font-style:normal;font-size:9px;display:flex;align-items:center;justify-content:center;background:rgba(66,76,96,.6);border-radius:8px;white-space:nowrap;padding:0 4px;letter-spacing:.04em}
@@ -159,7 +161,7 @@ body{padding-bottom:calc(10px + var(--dockH))}
 .panel.min h3::after{content:"▸"}
 .panel.min>*:not(h3){display:none!important}
 .panel.tight{margin-top:8px;padding:8px 10px}
-#vidBlock .transport{margin-top:8px}
+#vidBlock .transport{margin:0 0 10px}
 section.panel{scroll-margin-top:calc(var(--vbH,0px) + 8px)}
 /* title bar, video and transport stay locked at the top while the panels scroll under */
 body:not(.wide) #colL{position:sticky;top:0;z-index:9}
@@ -342,6 +344,16 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
     <button class="ur" id="bUndo">↶</button><button class="ur" id="bRedo">↷</button><button id="bExp">EXPORT</button>
   </header>
 
+  <div class="row transport">
+    <button id="bPlay" aria-label="Play"></button>
+    <button id="bRec" aria-label="Record"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="6.5" fill="currentColor" stroke="none"/></svg></button>
+    <div class="bpm"><button id="bpmDn">-</button><span id="bpmV">92</span><button id="bpmUp">+</button></div>
+    <button id="bMet" aria-label="Metronome"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.2 3.5h5.6L19 20.5H5z"/><path d="M12 16.5l5.5-9.5"/><circle cx="17.5" cy="7" r="1.4" fill="currentColor"/><path d="M7.2 15.5h9.6"/></svg></button>
+        <button id="bKeys" aria-label="Keys"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5.5" width="20" height="13" rx="2"/><path d="M7 5.5v13M12 5.5v13M17 5.5v13"/><rect x="5.6" y="5.5" width="2.8" height="7" fill="currentColor" stroke="none"/><rect x="10.6" y="5.5" width="2.8" height="7" fill="currentColor" stroke="none"/><rect x="15.6" y="5.5" width="2.8" height="7" fill="currentColor" stroke="none"/></svg></button>
+    <button id="bView" aria-label="View"></button>
+    <button id="bKill" class="kill" aria-label="Stop all sounds"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg></button>
+  </div>
+
   <section class="panel tight" id="secVid"><h3>VIDEO</h3>
   <div id="stage">
     <canvas id="cv" width="720" height="720"></canvas>
@@ -358,15 +370,6 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
   </div>
   <div class="vgrip" id="vGrip" title="Drag to resize, double tap for presets"></div>
   </section>
-  <div class="row transport">
-    <button id="bPlay" aria-label="Play"></button>
-    <button id="bRec" aria-label="Record"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="6.5" fill="currentColor" stroke="none"/></svg></button>
-    <div class="bpm"><button id="bpmDn">-</button><span id="bpmV">92</span><button id="bpmUp">+</button></div>
-    <button id="bMet" aria-label="Metronome"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.2 3.5h5.6L19 20.5H5z"/><path d="M12 16.5l5.5-9.5"/><circle cx="17.5" cy="7" r="1.4" fill="currentColor"/><path d="M7.2 15.5h9.6"/></svg></button>
-        <button id="bKeys" aria-label="Keys"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5.5" width="20" height="13" rx="2"/><path d="M7 5.5v13M12 5.5v13M17 5.5v13"/><rect x="5.6" y="5.5" width="2.8" height="7" fill="currentColor" stroke="none"/><rect x="10.6" y="5.5" width="2.8" height="7" fill="currentColor" stroke="none"/><rect x="15.6" y="5.5" width="2.8" height="7" fill="currentColor" stroke="none"/></svg></button>
-    <button id="bView" aria-label="View"></button>
-    <button id="bKill" class="kill" aria-label="Stop all sounds"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg></button>
-  </div>
 </div>
   <div id="panelsL"></div>
 </div><div id="colR">
@@ -509,10 +512,11 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
 </g></g><path d="M0 74q7.5-6 15 0t15 0 15 0 15 0 15 0 15 0 15 0 15 0V110H0z" fill="#7EB3D2"/></svg></div><div class="dtxt"><b>DUCKER</b><span class="dmsg"></span></div><button id="duckOk" class="hl">OK</button><button id="duckX" aria-label="Close ducker">CLOSE</button>
 </div>
 <div id="trimDock"><div id="tdGrip"><span id="tdName"></span></div>
-<div id="tdHead"><div id="tdTabs"></div><label class="btn" aria-label="Record a video"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="13" height="12" rx="2"/><path d="M15.5 10.2l5-3v9.6l-5-3"/><circle cx="9" cy="12" r="2.4"/></svg><input type="file" accept="video/*" capture="environment" class="fIn" hidden></label><label class="btn" aria-label="Import a video"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="6" width="13" height="12" rx="2"/><path d="M15.5 10.2l5-3v9.6l-5-3"/><path d="M9 9.5v5M6.5 12h5"/></svg><input type="file" accept="video/*" class="fIn" hidden></label><button id="tdChop">AUTO CHOP</button></div>
+<div class="tdCtl"><div class="sl"><button id="tdSlM" aria-label="Slip video earlier"><svg width="10" height="12" viewBox="0 0 10 12"><path d="M7.5 1.5 3 6l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><i id="tdSlV">SLIP 0 f</i><button id="tdSlP" aria-label="Slip video later"><svg width="10" height="12" viewBox="0 0 10 12"><path d="M2.5 1.5 7 6l-4.5 4.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div><button id="tzSnap">SNAP</button><button id="tzOut" aria-label="Zoom out">−</button><button id="tzIn" aria-label="Zoom in">+</button><button id="tdLoop">LOOP</button><button id="ptReset">RESET</button></div>
+<div id="tdHead"><div id="tdTabs"></div></div>
 <div id="tdWaveW"><canvas id="ptWave"></canvas></div>
 <div class="trimBar"><span id="ptInfo"></span></div>
-<div class="tdCtl"><div class="sl"><button id="tdSlM" aria-label="Slip video earlier"><svg width="10" height="12" viewBox="0 0 10 12"><path d="M7.5 1.5 3 6l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><i id="tdSlV">SLIP 0 f</i><button id="tdSlP" aria-label="Slip video later"><svg width="10" height="12" viewBox="0 0 10 12"><path d="M2.5 1.5 7 6l-4.5 4.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div><button id="tzSnap">SNAP</button><button id="tzOut" aria-label="Zoom out">−</button><button id="tzIn" aria-label="Zoom in">+</button><button id="tdLoop">LOOP</button><button id="ptReset">RESET</button></div></div>
+</div>
 <div id="padMoveWin" class="modal hidden">
   <div class="mbox sw">
     <div class="swT"><span>MOVE PAD</span></div>
@@ -1116,7 +1120,7 @@ function finishSource(src,audio){
     return;
   }
   if(src.key)toast(src.name+':'+keyMsg(src).replace(/^ /,' '),3600);
-  showSrc(src);dockOpen();estFlash('Drag across the sound to make a slice, then drag the slice up onto a pad.',4500);
+  showSrc(src);dockOpen();estFlash('Drag across the sound to make a slice, then hold it and drag it onto a pad.',4500);
 }
 /* Real time fallback: play the clip through the audio graph and capture the PCM */
 function listenAudio(url,secs,onProg){
@@ -2372,7 +2376,7 @@ function bandOf(H,dpr){if(!trim||!trim.src)return {band:0,R:null};const R=srcReg
 function slipNow(){if(!trim)return 0;if(trim.empty)return trim.slip||0;const p=pads[trim.pad];return p?(p.slipTarget!=null?p.slipTarget:p.slip||0):0;}
 function drawTrim(){
   const c=$('ptWave');if(!c)return;
-  const nm=!trim?(sources.some(x=>x.audio)?'Tap a pad':'Add a video with the camera or + button'):(trim.src?trim.src.name+' · ':'')+(pending()?'NEW SLICE · '+Math.round((trim.e-trim.s)*1000)+' ms':trim.empty?'no pad picked':'PAD '+padLabel(trim.pad)+' · '+Math.round((trim.e-trim.s)*1000)+' ms'+(trimChanged()?' · edited':''));
+  const nm=!trim?(sources.some(x=>x.audio)?'Tap a pad':'Add a video with the camera button up top'):(trim.src?trim.src.name+' · ':'')+(pending()?'NEW SLICE · '+Math.round((trim.e-trim.s)*1000)+' ms':trim.empty?'no pad picked':'PAD '+padLabel(trim.pad)+' · '+Math.round((trim.e-trim.s)*1000)+' ms'+(trimChanged()?' · edited':''));
   $('tdName').textContent=nm;
   const sf=Math.round(slipNow()/FR);$('tdSlV').textContent='SLIP '+(sf>0?'+':'')+sf+' f';
   const canSlip=!!(trim&&trim.src&&(pending()||!trim.empty));['tdSlM','tdSlP'].forEach(id=>$(id).disabled=!canSlip);
@@ -2430,14 +2434,12 @@ function dockOpen(){if(dockFolded()||$('trimDock').offsetHeight<190)setDockH(Mat
     const h=d.offsetHeight;if(h<120){trimCommit();setDockH(mn,true);}else if(h<190)setDockH(190,true);else setDockH(h);});
   gp.addEventListener('pointercancel',()=>st=null);}
 /* video chips */
-function renderDockTabs(){const el=$('tdTabs');if(!el)return;el.innerHTML='';const cs=trim&&trim.src;
+function renderDockTabs(){const el=$('tdTabs');if(!el)return;el.innerHTML='';const cs=trim&&trim.src;$('tdHead').classList.toggle('solo',sources.filter(x=>x.audio).length<2);
   sources.forEach((src,i)=>{if(!src.audio)return;const b=document.createElement('button');b.textContent=src.name;if(src.thumb)b.style.backgroundImage='url('+src.thumb+')';b.classList.toggle('on',src===cs);
     b.onclick=()=>{if(src===cs)return;if(i!==curSrc&&!edBusy)selectSource(i);showSrc(src);};el.appendChild(b);});}
 /* auto chop from the drawer: pick a type, it fills the next empty bank */
 function chopUI(on){const r=$('tpAuto').parentElement;r.classList.toggle('hidden',on);$('tpModeNote').classList.toggle('hidden',on);}
-$('tdChop').onclick=()=>{const src=(trim&&trim.src)||lastSrc();if(!src){toast('Add a video first.',1500);return;}if(edBusy)return;
-  if(nextEmptyBank()<0){toast('All 8 banks are full. Clear a bank first.',2400);return;}
-  chopSrc=src;chopUI(true);$('typePick').classList.remove('hidden');};
+
 function chopRun(type){const src=chopSrc;chopSrc=null;chopUI(false);const i=sources.indexOf(src);if(i<0)return;if(i!==curSrc)selectSource(i);
   src.type=type;const b=nextEmptyBank();if(b<0)return;bank=b;renderBanks();
   fillAll('auto').then(()=>{trim=null;trimLoad(selPad);toast('Bank '+(b+1)+' filled with 16 '+type.toLowerCase()+' chops from '+src.name+'.',3000);});}
