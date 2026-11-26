@@ -1577,14 +1577,14 @@ function duckZone(h3,x){const r=h3.getBoundingClientRect(),rg=document.createRan
 /* step 1: tap tracks to duck (they blink, a duck lands on each one picked), OK. Step 2: tap the pads that duck them, DONE. */
 var duckStep=1,duckPads=[];
 function duckStart(){
-  duckMode=true;duckSel=[];duckPads=[];duckStep=1;duckPrev={};
+  duckMode=true;duckSel=[0,1,2,3].filter(t=>S.duckBy[t].length);duckPads=[];duckStep=1;duckPrev={};
   document.querySelectorAll('section.panel[id]').forEach(sec=>{duckPrev[sec.id]=sec.classList.contains('min');const keep=sec.id==='secFx'||sec.id==='secPads'||sec.id==='secVid';if(!keep)sec.classList.add('min');else if(sec.id!=='secVid')sec.classList.remove('min');});
   const d=$('duckPop');d.classList.remove('hidden','bye');duckMsg();
   try{navigator.vibrate&&navigator.vibrate([30,40,30]);}catch(_){}
   renderTfx();renderPads();$('secFx').scrollIntoView({behavior:'smooth',block:'start'});
 }
 function duckMsg(){const m=$('duckPop').querySelector('.dmsg'),ok=$('duckOk');
-  if(duckStep===1){m.textContent=duckSel.length?'Ducking '+duckSel.map(x=>TL[x]).join(' + ')+'. Tap OK.':'Tap the tracks to duck';ok.textContent='OK';ok.disabled=!duckSel.length;}
+  if(duckStep===1){m.textContent=duckSel.length?'Ducking '+duckSel.map(x=>TL[x]).join(' + ')+'. Tap a track to add or unduck it, then OK.':'Tap the tracks to duck';ok.textContent='OK';ok.disabled=!duckSel.length;}
   else{m.textContent=duckPads.length?'Ducker pads: '+duckPads.map(padLabel).join(', ')+'. Tap DONE.':'Now tap the pads that duck '+duckSel.map(x=>TL[x]).join(' + ');ok.textContent='DONE';ok.disabled=!duckPads.length;}}
 function duckEnd(msg){
   duckMode=false;duckSel=[];duckPads=[];duckStep=1;
@@ -1592,7 +1592,11 @@ function duckEnd(msg){
   const d=$('duckPop');d.classList.add('bye');setTimeout(()=>d.classList.add('hidden'),350);renderTfx();renderPads();if(msg)toast(msg,2400);
 }
 function duckTrack(t){
-  if(duckStep!==1)return;const i=duckSel.indexOf(t);if(i>=0)duckSel.splice(i,1);else duckSel.push(t);
+  if(duckStep!==1)return;const i=duckSel.indexOf(t);
+  if(i>=0){duckSel.splice(i,1);
+    if(S.duckBy[t].length){pushUndo();S.duckBy[t]=[];save();toast('Track '+TL[t]+' unducked.',1100);}
+    if(!duckSel.length&&!S.duckBy.some(x=>x.length)){renderTfx();duckEnd('Ducker off. No tracks are ducked.');return;}}
+  else duckSel.push(t);
   try{navigator.vibrate&&navigator.vibrate(12);}catch(_){}duckMsg();renderTfx();
 }
 function duckPad(pi){
