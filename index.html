@@ -473,9 +473,9 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
     <div class="ctl"><label>HOLD</label><input type="range" id="dkHold" min="0" max="200" step="1"><output id="dkHoldV"></output></div>
     <div class="ctl"><label>RELEASE</label><input type="range" id="dkRel" min="20" max="1000" step="5"><output id="dkRelV"></output></div>
     <div class="dkH">SYNC RELEASE TO THE BEAT</div><div class="dkRow" id="dkSync"></div>
-    <div class="dkRow"><button id="dkTry">TRY IT</button><button id="dkRemove">REMOVE DUCK</button></div>
+    <div class="dkRow"><button id="dkRemove">REMOVE DUCK</button></div>
   </div>
-    <div class="row"><button id="tfxClear">CLEAR</button><button id="tfxDone" class="hl">DONE</button></div>
+    <div class="row"><button id="tfxDone" class="hl">DONE</button></div>
   </div>
 </div>
 <div id="saveWin" class="modal hidden">
@@ -1364,7 +1364,6 @@ function drawDuckCurve(){
 $('dkDepth').oninput=e=>setDuck({depth:+e.target.value,preset:null});
 $('dkHold').oninput=e=>setDuck({hold:+e.target.value,preset:null});
 $('dkRel').oninput=e=>setDuck({rel:+e.target.value,preset:null});
-$('dkTry').onclick=()=>{if(!duckCard)return;initAudio();const pi=S.duckBy[duckCard[0]][0];if(pi!=null)trigger(selTrack,pi,0,ctx.currentTime+0.01,true);};
 $('dkRemove').onclick=()=>{if(!duckCard)return;pushUndo();const tr=duckCard;tr.forEach(t=>S.duckBy[t]=[]);save();$('duckCard').classList.add('hidden');duckCard=null;renderTfx();toast('Track'+(tr.length>1?'s ':' ')+tr.map(x=>TL[x]).join(' + ')+' not ducked anymore.',1600);};
 /* the bath duck dips with the real ducker: reads the duck gain of the tracks being ducked */
 let dkIdle=0;
@@ -1759,7 +1758,7 @@ function buildTfx(){
     if(i>=0)a.splice(i,1);else{if(a.length>=2){toast('Up to 2 per track. Tap one to remove it first.',1600);return;}a.push(k);S.trackFxOn[tfxEdit]=true;}
     save();applyTrackFx(tfxEdit);renderTfx();};$('tfxGrid').appendChild(b);});
   $('tfxDone').onclick=()=>$('tfxWin').classList.add('hidden');
-  $('tfxClear').onclick=()=>{pushUndo();S.trackFx[tfxEdit]=[];S.trackFxAmt[tfxEdit]={};save();applyTrackFx(tfxEdit);renderTfx();};
+
   $('tfxWin').addEventListener('click',e=>{if(e.target.id==='tfxWin')$('tfxWin').classList.add('hidden');});
 }
 /* ---------- track video ---------- */
