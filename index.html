@@ -1274,8 +1274,12 @@ function post(W,H){
 }
 /* ---------- the secret ducker ---------- */
 var duckMode=false,duckSel=[],duckPrev=null;
-function duckZone(h3,x){const r=h3.getBoundingClientRect(),rg=document.createRange();const tn=[...h3.childNodes].find(n=>n.nodeType===3&&n.textContent.trim());
-  let tEnd=r.left+90;if(tn){rg.selectNodeContents(tn);tEnd=rg.getBoundingClientRect().right;}return x>tEnd+10&&x<r.right-48;}
+/* every panel title: hold its left part (as wide as the words STEP SEQUENCER) to drag the panel; tap anywhere on it to open or fold */
+function gripW(){const h=$('secSeq').querySelector('h3'),tn=[...h.childNodes].find(n=>n.nodeType===3&&n.textContent.trim());let w=130;
+  if(tn){const rg=document.createRange();rg.selectNodeContents(tn);const b=rg.getBoundingClientRect();if(b.width)w=b.right-h.getBoundingClientRect().left;}return w+12;}
+function gripZone(h3,x){return x-h3.getBoundingClientRect().left<=gripW();}
+/* the secret ducker lives just past the grip in the AUDIO FX title */
+function duckZone(h3,x){const r=h3.getBoundingClientRect();return x>r.left+gripW()+8&&x<r.right-48;}
 /* step 1: tap tracks to duck (they blink, a duck lands on each one picked), OK. Step 2: tap the pads that duck them, DONE. */
 var duckStep=1,duckPads=[];
 function duckStart(){
@@ -1314,7 +1318,7 @@ function duckOk(){
   duckEnd('Pad'+(duckPads.length>1?'s ':' ')+duckPads.map(padLabel).join(', ')+' now duck'+(duckPads.length>1?'':'s')+' track'+(tr.length>1?'s ':' ')+tr.map(x=>TL[x]).join(' + ')+'. Hold a track slot to tune it.');
 }
 {const h3=$('secFx').querySelector('h3');let tm=null;
-  h3.addEventListener('pointerdown',e=>{if(!duckZone(h3,e.clientX))return;clearTimeout(tm);tm=setTimeout(()=>{duckMode?duckEnd('Ducker closed.'):duckStart();},1000);});
+  h3.addEventListener('pointerdown',e=>{if(!duckZone(h3,e.clientX))return;clearTimeout(tm);tm=setTimeout(()=>{const sf=$('secFx');sf._skipClick=true;setTimeout(()=>{sf._skipClick=false;},600);duckMode?duckEnd('Ducker closed.'):duckStart();},1000);});
   ['pointerup','pointercancel','pointerleave'].forEach(ev=>h3.addEventListener(ev,()=>clearTimeout(tm)));
   h3.addEventListener('contextmenu',e=>e.preventDefault());}
 $('tfx').addEventListener('pointerdown',e=>{if(!duckMode)return;const b=e.target.closest('button');if(!b)return;e.stopImmediatePropagation();e.preventDefault();duckTrack(tfxEls.indexOf(b));},true);
@@ -2639,7 +2643,7 @@ $('mSave').onclick=async()=>{
   catch(e){$('mTxt').textContent=e&&e.code==='declined'?'Save cancelled.':'Could not save here ('+(e&&e.code||'error')+').';}
 };
 
-/* collapsible panels: tap a title to minimize. When minimized, hold the title and drag to reorder (VIDEO stays on top) */
+/* panels: tap a title to open or fold it; hold the left part of the title and drag to reorder (VIDEO stays on top) */
 const panelsEl=$('panels');
 if(Array.isArray(UI.order))UI.order.forEach(id=>{const el=$(id);if(el&&el.parentNode===panelsEl)panelsEl.appendChild(el);});
 let pDrag=null;
@@ -2647,11 +2651,11 @@ document.addEventListener('touchmove',e=>{if((pDrag&&pDrag.lifted)||(pd&&pd.arme
 document.querySelectorAll('section.panel[id]').forEach(sec=>{
   sec.classList.toggle('min',!!UI[sec.id]);
   const h3=sec.querySelector('h3');
-  h3.addEventListener('click',e=>{if(sec._skipClick){sec._skipClick=false;return;}if(sec.id==='secFx'&&duckZone(h3,e.clientX))return;const m=!sec.classList.contains('min');sec.classList.toggle('min',m);UI[sec.id]=m;saveUI();});
+  h3.addEventListener('click',e=>{if(sec._skipClick){sec._skipClick=false;return;}const m=!sec.classList.contains('min');sec.classList.toggle('min',m);UI[sec.id]=m;saveUI();});
   if(sec.id==='secVid'){
     /* VIDEO stays on top with the title bar and transport. Sideways on a wide screen, hold its title and drag left or right to switch columns. */
     h3.addEventListener('pointerdown',e=>{
-      if(!wideOn)return;const vb=$('vidBlock');const st={x0:e.clientX,y0:e.clientY,lifted:false,moved:false};pDrag=st;
+      if(!wideOn||!gripZone(h3,e.clientX))return;const vb=$('vidBlock');const st={x0:e.clientX,y0:e.clientY,lifted:false,moved:false};pDrag=st;
       const move=ev=>{if(pDrag!==st)return;
         if(!st.lifted){if(Math.hypot(ev.clientX-st.x0,ev.clientY-st.y0)>8){st.moved=true;clearTimeout(st.timer);}return;}
         const side=ev.clientX<$('colR').getBoundingClientRect().left?'L':'R',col=$(side==='L'?'colL':'colR');
@@ -2667,8 +2671,7 @@ document.querySelectorAll('section.panel[id]').forEach(sec=>{
   }
   /* window-level listeners, because moving the panel in the page would drop a pointer capture */
   h3.addEventListener('pointerdown',e=>{
-    if(sec.id==='secFx'&&duckZone(h3,e.clientX))return;
-    if(!sec.classList.contains('min')&&!wideOn)return;
+    if(!gripZone(h3,e.clientX))return;
     const st={sec,y0:e.clientY,lifted:false,moved:false};pDrag=st;
     const move=ev=>{
       if(pDrag!==st)return;
