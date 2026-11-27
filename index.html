@@ -137,7 +137,16 @@ button.hold.flash{background:var(--fire)!important;color:var(--ink)}
   -webkit-mask-image:linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent);mask-image:linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent)}
 .dkPond canvas{display:block;width:100%;height:100%}
 /* the WAVEFORM panel */
-#tdWaveW{position:relative;height:110px}
+#tdWaveW{position:relative;height:150px}
+#ptWave{border-radius:4px 4px 10px 10px}
+#ptWave.held{box-shadow:0 0 0 2px var(--fire)}
+.lpRow{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:5px}
+.lpRow:last-child{grid-template-columns:repeat(3,1fr)}
+.lpRow button{height:34px;padding:0;font-size:11px;display:flex;align-items:center;justify-content:center}
+.lpRow .lpStep{font-size:9px;letter-spacing:.06em}
+#lpLock.on{background:var(--water);color:var(--ink)}
+#pickG{display:grid;gap:6px;margin:10px 0}
+#pickG button{height:40px;font-size:11px}
 #secPads .est{margin:0 0 8px}
 #ptHead{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 #ptWave{position:absolute;inset:0;display:block;width:100%;height:100%;border-radius:10px;background:#313043;touch-action:none}
@@ -357,6 +366,10 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
     <h3>PAD EDIT <span id="padName"></span></h3>
     <div class="psec" id="psA"><div class="psh">TRIM &amp; PLAY</div><div class="psb">
     <div id="tdWaveW"><canvas id="ptWave"></canvas><canvas id="ptHead"></canvas></div>
+    <div id="lpCtl">
+      <div class="lpRow"><button id="lnA"></button><button id="lnB"></button><button id="lnStep" class="lpStep">1 FR</button><button id="lnC"></button><button id="lnD"></button></div>
+      <div class="lpRow"><button id="lpLock">LOCK</button><button id="lpBars">BARS</button><button id="lpSplit">SPLIT</button></div>
+    </div>
     <div class="trimBar"><span id="ptInfo"></span></div>
     <div class="ctl"><label>PITCH</label><input type="range" id="pPitch" min="-12" max="12" step="1" value="0"><output id="oPitch">0</output></div>
     <div class="ctl"><label>LEVEL</label><input type="range" id="pVol" min="0" max="150" step="1" value="100"><output id="oVol">100</output></div>
@@ -403,6 +416,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
 </div></div>
 </div>
 
+<div id="pickWin" class="modal hidden"><div class="mbox"><div class="tpT" id="pickT"></div><div id="pickG"></div><div class="row"><button id="pickX">CANCEL</button></div></div></div>
 <div id="modal" class="modal hidden">
   <div class="mbox">
     <div id="mTxt"></div>
@@ -2012,59 +2026,88 @@ function renderTransport(){
   $('bView').innerHTML=(view==='focus'?ICON_EYE_FOCUS:ICON_EYE)+'<span class="vb">'+(view==='mix'?'MIX':view==='focus'?TL[selTrack]:view)+'</span>';$('bView').classList.toggle('focus',view==='focus');$('bpmV').textContent=S.bpm;$('gBpm').value=S.bpm;$('oBpm').textContent=S.bpm;
   $('gSw').value=Math.round(S.swing*100);$('oSw').textContent=Math.round(S.swing*100)+'%';$('eFmt').value=S.format;
 }
-/* ---------- pad trim: PAD EDIT shows the selected pad with a little of its video either side; drag a red line, it saves when you let go ---------- */
-let trim=null,trimBusy=false,tview={pad:-1,p:null,v0:0,v1:0};
+/* ---------- pad looper: PAD EDIT shows the selected pad as a loop on its whole video, Loop Lock style.
+   S (red) and L (blue) lines, overview strip, bar lines at VBM's tempo, nudge row with STEP, LOCK keeps the length,
+   hold inside the loop to SPLIT it into 2, 4, 8 or 16 chops on this pad and the ones after it. Every change saves to the pad. ---------- */
+let trim=null,trimBusy=false,tview={pad:-1,v0:0,v1:0},prevView=null;
+const OV=18,SCOL=COL.fire,LCOL=COL.water,STEPS=[[1/30,'1 FR'],[0.01,'10 MS'],[0.001,'1 MS'],[0.0001,'0.1 MS']];
 function trimSrc(p){return p&&p.srcId!=null?sources.find(x=>x.id===p.srcId&&x.audio)||null:null;}
 function dEnd(){return trim?(trim.src?trim.src.dur:trim.p.buf.duration):0;}
-/* how far the view may go: the whole video, or a margin around a pad whose video is not loaded */
 function vLo(){return trim&&!trim.src?-trim.p.buf.duration*0.35:0;}
 function vHi(){return trim?(trim.src?trim.src.dur:trim.p.buf.duration*1.35):0;}
+const barDur=()=>240/S.bpm;
 function trimLoad(i){
   const p=pads[i];
   if(trim&&trim.pad===i&&p===trim.p){drawTrim();return;}
   if(trim)trimCommit();
-  if(!p){trim=null;drawTrim();return;}
+  if(!p){trim=null;drawTrim();renderLoopCtl();return;}
   const src=trimSrc(p);let t;
   if(src){const s0=p.start||0,e0=Math.min(src.dur,s0+p.len),m=Math.max(0.25,(e0-s0)*0.5);t={pad:i,p,src,s:s0,e:e0,s0,e0,v0:Math.max(0,s0-m),v1:Math.min(src.dur,e0+m)};}
   else{const L=p.buf.duration;t={pad:i,p,src:null,s:0,e:L,s0:0,e0:L,v0:-L*0.35,v1:L*1.35};}
-  /* the same pad again (after a save) keeps your zoom */
-  if(tview.pad===i&&tview.v1>tview.v0&&t.s>=tview.v0&&t.e<=tview.v1){t.v0=tview.v0;t.v1=tview.v1;}
-  trim=t;tview={pad:i,v0:t.v0,v1:t.v1};drawTrim();
+  if(tview.pad===i&&tview.v1>tview.v0&&t.s<tview.v1&&t.e>tview.v0){t.v0=tview.v0;t.v1=tview.v1;}
+  trim=t;tview={pad:i,v0:t.v0,v1:t.v1};drawTrim();renderLoopCtl();
 }
 function trimRefresh(){if(!trim||pads[trim.pad]!==trim.p){const i=trim?trim.pad:selPad;trim=null;trimLoad(i===selPad?i:selPad);}else drawTrim();}
-function trimChanged(){return !!(trim&&(Math.abs(trim.s-trim.s0)>1e-4||Math.abs(trim.e-trim.e0)>1e-4));}
+function trimChanged(){return !!(trim&&(Math.abs(trim.s-trim.s0)>1e-6||Math.abs(trim.e-trim.e0)>1e-6));}
+/* cut a piece [a,b] for pad slot: from its video if loaded, else from the pad's own sound */
+async function cutPiece(src,old,a,b,prog){
+  if(src)return await makePad(src,a,b-a,prog,old?(old.slip||0):(src.slip||0));
+  const c=cutBuffer(old.buf,a,b-a),L=old.buf.duration,n=old.frames.length,i0=Math.min(n-1,Math.floor(a/L*n)),i1=Math.max(i0+1,Math.ceil(b/L*n)),fr=old.frames.slice(i0,i1);
+  return {...old,...c,cat:old.cat,start:(old.start||0)+a,len:b-a,frames:fr,fps:fr.length/(b-a),thumb:fr[0]?fr[0].toDataURL('image/jpeg',0.6):old.thumb};}
 async function trimCommit(){
   if(!trimChanged()||trimBusy)return;const t=trim,i=t.pad,old=pads[i];if(old!==t.p)return;
   trimBusy=true;pushUndo();
-  try{let np;
-    if(t.src)np=await makePad(t.src,t.s,t.e-t.s,null,old.slip||0);
-    else{const c=cutBuffer(old.buf,t.s,t.e-t.s),L=old.buf.duration,n=old.frames.length,a=Math.min(n-1,Math.floor(t.s/L*n)),b=Math.max(a+1,Math.ceil(t.e/L*n)),fr=old.frames.slice(a,b);
-      np={...old,...c,cat:old.cat,start:(old.start||0)+t.s,len:t.e-t.s,frames:fr,fps:fr.length/(t.e-t.s),thumb:fr[0]?fr[0].toDataURL('image/jpeg',0.6):old.thumb};}
-    if(old.name)np.name=old.name;if(old.cat&&!t.src)np.cat=old.cat;
+  try{const np=await cutPiece(t.src,old,t.s,t.e);if(old.name)np.name=old.name;if(old.cat&&!t.src)np.cat=old.cat;
     pads[i]=np;trimBusy=false;save();padsChanged();renderPads();
     if(trim===t){trim=null;trimLoad(i);}
   }catch(e){toast('Could not save pad '+padLabel(i)+'.',1600);}
   trimBusy=false;
 }
+let commitT=null;function commitSoon(){clearTimeout(commitT);commitT=setTimeout(()=>trimCommit(),550);}
+const fmtT=x=>{const m=Math.floor(Math.max(0,x)/60),s=Math.max(0,x)-m*60;return m+':'+(s<10?'0':'')+s.toFixed(4);};
+function barsTxt(len){const b=len/barDur();if(b<0.95)return (b*4).toFixed(b*4<10?2:1).replace(/\.?0+$/,'')+' beats';const r=Math.round(b);return (Math.abs(b-r)<0.04?r:b.toFixed(2))+' bar'+(Math.abs(b-1)<0.04?'':'s');}
+function pill(g,x,y,txt,col,align,dpr){g.font='700 '+(9*dpr)+'px ui-monospace,Menlo,monospace';const w=g.measureText(txt).width+8*dpr,h=13*dpr;let x0=align==='l'?x:align==='r'?x-w:x-w/2;
+  g.fillStyle='rgba(49,48,67,.85)';g.beginPath();g.roundRect?g.roundRect(x0,y,w,h,4*dpr):g.rect(x0,y,w,h);g.fill();g.fillStyle=col;g.textAlign='left';g.fillText(txt,x0+4*dpr,y+9.5*dpr);}
+function waveCols(g,t,v0,v1,y0,h,W,colIn,colOut,a,b){
+  const buf=t.src?t.src.audio:t.p.buf,sr=buf.sampleRate,d=t.src?t.src.mono:buf.getChannelData(0),nrm=t.src?(t.src.norm||1):1,P=t.src&&t.src.peaks,span=v1-v0,mid=y0+h/2;
+  for(let x=0;x<W;x++){const ta=v0+x/W*span,i0=Math.floor(ta*sr),i1=Math.floor((v0+(x+1)/W*span)*sr);let lo=0,hi=0;
+    if(P&&(i1-i0)>=P.B){for(let k=Math.max(0,Math.floor(i0/P.B));k<Math.ceil(i1/P.B)&&k<P.min.length;k++){if(P.min[k]<lo)lo=P.min[k];if(P.max[k]>hi)hi=P.max[k];}}
+    else for(let k=Math.max(0,i0);k<i1&&k<d.length;k+=Math.max(1,Math.floor((i1-i0)/64))){const v=d[k];if(v<lo)lo=v;if(v>hi)hi=v;}
+    g.fillStyle=ta>=a&&ta<=b?colIn:colOut;const ya=mid-Math.min(1,hi*nrm)*h*0.46,yb=mid-Math.max(-1,lo*nrm)*h*0.46;g.fillRect(x,ya,1,Math.max(1,yb-ya));}}
 function drawTrim(){
   const c=$('ptWave');if(!c)return;
-  $('tdWaveW').classList.toggle('hidden',!trim);
-  $('ptInfo').textContent=!trim?'':!trim.src?'Video not loaded, so it can only be trimmed shorter.':Math.round((trim.e-trim.s)*1000)+' ms · drag a red line to trim, tap to play';
+  $('tdWaveW').classList.toggle('hidden',!trim);$('lpCtl').classList.toggle('hidden',!trim);
+  $('ptInfo').textContent=!trim?'':!trim.src?'Video not loaded, so it can only be trimmed shorter. Hold the loop to split it.':'Hold the loop to split it onto pads. Double tap to zoom out.';
   if(!trim)return;
   const dpr=Math.min(2,window.devicePixelRatio||1),W=Math.round(c.clientWidth*dpr),H=Math.round(c.clientHeight*dpr);if(!W||!H)return;
   if(c.width!==W||c.height!==H){c.width=W;c.height=H;}const g=c.getContext('2d');g.clearRect(0,0,W,H);
-  const t=trim,span=t.v1-t.v0,X=x=>(x-t.v0)/span*W,mid=H/2;
-  const buf=t.src?t.src.audio:t.p.buf,sr=buf.sampleRate,d=t.src?t.src.mono:buf.getChannelData(0),nrm=t.src?(t.src.norm||1):1,P=t.src&&t.src.peaks;
+  const t=trim,ov=OV*dpr,top=ov+2*dpr,WH=H-top,span=t.v1-t.v0,X=x=>(x-t.v0)/span*W,lo=vLo(),hi=vHi(),D=hi-lo,OX=x=>(x-lo)/D*W;
+  /* overview: whole file, the view box, the loop */
+  g.fillStyle='rgba(49,48,67,.9)';g.fillRect(0,0,W,ov);
+  waveCols(g,t,lo,hi,0,ov,W,'rgba(173,207,222,.9)','rgba(173,207,222,.35)',t.s,t.e);
+  g.fillStyle='rgba(220,123,120,.18)';g.fillRect(OX(t.s),0,Math.max(dpr,OX(t.e)-OX(t.s)),ov);
+  g.strokeStyle='rgba(255,255,255,.75)';g.lineWidth=dpr;g.strokeRect(OX(t.v0)+.5,.5,Math.max(2*dpr,OX(t.v1)-OX(t.v0))-1,ov-1);
+  /* main wave: bright inside the loop, dim outside */
   const x0=X(t.s),x1=X(t.e);
-  g.fillStyle='rgba(173,207,222,.16)';g.fillRect(x0,0,x1-x0,H);
-  for(let x=0;x<W;x++){const a=Math.floor((t.v0+x/W*span)*sr),b=Math.floor((t.v0+(x+1)/W*span)*sr);let lo=0,hi=0;
-    if(P&&(b-a)>=P.B){for(let k=Math.max(0,Math.floor(a/P.B));k<Math.ceil(b/P.B)&&k<P.min.length;k++){if(P.min[k]<lo)lo=P.min[k];if(P.max[k]>hi)hi=P.max[k];}}
-    else for(let k=Math.max(0,a);k<b&&k<d.length;k+=Math.max(1,Math.floor((b-a)/64))){const v=d[k];if(v<lo)lo=v;if(v>hi)hi=v;}
-    g.fillStyle=x>=x0&&x<=x1?COL.air:'rgba(173,207,222,.3)';const y0=mid-Math.min(1,hi*nrm)*H*0.44,y1=mid-Math.max(-1,lo*nrm)*H*0.44;g.fillRect(x,y0,1,Math.max(1,y1-y0));}
-  if(!t.src){const L=t.p.buf.duration;g.fillStyle='rgba(49,48,67,.7)';g.fillRect(0,0,Math.max(0,X(0)),H);g.fillRect(X(L),0,W-X(L),H);}
-  [[x0,true],[x1,false]].forEach(([x,st])=>{g.fillStyle=COL.fire;g.fillRect(x-dpr,0,2*dpr,H);g.beginPath();const w=10*dpr;if(st){g.moveTo(x,0);g.lineTo(x+w,0);g.lineTo(x,w*1.3);}else{g.moveTo(x,H);g.lineTo(x-w,H);g.lineTo(x,H-w*1.3);}g.fill();});
+  g.fillStyle='rgba(173,207,222,.1)';g.fillRect(x0,top,x1-x0,WH);
+  waveCols(g,t,t.v0,t.v1,top,WH-12*dpr,W,COL.air,'rgba(173,207,222,.28)',t.s,t.e);
+  if(!t.src){const L=t.p.buf.duration;g.fillStyle='rgba(49,48,67,.7)';g.fillRect(0,top,Math.max(0,X(0)),WH);g.fillRect(X(L),top,W-X(L),WH);}
+  /* bars from the loop start at VBM's tempo; thin out labels when they crowd */
+  const bd=barDur(),pxBar=bd/span*W,every=pxBar<9*dpr?4:pxBar<18*dpr?2:1;
+  g.fillStyle='rgba(255,255,255,.06)';g.fillRect(0,H-12*dpr,W,12*dpr);
+  const k0=Math.ceil((t.v0-t.s)/bd),k1=Math.floor((t.v1-t.s)/bd);
+  if(k1-k0<400)for(let k=k0;k<=k1;k++){const x=X(t.s+k*bd),main=k%every===0;g.strokeStyle='rgba(255,255,255,'+(main?.22:.07)+')';g.lineWidth=dpr;g.setLineDash([3*dpr,3*dpr]);g.beginPath();g.moveTo(x,top);g.lineTo(x,H-12*dpr);g.stroke();g.setLineDash([]);
+    if(main&&k>=0){g.font=(8*dpr)+'px ui-monospace,Menlo,monospace';g.fillStyle=t.s+k*bd<t.e-1e-6?'rgba(255,255,255,.75)':'rgba(255,255,255,.35)';g.textAlign='left';g.fillText(String(k+1),x+2*dpr,H-3*dpr);}}
+  /* S line with its flag at the top, L line with its flag at the bottom */
+  const fw=14*dpr,fh=22*dpr;
+  g.fillStyle=SCOL;g.fillRect(x0-dpr,top,2*dpr,WH-12*dpr);g.fillRect(x0,top,fw,fh);
+  g.fillStyle=LCOL;g.fillRect(x1-dpr,top,2*dpr,WH-12*dpr);g.fillRect(x1-fw,H-12*dpr-fh,fw,fh);
+  g.font='800 '+(10*dpr)+'px ui-monospace,Menlo,monospace';g.textAlign='center';g.fillStyle='#fff';g.fillText('S',x0+fw/2,top+15*dpr);g.fillStyle=COL.ink;g.fillText('L',x1-fw/2,H-12*dpr-fh+15*dpr);
+  /* readouts on the wave */
+  const py=top+3*dpr;pill(g,fw+6*dpr,py,'S '+fmtT(t.s),SCOL,'l',dpr);pill(g,W/2,py+16*dpr,(t.e-t.s).toFixed(4)+'s · '+barsTxt(t.e-t.s),'#fff','c',dpr);pill(g,W-3*dpr,py,fmtT(t.e)+' L',LCOL,'r',dpr);
+  if(UI.tLock){g.fillStyle='rgba(255,255,255,.08)';g.fillRect(x0,top,x1-x0,3*dpr);}
 }
-/* playhead: a line runs across the pad's waveform while that pad sounds, at its pitch, backwards when reversed, round again when looping */
+/* playhead: a white line runs across the loop while the pad sounds */
 let headOn=false;
 function padHead(){const c=$('ptHead');if(!c)return;
   let v=null;if(trim&&ctx&&!$('tdWaveW').classList.contains('hidden')){const now=ctx.currentTime;
@@ -2074,34 +2117,96 @@ function padHead(){const c=$('ptHead');if(!c)return;
   if(c.width!==W||c.height!==H){c.width=W;c.height=H;}const g=c.getContext('2d');g.clearRect(0,0,W,H);
   let pos=(ctx.currentTime-v.vis.start)*v.vis.rate;if(v.vis.loop)pos%=p.len;else if(pos>p.len)return;if(v.vis.rev)pos=p.len-pos;
   const t=(trim.src?(p.start||0):0)+pos,x=(t-trim.v0)/(trim.v1-trim.v0)*W;if(x<0||x>W)return;
-  g.fillStyle='rgba(255,255,255,.9)';g.fillRect(x-dpr*0.75,0,1.5*dpr,H);headOn=true;}
-function setSpan(sp,c,fx){const t=trim;if(!t)return;const lo=vLo(),hi=vHi(),D=hi-lo;fx=fx==null?0.5:fx;sp=Math.max(Math.min(D,0.02),Math.min(D,sp));t.v0=Math.max(lo,Math.min(hi-sp,c-fx*sp));t.v1=t.v0+sp;tview={pad:t.pad,v0:t.v0,v1:t.v1};drawTrim();}
-/* touch: the nearer red line follows your finger; let go and it saves. A tap plays the pad (and records with REC on). Two fingers zoom. */
-{const c=$('ptWave');let dr=null,pinch=null;const P=new Map();
+  g.fillStyle='rgba(255,255,255,.9)';g.fillRect(x-dpr*0.75,(OV+2)*dpr,1.5*dpr,H-(OV+2)*dpr);headOn=true;}
+function setView(v0,v1){const t=trim;if(!t)return;const lo=vLo(),hi=vHi(),sp=Math.max(Math.min(hi-lo,0.002),Math.min(hi-lo,v1-v0));t.v0=Math.max(lo,Math.min(hi-sp,v0));t.v1=t.v0+sp;tview={pad:t.pad,v0:t.v0,v1:t.v1};drawTrim();}
+function setSpan(sp,c,fx){fx=fx==null?0.5:fx;setView(c-fx*sp,c-fx*sp+sp);}
+/* move the loop: keeps it inside the sound and at least 20 ms long */
+function setLoop(s,e){const D=dEnd();if(UI.tLock){const L=trim.e-trim.s;s=Math.max(0,Math.min(D-L,s));e=s+L;}else{s=Math.max(0,Math.min(s,e-0.02));e=Math.min(D,Math.max(e,s+0.02));}trim.s=s;trim.e=e;drawTrim();}
+/* nudge row */
+function renderLoopCtl(){const L=!!UI.tLock;
+  $('lnA').innerHTML=L?'÷2':CHEV(-1);$('lnB').innerHTML=L?CHEV(-1):CHEV(1);$('lnC').innerHTML=L?CHEV(1):CHEV(-1);$('lnD').innerHTML=L?'×2':CHEV(1);
+  $('lnA').style.color=L?'':SCOL;$('lnB').style.color=L?'':SCOL;$('lnC').style.color=L?'':LCOL;$('lnD').style.color=L?'':LCOL;
+  $('lnStep').textContent=STEPS[UI.tStep||0][1];$('lpLock').classList.toggle('on',L);$('lpLock').textContent=L?'LOCKED':'LOCK';}
+const CHEV=d=>'<svg width="10" height="12" viewBox="0 0 10 12"><path d="'+(d<0?'M7.5 1.5 3 6l4.5 4.5':'M2.5 1.5 7 6l-4.5 4.5')+'" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+function nudge(btn){if(!trim)return;const st=STEPS[UI.tStep||0][0],L=!!UI.tLock;
+  if(L){const len=trim.e-trim.s;
+    if(btn==='A'){const nl=len/2;if(nl>=0.02){UI.tLock=false;setLoop(trim.s,trim.s+nl);UI.tLock=true;}}
+    else if(btn==='D'){const nl=Math.min(dEnd()-trim.s,len*2);UI.tLock=false;setLoop(trim.s,trim.s+nl);UI.tLock=true;}
+    else setLoop(trim.s+(btn==='B'?-st:st),0);}
+  else{if(btn==='A')setLoop(trim.s-st,trim.e);else if(btn==='B')setLoop(trim.s+st,trim.e);else if(btn==='C')setLoop(trim.s,trim.e-st);else setLoop(trim.s,trim.e+st);}
+  keepInView();commitSoon();}
+function keepInView(){const t=trim,sp=t.v1-t.v0;if(t.s<t.v0||t.e>t.v1){if(t.e-t.s<sp*0.9){const c=(t.s+t.e)/2;setView(c-sp/2,c+sp/2);}}}
+['A','B','C','D'].forEach(k=>{const b=$('ln'+k);let tm=null,n=0;const stop=()=>{clearTimeout(tm);tm=null;};
+  b.addEventListener('pointerdown',e=>{e.preventDefault();n=0;const go=()=>{nudge(k);n++;tm=setTimeout(go,Math.max(35,320*Math.pow(0.82,n)));};go();});
+  ['pointerup','pointercancel','pointerleave'].forEach(ev=>b.addEventListener(ev,stop));});
+$('lnStep').onclick=()=>{UI.tStep=((UI.tStep||0)+1)%STEPS.length;saveUI();renderLoopCtl();};
+$('lpLock').onclick=()=>{UI.tLock=!UI.tLock;saveUI();renderLoopCtl();drawTrim();};
+/* BARS: set the loop to a number of bars at VBM's tempo */
+$('lpBars').onclick=()=>{if(!trim)return;openPick('LOOP LENGTH',[1,2,4,8,16,32].map(n=>[n+(n>1?' BARS':' BAR'),()=>{const was=UI.tLock;UI.tLock=false;setLoop(trim.s,trim.s+n*barDur());UI.tLock=was;keepInView();commitSoon();}]));};
+$('lpSplit').onclick=()=>openSplit();
+/* SPLIT: the loop cut into equal chops on this pad and the ones after it, into the next bank if needed */
+function openSplit(){if(!trim)return;const i=trim.pad;
+  openPick('SPLIT THE LOOP ONTO PADS',[2,4,8,16].map(n=>{const last=Math.min(NP-1,i+n-1);return [n+' CHOPS · '+padLabel(i)+' TO '+padLabel(last),()=>splitLoop(n)];}));}
+async function splitLoop(n){if(!trim||trimBusy||edBusy)return;await trimCommit();const t=trim;if(!t)return;
+  const a=t.s,b=t.e,L=(b-a)/n,src=t.src,base=pads[t.pad];edBusy=true;pushUndo();let made=0;
+  try{for(let q=0;q<n;q++){const k=t.pad+q;if(k>=NP)break;
+      const np=await cutPiece(src,base,a+q*L,a+(q+1)*L,(x,m)=>est('Splitting the loop',(q+x/m)/n));
+      const was=pads[k];pads[k]=np;if(!was)typeDefaults(k,src||cur()||{type:'EQUAL'});made++;}
+    estDone();}catch(e){estErr('Could not split that loop.');}
+  edBusy=false;save();padsChanged();const b2=Math.floor(t.pad/16);if(b2!==bank)setBank(b2);renderAll();trim=null;trimLoad(selPad);
+  toast('Loop split into '+made+' chops on pads '+padLabel(t.pad)+' to '+padLabel(t.pad+made-1)+'.',2600);}
+/* a small chooser popup */
+function openPick(title,items){$('pickT').textContent=title;const g=$('pickG');g.innerHTML='';items.forEach(([lb,fn])=>{const b=document.createElement('button');b.textContent=lb;b.onclick=()=>{$('pickWin').classList.add('hidden');fn();};g.appendChild(b);});$('pickWin').classList.remove('hidden');}
+$('pickX').onclick=()=>$('pickWin').classList.add('hidden');$('pickWin').addEventListener('click',e=>{if(e.target.id==='pickWin')$('pickWin').classList.add('hidden');});
+/* touch on the wave:
+   drag S or L (24 px either side, anywhere up the line), or pull in from an edge to grab a line that is off screen;
+   drag empty space to scroll, drag on the overview to jump; tap to play; double tap to zoom all the way out and back;
+   pinch to zoom; hold inside the loop then drag to slide it (LOCK keeps its length), or hold and let go to SPLIT it */
+{const c=$('ptWave');let dr=null,pinch=null,holdT=null,lastTap=0;const P=new Map();
   const tAt=(x,r)=>trim.v0+(x-r.left)/r.width*(trim.v1-trim.v0);
   c.addEventListener('pointerdown',e=>{if(!trim)return;e.preventDefault();try{c.setPointerCapture(e.pointerId);}catch(_){}
     P.set(e.pointerId,{x:e.clientX,y:e.clientY});const r=c.getBoundingClientRect();
-    if(P.size===2){if(dr&&dr.moved){trim.s=dr.s0;trim.e=dr.e0;}dr=null;const [a,b]=[...P.values()];pinch={d:Math.max(20,Math.hypot(a.x-b.x,a.y-b.y)),sp:trim.v1-trim.v0,c:tAt((a.x+b.x)/2,r),r};drawTrim();return;}
+    if(P.size===2){clearTimeout(holdT);if(dr&&dr.moved&&dr.mode!=='pan'){trim.s=dr.s0;trim.e=dr.e0;}dr=null;const [a,b]=[...P.values()];pinch={d:Math.max(20,Math.hypot(a.x-b.x,a.y-b.y)),sp:trim.v1-trim.v0,c:tAt((a.x+b.x)/2,r),r};drawTrim();return;}
     if(P.size>2)return;
-    const t=tAt(e.clientX,r),which=Math.abs(t-trim.s)<=Math.abs(t-trim.e)?'s':'e';
-    dr={which,off:(which==='s'?trim.s:trim.e)-t,x:e.clientX,r,moved:false,s0:trim.s,e0:trim.e};});
+    const x=e.clientX-r.left,y=e.clientY-r.top,px=t=>(t-trim.v0)/(trim.v1-trim.v0)*r.width,t=tAt(e.clientX,r);
+    let mode=null;
+    if(y<OV)mode='ov';
+    else if(x<24&&trim.s<trim.v0)mode='s';
+    else if(x>r.width-24&&trim.e>trim.v1)mode='e';
+    else if(!UI.tLock&&Math.abs(x-px(trim.s))<24&&Math.abs(x-px(trim.s))<=Math.abs(x-px(trim.e)))mode='s';
+    else if(!UI.tLock&&Math.abs(x-px(trim.e))<24)mode='e';
+    if((mode==='s'||mode==='e')&&(x<24||x>r.width-24))try{navigator.vibrate&&navigator.vibrate(8);}catch(_){}
+    const inLoop=t>=trim.s&&t<=trim.e;
+    dr={mode,inLoop,x:e.clientX,r,moved:false,s0:trim.s,e0:trim.e,v0:trim.v0,v1:trim.v1,t0:t,held:false};
+    if(mode==='ov'){const lo=vLo(),hi=vHi(),sp=trim.v1-trim.v0,tc=lo+x/r.width*(hi-lo);setView(tc-sp/2,tc+sp/2);}
+    clearTimeout(holdT);if(!mode&&inLoop){const d0=dr;holdT=setTimeout(()=>{if(dr===d0&&!d0.moved){d0.held=true;try{navigator.vibrate&&navigator.vibrate(12);}catch(_){}c.classList.add('held');}},420);}});
   c.addEventListener('pointermove',e=>{if(P.has(e.pointerId))P.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(pinch&&P.size>=2&&trim){const [a,b]=[...P.values()],d=Math.max(20,Math.hypot(a.x-b.x,a.y-b.y)),fx=(((a.x+b.x)/2)-pinch.r.left)/pinch.r.width;setSpan(pinch.sp*pinch.d/d,pinch.c,fx);return;}
-    if(!dr||!trim)return;if(!dr.moved&&Math.abs(e.clientX-dr.x)<4)return;dr.moved=true;
-    const D=dEnd(),t=Math.max(0,Math.min(D,tAt(e.clientX,dr.r)+dr.off));
-    if(dr.which==='s')trim.s=Math.min(t,trim.e-0.02);else trim.e=Math.max(t,trim.s+0.02);
-    /* drag past an edge and the view slides along */
-    const sp=trim.v1-trim.v0,lo=vLo(),hi=vHi(),edge=sp*0.04,x=dr.which==='s'?trim.s:trim.e;
-    if(x<trim.v0+edge&&trim.v0>lo){trim.v0=Math.max(lo,trim.v0-sp*0.02);trim.v1=trim.v0+sp;}else if(x>trim.v1-edge&&trim.v1<hi){trim.v1=Math.min(hi,trim.v1+sp*0.02);trim.v0=trim.v1-sp;}
-    tview={pad:trim.pad,v0:trim.v0,v1:trim.v1};drawTrim();});
-  const up=e=>{P.delete(e.pointerId);if(pinch){if(P.size<2)pinch=null;dr=null;return;}
+    if(!dr||!trim)return;const dx=e.clientX-dr.x;if(!dr.moved&&Math.abs(dx)<4)return;if(!dr.moved){dr.moved=true;clearTimeout(holdT);}
+    const r=dr.r,t=tAt(e.clientX,r),D=dEnd(),sp=trim.v1-trim.v0;
+    if(dr.mode==='ov'){const lo=vLo(),hi=vHi(),tc=lo+(e.clientX-r.left)/r.width*(hi-lo);setView(tc-sp/2,tc+sp/2);return;}
+    if(dr.mode==='s'||dr.mode==='e'){
+      /* one line follows the finger, the other stays put; LOCK keeps the new length afterwards */
+      const was=UI.tLock;UI.tLock=false;if(dr.mode==='s')setLoop(Math.max(0,Math.min(t,trim.e-0.02)),trim.e);else setLoop(trim.s,Math.min(D,Math.max(t,trim.s+0.02)));UI.tLock=was;
+      const lo=vLo(),hi=vHi(),edge=sp*0.04,xx=dr.mode==='s'?trim.s:trim.e;
+      if(xx<trim.v0+edge&&trim.v0>lo){setView(trim.v0-sp*0.02,trim.v1-sp*0.02);}else if(xx>trim.v1-edge&&trim.v1<hi){setView(trim.v0+sp*0.02,trim.v1+sp*0.02);}
+      return;}
+    if(dr.held){const L=dr.e0-dr.s0,dt=t-dr.t0;let s=Math.max(0,Math.min(D-L,dr.s0+dt));trim.s=s;trim.e=s+L;drawTrim();return;}
+    const dt=(e.clientX-dr.x)/r.width*(dr.v1-dr.v0);setView(dr.v0-dt,dr.v1-dt);});
+  const up=e=>{P.delete(e.pointerId);clearTimeout(holdT);c.classList.remove('held');
+    if(pinch){if(P.size<2)pinch=null;dr=null;lastTap=0;return;}
     if(!dr||!trim)return;const d=dr;dr=null;
-    if(d.moved){if(trimChanged()){trimCommit().then(()=>{if(trim&&pads[trim.pad])playHit(trim.pad,[0],0,null);});}return;}
-    if(pads[trim.pad]){initAudio();playHit(trim.pad,[0],0,null);}};
+    if(d.moved){if((d.mode==='s'||d.mode==='e'||d.held)&&trimChanged())trimCommit().then(()=>{if(trim&&pads[trim.pad])playHit(trim.pad,[0],0,null);});return;}
+    if(d.mode==='ov')return;
+    if(d.held){openSplit();return;}
+    const now=performance.now();if(now-lastTap<320){lastTap=0;const lo=vLo(),hi=vHi();
+      if(trim.v1-trim.v0<hi-lo-1e-6){prevView=[trim.v0,trim.v1];setView(lo,hi);}else if(prevView){setView(prevView[0],prevView[1]);prevView=null;}return;}
+    lastTap=now;if(pads[trim.pad]){initAudio();playHit(trim.pad,[0],0,null);}};
   c.addEventListener('pointerup',up);
-  c.addEventListener('pointercancel',e=>{P.delete(e.pointerId);pinch=null;if(dr&&dr.moved&&trim){trim.s=dr.s0;trim.e=dr.e0;drawTrim();}dr=null;});}
+  c.addEventListener('pointercancel',e=>{P.delete(e.pointerId);pinch=null;clearTimeout(holdT);c.classList.remove('held');if(dr&&dr.moved&&dr.mode!=='pan'&&trim){trim.s=dr.s0;trim.e=dr.e0;drawTrim();}dr=null;});}
 try{new ResizeObserver(()=>drawTrim()).observe($('tdWaveW'));}catch(e){}window.addEventListener('resize',()=>drawTrim());
 document.addEventListener('visibilitychange',()=>{if(document.hidden)trimCommit();});
+
 
 try{new ResizeObserver(()=>{document.documentElement.style.setProperty('--vbH',$('vidBlock').offsetHeight+'px');}).observe($('vidBlock'));}catch(e){}
 ['gesturestart','gesturechange'].forEach(n=>$('ptWave').addEventListener(n,e=>e.preventDefault()));
