@@ -2174,6 +2174,7 @@ function setSpan(sp,c,fx){const t=trim;if(!t)return;const lo=vLo(),D=tD();fx=fx=
     if(!dr)return;const d=dr;dr=null;if(!trim)return;
     if(d.mode==='lift'){liftEnd(true,d.item);return;}
     if(d.mode==='new'){const a=trim.nA,b=trim.nB,src=trim.src;trim.nA=trim.nB=null;if(a!=null&&b-a>=0.03){trim={pad:-1,p:null,src,empty:true,s:a,e:b,s0:a,e0:b,slip:src.slip||0,v0:trim.v0,v1:trim.v1,from:selPad};drawTrim();trimAudition();}else drawTrim();return;}
+    if(d.mode==='edge'&&!trim.empty&&trimChanged()){trimCommit();return;}/* a pad edit saves the moment you let go of a red line */
     if(d.mode)return;
     const now=performance.now();if(now-lastTap<320&&Math.abs(e.clientX-lastX)<30){lastTap=0;dbl(e,d.r);return;}lastTap=now;lastX=e.clientX;
     if(d.pick!=null)trimPick(d.pick);else if(d.inSel){if(trim.empty)trimAudition();else drawerHit(trim.pad);}else if(pending())showSrc(trim.src);};
