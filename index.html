@@ -730,7 +730,7 @@ function trigger(tr,pi,semi,t,live){
     if(o.start<=t&&Math.abs(o.start-t)>0.002&&((grp&&o.grp===grp)||o.pad===pi)){release(o,t,0.006);list.splice(k,1);}}});
   const vs=voices[tr];
   const vis={pad:pi,tr,start:t,rate,rev,loop:lp,end};
-  const v={src,g,start:t,vis,fo,pad:pi,grp};vs.push(v);src.onended=()=>{const i=vs.indexOf(v);if(i>=0)vs.splice(i,1);};
+  const v={src,g,start:t,vis,fo,pad:pi,grp,p};vs.push(v);src.onended=()=>{const i=vs.indexOf(v);if(i>=0)vs.splice(i,1);};
   src.start(t);if(end!=null){try{src.stop(end+0.02);}catch(e){}}
   const q=vq[tr];let i=q.length;while(i>0&&q[i-1].start>t)i--;q.splice(i,0,vis);
   setTimeout(()=>flash(pi,tr),Math.max(0,(t-ctx.currentTime)*1000));
@@ -2089,20 +2089,28 @@ function trimChanged(){return !!(trim&&(Math.abs(trim.s-trim.s0)>1e-6||Math.abs(
 /* cut a piece [a,b] for pad slot: from its video if loaded, else from the pad's own sound */
 async function cutPiece(src,old,a,b,prog){
   if(src)return await makePad(src,a,b-a,prog,old?(old.slip||0):(src.slip||0));
+  return cutPieceSync(old,a,b);}
+function cutPieceSync(old,a,b){
   const c=cutBuffer(old.buf,a,b-a),L=old.buf.duration,n=old.frames.length,i0=Math.min(n-1,Math.floor(a/L*n)),i1=Math.max(i0+1,Math.ceil(b/L*n)),fr=old.frames.slice(i0,i1);
   return {...old,...c,cat:old.cat,start:(old.start||0)+a,len:b-a,frames:fr,fps:fr.length/(b-a),thumb:fr[0]?fr[0].toDataURL('image/jpeg',0.6):old.thumb};}
-async function trimCommit(){
+/* save the lines to the pad: the sound is swapped right away so the next hit plays the new loop,
+   the video frames follow in the background */
+function trimCommit(){
   if(!trimChanged()||trimBusy)return;const t=trim,i=t.pad,old=pads[i];if(old!==t.p)return;
-  trimBusy=true;pushUndo();
-  try{const np=await cutPiece(t.src,old,t.s,t.e);if(old.name)np.name=old.name;if(old.cat&&!t.src)np.cat=old.cat;
-    pads[i]=np;trimBusy=false;save();padsChanged();renderPads();
-    if(trim===t){trim=null;trimLoad(i);}
-  }catch(e){toast('Could not save pad '+padLabel(i)+'.',1600);}
-  trimBusy=false;
+  pushUndo();let np;
+  try{if(t.src){const L=Math.max(0.02,Math.min(t.e-t.s,t.src.dur-t.s));np={...old,...cutBuffer(t.src.audio,t.s,L),start:t.s,len:L,slip:old.slip||0};}
+    else np=cutPieceSync(old,t.s,t.e);}
+  catch(e){toast('Could not save pad '+padLabel(i)+'.',1600);return;}
+  if(old.name)np.name=old.name;
+  /* a sound still ringing from the old lines stops, so you never hear the old spot */
+  if(ctx)for(const list of voices)for(const o of list.slice())if(o.pad===i)release(o,ctx.currentTime,0.01);
+  pads[i]=np;trim=null;save();padsChanged();renderPads();trimLoad(i);
+  if(t.src){const src=t.src;grabFrames(src,np.start,np.len,np.slip).then(fr=>{if(pads[i]!==np||!fr.length)return;
+    np.frames=fr;np.fps=fr.length/np.len;np.thumb=fr[0].toDataURL('image/jpeg',0.6);save();renderPads();}).catch(()=>{});}
 }
 /* play the pad as the lines are now: save first if there is an unsaved change */
-async function playTrim(){if(!trim||!pads[trim.pad])return;initAudio();const i=trim.pad;
-  if(trimChanged()||commitT){clearTimeout(commitT);commitT=null;await trimCommit();}
+function playTrim(){if(!trim||!pads[trim.pad])return;initAudio();const i=trim.pad;
+  clearTimeout(commitT);commitT=null;trimCommit();
   if(pads[i])playHit(i,[0],0,null);}
 let commitT=null;function commitSoon(){clearTimeout(commitT);commitT=setTimeout(()=>{commitT=null;trimCommit();},550);}
 const fmtT=x=>{const m=Math.floor(Math.max(0,x)/60),s=Math.max(0,x)-m*60;return m+':'+(s<10?'0':'')+s.toFixed(4);};
@@ -2154,10 +2162,10 @@ function padHead(){const c=$('ptHead');if(!c)return;
   let v=null;if(trim&&ctx&&!$('tdWaveW').classList.contains('hidden')){const now=ctx.currentTime;
     for(const list of voices)for(const o of list)if(o.pad===trim.pad&&o.vis&&o.start<=now&&(o.vis.end==null||now<o.vis.end)&&(!v||o.start>v.start))v=o;}
   if(!v){if(headOn){c.getContext('2d').clearRect(0,0,c.width,c.height);headOn=false;}return;}
-  const p=pads[trim.pad];if(!p)return;const dpr=Math.min(2,window.devicePixelRatio||1),W=Math.round(c.clientWidth*dpr),H=Math.round(c.clientHeight*dpr);if(!W)return;
+  const p=pads[trim.pad];if(!p||v.p!==p){if(headOn){c.getContext('2d').clearRect(0,0,c.width,c.height);headOn=false;}return;}const dpr=Math.min(2,window.devicePixelRatio||1),W=Math.round(c.clientWidth*dpr),H=Math.round(c.clientHeight*dpr);if(!W)return;
   if(c.width!==W||c.height!==H){c.width=W;c.height=H;}const g=c.getContext('2d');g.clearRect(0,0,W,H);
-  let pos=(ctx.currentTime-v.vis.start)*v.vis.rate;if(v.vis.loop)pos%=p.len;else if(pos>p.len)return;if(v.vis.rev)pos=p.len-pos;
-  const t=(trim.src?(p.start||0):0)+pos,x=(t-trim.v0)/(trim.v1-trim.v0)*W;if(x<0||x>W)return;
+  let pos=(ctx.currentTime-v.vis.start)*v.vis.rate;if(v.vis.loop)pos%=p.len;if(v.vis.rev)pos=p.len-pos;
+  const t=(trim.src?(p.start||0):0)+pos,x=(t-trim.v0)/(trim.v1-trim.v0)*W;headOn=false;if(pos>p.len||x<0||x>W)return;
   g.fillStyle='rgba(255,255,255,.9)';g.fillRect(x-dpr*0.75,(OV+2)*dpr,1.5*dpr,H-(OV+2)*dpr);headOn=true;}
 function setView(v0,v1){const t=trim;if(!t)return;const lo=vLo(),hi=vHi(),sp=Math.max(Math.min(hi-lo,0.002),Math.min(hi-lo,v1-v0));t.v0=Math.max(lo,Math.min(hi-sp,v0));t.v1=t.v0+sp;tview={pad:t.pad,v0:t.v0,v1:t.v1};drawTrim();}
 function setSpan(sp,c,fx){fx=fx==null?0.5:fx;setView(c-fx*sp,c-fx*sp+sp);}
