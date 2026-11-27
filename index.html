@@ -496,7 +496,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
   <div class="mbox sw">
     <div class="swT"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M4 4h13l3 3v13H4z"/><path d="M8 4v5h7V4"/><rect x="7.5" y="13" width="9" height="7" rx="1"/></svg><span>SESSION</span></div>
     <a class="guide" href="https://brentwalker.github.io/VBM-16/manual.html" target="_blank" rel="noopener"><i>?</i><span>Getting started guide</span></a>
-    <div class="ver">VBM-16 · VERSION 1.0</div>
+    <div class="ver">VBM-16 · VERSION 0.2.0</div>
     <p class="help" style="margin:-6px 0 10px"><a id="tutLink" href="https://claude.ai/artifact/KqWeYPqnK9pxDATQS2VJQC" style="color:var(--air)">Quick swipe tutorial</a> · VBM-16 v1.1</p>
     <div class="row"><input id="sessName" class="txt" value="My session" maxlength="40" aria-label="Session name"></div>
     <div class="row"><button id="bSaveSess" class="hl">SAVE SESSION</button><label class="btn">OPEN<input type="file" id="fOpen" accept=".zip,.json,application/zip,application/json" hidden></label></div>
@@ -2066,7 +2066,7 @@ function renderTransport(){
 /* ---------- pad looper: PAD EDIT shows the selected pad as a loop on its whole video, Loop Lock style.
    S (red) and L (blue) lines, overview strip, bar lines at VBM's tempo, nudge row with STEP, LOCK keeps the length,
    hold inside the loop to SPLIT it into 2, 4, 8 or 16 chops on this pad and the ones after it. Every change saves to the pad. ---------- */
-let trim=null,trimBusy=false,tview={pad:-1,v0:0,v1:0},prevView=null;
+let trim=null,tview={pad:-1,v0:0,v1:0},prevView=null;
 const OV=18,SCOL=COL.fire,LCOL=COL.water,STEPS=[[1/30,'1 FR'],[0.01,'10 MS'],[0.001,'1 MS'],[0.0001,'0.1 MS']];
 function trimSrc(p){return p&&p.srcId!=null?sources.find(x=>x.id===p.srcId&&x.audio)||null:null;}
 function dEnd(){return trim?(trim.src?trim.src.dur:trim.p.buf.duration):0;}
@@ -2096,7 +2096,7 @@ function cutPieceSync(old,a,b){
 /* save the lines to the pad: the sound is swapped right away so the next hit plays the new loop,
    the video frames follow in the background */
 function trimCommit(){
-  if(!trimChanged()||trimBusy)return;const t=trim,i=t.pad,old=pads[i];if(old!==t.p)return;
+  if(!trimChanged())return;const t=trim,i=t.pad,old=pads[i];if(old!==t.p)return;
   pushUndo();let np;
   try{if(t.src){const L=Math.max(0.02,Math.min(t.e-t.s,t.src.dur-t.s));np={...old,...cutBuffer(t.src.audio,t.s,L),start:t.s,len:L,slip:old.slip||0};}
     else np=cutPieceSync(old,t.s,t.e);}
@@ -2196,7 +2196,7 @@ $('lpSplit').onclick=()=>openSplit();
 /* SPLIT: the loop cut into equal chops on this pad and the ones after it, into the next bank if needed */
 function openSplit(){if(!trim)return;const i=trim.pad;
   openPick('SPLIT THE LOOP ONTO PADS',[2,4,8,16].map(n=>{const last=Math.min(NP-1,i+n-1);return [n+' CHOPS · '+padLabel(i)+' TO '+padLabel(last),()=>splitLoop(n)];}));}
-async function splitLoop(n){if(!trim||trimBusy||edBusy)return;await trimCommit();const t=trim;if(!t)return;
+async function splitLoop(n){if(!trim||edBusy)return;trimCommit();const t=trim;if(!t)return;
   const a=t.s,b=t.e,L=(b-a)/n,src=t.src,base=pads[t.pad];edBusy=true;pushUndo();let made=0;
   try{for(let q=0;q<n;q++){const k=t.pad+q;if(k>=NP)break;
       const np=await cutPiece(src,base,a+q*L,a+(q+1)*L,(x,m)=>est('Splitting the loop',(q+x/m)/n));
@@ -2666,7 +2666,7 @@ const idb={db:null,
   async get(k){const db=this.db||await this.open();if(!db)return null;return new Promise(res=>{try{const r=db.transaction('kv').objectStore('kv').get(k);r.onsuccess=()=>res(r.result||null);r.onerror=()=>res(null);}catch(e){res(null);}});}
 };
 let autoT=null,restoring=false;
-function padsChanged(){layoutStage();try{if(!trimBusy)trimRefresh();}catch(e){}if(restoring)return;clearTimeout(autoT);autoT=setTimeout(autosave,2500);}
+function padsChanged(){layoutStage();try{trimRefresh();}catch(e){}if(restoring)return;clearTimeout(autoT);autoT=setTimeout(autosave,2500);}
 /* loaded videos are kept in this browser too, so every pad can still be trimmed against its full video after the app reopens */
 async function autosave(){
   try{const recs=[],refs=[];for(let i=0;i<NP;i++){const p=pads[i];recs.push(p?await padRecord(p):null);refs.push(p?(p.srcId!=null?p.srcId:(p._pref!=null?p._pref:null)):null);}
