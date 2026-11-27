@@ -2064,7 +2064,7 @@ try{new ResizeObserver(()=>{document.documentElement.style.setProperty('--vbH',$
 /* a touch that starts on the locked top (title bar, transport, video), on the waveform, or in a popup never scrolls the page behind it.
    Popups that are taller than the screen still scroll inside themselves. */
 let tmScroll=null;
-document.addEventListener('touchstart',e=>{const t=e.target;tmScroll=null;
+document.addEventListener('touchstart',e=>{const t=e.target;tmScroll=null;if(t.closest&&t.closest('input,select,textarea'))return;/* sliders and fields keep their own touch */
   const m=t.closest&&t.closest('.modal:not(.hidden),#duckPop:not(.hidden)');
   if(m){const box=t.closest('.mbox,#duckPop');tmScroll=box&&box.scrollHeight>box.clientHeight+1?{box,y:e.touches[0].clientY}:'block';return;}
   if(t.closest&&t.closest('#vidBlock,#ptWave'))tmScroll='block';},{passive:true,capture:true});
