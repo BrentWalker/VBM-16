@@ -494,7 +494,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
     <div class="row"><button id="bSaveSamp">SAVE SAMPLES</button><label class="btn">LOAD SAMPLES<input type="file" id="fSamp" accept="audio/*,.wav,.mp3,.m4a,.aif,.aiff,.zip" multiple hidden></label></div>
     <div class="row"><button id="bNewSess" class="danger">INIT (CLEAR)</button></div>
     <div class="help">
-      <p><b>Session:</b> one .zip with every pad's sound and video, all patterns, pad settings, BPM and swing. With INCLUDE VIDEOS on, it also keeps the full videos so EDIT SLICE and VIDEO SLIP still work when you open it again. Turn it off for a much smaller file.</p>
+      <p><b>Session:</b> one .zip with every pad's sound and video, all patterns, pad settings, BPM and swing. With INCLUDE VIDEOS on, it also keeps the full videos so every pad can still be trimmed longer when you open it again. Turn it off for a much smaller file.</p>
       <p><b>Samples:</b> a .zip of every pad sound as WAV files for any DAW.</p>
       <p><b>Load samples:</b> pick WAV or MP3 files (or a .zip of them). They fill pads starting from the selected pad.</p>
       <p>Your work also autosaves in this browser and comes back when you reopen the page. The full original videos are not saved, so add a video again if you want to re-slice or slip pads from it.</p>
@@ -524,15 +524,12 @@ const CAT_ORDER=['KICK','SNARE','HAT','TONE'];
 Object.assign(CATS,{SAMPLES:{c:COL.ink,i:CICON.SAMPLES},FX:{c:COL.fire,i:CICON.TRANSIENT},BASS:{c:COL.purple,i:CICON.BASS},GUITAR:{c:COL.water,i:CICON.GUITAR},KEYS:{c:COL.fire,i:CICON.KEYS},VOX:{c:COL.earth,i:CICON.VOX},CHAOS:{c:COL.fire,i:CICON.TRANSIENT},TRANSIENT:{c:COL.ink,i:CICON.TRANSIENT},EQUAL:{c:COL.purple,i:CICON.EQUAL}});
 /* light colors take ink text, dark ones white */
 const lightCol=c=>[COL.air,COL.fire,COL.water].includes(c);
+/* how each import choice chops: DRUMS finds and sorts hits, TRANSIENT takes every hit, EQUAL cuts 16 even parts, WHOLE keeps it whole */
 const TYPES=[
-  ['DRUMS',{th:0.2,gap:0.08,max:1.0,sort:true,def:2,fi:0,fo:0,c:COL.ink,i:CICON.DRUMS}],
-  ['BASS',{th:0.15,gap:0.15,max:2.0,def:4,fi:2,fo:10,cat:'BASS'}],
-  ['GUITAR',{th:0.15,gap:0.12,max:2.0,def:4,fi:2,fo:15,cat:'GUITAR'}],
-  ['KEYS',{th:0.15,gap:0.12,max:2.0,def:4,fi:2,fo:15,cat:'KEYS'}],
-  ['VOX',{th:0.3,gap:0.3,max:3.0,def:8,fi:5,fo:25,cat:'VOX'}],
-  ['SAMPLES',{th:0.2,gap:0.2,max:2.0,def:8,fi:2,fo:12,cat:'SAMPLES'}],
-  ['TRANSIENT',{trans:true,th:0.12,gap:0.06,max:4.0,def:4,fi:0,fo:6,cat:'TRANSIENT'}],
-  ['EQUAL',{equal:true,def:4,fi:1,fo:6,cat:'EQUAL'}],
+  ['DRUMS',{th:0.2,gap:0.08,max:1.0,sort:true,fi:0,fo:0}],
+  ['TRANSIENT',{trans:true,th:0.12,gap:0.06,max:4.0,fi:0,fo:6,cat:'TRANSIENT'}],
+  ['EQUAL',{equal:true,fi:1,fo:6,cat:'EQUAL'}],
+  ['WHOLE',{fi:1,fo:6,cat:'SAMPLES'}],
 ];
 const PROF=Object.fromEntries(TYPES);
 const TL=['A','B','C','D'],TCOL=[COL.earth,COL.air,COL.fire,COL.water];
@@ -830,10 +827,6 @@ function autoSlices(src){
     else{pick=[...all];for(let k=0;pick.length<16&&k<64;k++){const t=((k*7)%16+0.5)/16*dur;if(!pick.some(p=>Math.abs(p-t)<0.1))pick.push(t);}pick.sort((a,b)=>a-b);}
     return pick.map((t,k)=>{const st=Math.max(0,t-0.005),end=k<15?pick[k+1]-0.003:dur;return {start:st,len:Math.max(0.05,Math.min(P.max,end-st,dur-st)),t};});
   }
-  if(P.chaos){
-    const L=[1,2,3,4,6,8];
-    return Array.from({length:16},()=>{const len=Math.min(dur,L[Math.floor(Math.random()*L.length)]*stepDur());const st=Math.random()*Math.max(0,dur-len);return {start:st,len:Math.max(0.03,len),t:st};}).sort((a,b)=>a.t-b.t);
-  }
   const all=findOnsets(src.mono,sr,P.th,P.gap).filter(o=>o.t<dur-0.05);
   let pick=[...all].sort((a,b)=>b.s-a.s).slice(0,16).sort((a,b)=>a.t-b.t).map(o=>o.t);
   for(let k=0;pick.length<16&&k<64;k++){const t=((k*7)%16+0.5)/16*dur;if(!pick.some(p=>Math.abs(p-t)<0.15))pick.push(t);}
@@ -1074,7 +1067,7 @@ function estFlash(txt,ms){est(txt);flashT=setTimeout(estDone,ms||1500);}
 function estErr(txt){edBusy=false;est(txt);const b=$('estBtn');b.textContent='OK';b.classList.remove('hidden');b.onclick=estDone;}
 
 function typeDefaults(i,src){const P=PROF[src.type]||PROF.DRUMS;S.padFi[i]=P.fi||0;S.padFo[i]=P.fo||0;S.padDecay[i]=100;S.padMode[i]='one';S.padFreeze[i]=-1;S.padRev[i]=false;S.padChoke[i]=0;}
-/* AUTO CHOP: 16 slices from the newest video into the current bank */
+/* chop: 16 slices from the newest video into the current bank (DRUMS, TRANSIENTS or EVEN 16) */
 async function fillAll(mode){
   const src=cur();if(!src||!src.audio){estFlash('Add a video first.',1500);return;}
   if(edBusy)return;pushUndo();edBusy=true;
@@ -1085,7 +1078,7 @@ async function fillAll(mode){
     p.t=x.t;out.push(p);
   }
   if(mode==='auto'&&(PROF[src.type]||PROF.DRUMS).sort)out.sort((p,q)=>CAT_ORDER.indexOf(p.cat)-CAT_ORDER.indexOf(q.cat)||p.t-q.t);
-  const o=bank*16;for(let i=0;i<16;i++){pads[o+i]=out[i];typeDefaults(o+i,src);if(PROF[src.type]&&PROF[src.type].chaos)S.padRev[o+i]=Math.random()<0.25;}
+  const o=bank*16;for(let i=0;i<16;i++){pads[o+i]=out[i];typeDefaults(o+i,src);}
   vq=[[],[],[],[]];lastHit=[null,null,null,null];edBusy=false;selPad=o;save();padsChanged();
   estFlash('Bank '+(bank+1)+' filled from '+src.name+'.',1800);
   renderAll();
@@ -2346,7 +2339,7 @@ async function restoreSource(file,wavAB,vm){
   v.playsInline=true;v.setAttribute('playsinline','');v.muted=true;v.preload='auto';v.src=url;$('vHold').appendChild(v);
   await waitMeta(v);if(!v.videoWidth){v.remove();URL.revokeObjectURL(url);return null;}
   const audio=await decode(wavAB),id=++srcSeq;
-  const src={id,name:vm.name||('V'+id),type:vm.type||'DRUMS',url,file,video:v,vdur:v.duration||0,aspect:v.videoWidth/v.videoHeight,slip:vm.slip||0,autoChop:false,quiet:true};
+  const src={id,name:vm.name||('V'+id),type:vm.type||'DRUMS',url,file,video:v,vdur:v.duration||0,aspect:v.videoWidth/v.videoHeight,slip:vm.slip||0,quiet:true};
   src.audio=audio;src.dur=Math.min(audio.duration,src.vdur||audio.duration);src.mono=mono(audio);
   try{src.key=readKey(src.mono,audio.sampleRate);}catch(e){src.key=null;}
   let pk=1e-6;for(let i=0;i<src.mono.length;i++){const a=Math.abs(src.mono[i]);if(a>pk)pk=a;}src.norm=Math.min(8,0.95/pk);
@@ -2453,7 +2446,7 @@ const idb={db:null,
 };
 let autoT=null,restoring=false;
 function padsChanged(){layoutStage();try{if(!trimBusy)trimRefresh();}catch(e){}if(restoring)return;clearTimeout(autoT);autoT=setTimeout(autosave,2500);}
-/* loaded videos are kept in this browser too, so pads stay regions of their video after the app reopens */
+/* loaded videos are kept in this browser too, so every pad can still be trimmed against its full video after the app reopens */
 async function autosave(){
   try{const recs=[],refs=[];for(let i=0;i<NP;i++){const p=pads[i];recs.push(p?await padRecord(p):null);refs.push(p?(p.srcId!=null?p.srcId:(p._pref!=null?p._pref:null)):null);}
     const live=sources.filter(x=>x.audio&&x.file);
