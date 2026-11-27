@@ -107,7 +107,7 @@ button.hold.flash{background:var(--fire)!important;color:var(--ink)}
 .steps button.nl{box-shadow:inset 3px 0 0 var(--ink)}
 .steps button.nr{box-shadow:inset -3px 0 0 var(--ink)}
 .steps button.ph{outline:2px solid var(--w);outline-offset:-2px}
-.pads{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
+.pads{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px;touch-action:pan-y}
 .pad{position:relative;aspect-ratio:1.25;border-radius:12px;background:var(--slate) center/cover no-repeat;padding:0;overflow:hidden;transition:transform .05s}
 .pad::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(49,48,67,.15),rgba(49,48,67,.55))}
 .pad .n{position:absolute;left:6px;top:4px;font-size:11px;font-weight:700;z-index:1}
@@ -724,10 +724,10 @@ function trigger(tr,pi,semi,t,live){
     if(shaped){g.gain.setValueAtTime(vol,Math.max(t+fiE,end-f));g.gain.linearRampToValueAtTime(0,end);}
   }
   src.connect(g);g.connect(trackG[tr]);
-  /* polyphonic by default: only pads in the same mute group cut each other, and a looping pad stops when it plays again */
+  /* a pad cuts its own last hit, so long sounds never pile up; pads in the same mute group cut each other */
   const grp=S.padChoke[pi]||0;
   voices.forEach(list=>{for(let k=list.length-1;k>=0;k--){const o=list[k];
-    if(o.start<=t&&Math.abs(o.start-t)>0.002&&((grp&&o.grp===grp)||(o.pad===pi&&o.vis&&o.vis.loop))){release(o,t,0.006);list.splice(k,1);}}});
+    if(o.start<=t&&Math.abs(o.start-t)>0.002&&((grp&&o.grp===grp)||o.pad===pi)){release(o,t,0.006);list.splice(k,1);}}});
   const vs=voices[tr];
   const vis={pad:pi,tr,start:t,rate,rev,loop:lp,end};
   const v={src,g,start:t,vis,fo,pad:pi,grp};vs.push(v);src.onended=()=>{const i=vs.indexOf(v);if(i>=0)vs.splice(i,1);};
@@ -1652,10 +1652,10 @@ function buildUI(){
     w.append(b,m);$('tracks').append(w);trkEls.push({b,m});
   }
   for(let s=0;s<16;s++){const b=document.createElement('button');if(s%4===0)b.classList.add('beat');stepPress(b,s);$('steps').append(b);stepEls.push(b);}
-  for(let i=0;i<16;i++){const b=document.createElement('button');b.className='pad';b.innerHTML='<span class="n"></span><span class="i"></span><span class="k"></span>';b.onpointerdown=e=>{e.preventDefault();if(clearMode){clearPad(bank*16+i);return;}if(recHeld){const ep=keys?selPad:bank*16+i;b._ep=ep;eraseStart(ep);return;}try{b.setPointerCapture(e.pointerId);}catch(_){}tapPad(i);dragDown(e,i);};
+  for(let i=0;i<16;i++){const b=document.createElement('button');b.className='pad';b.innerHTML='<span class="n"></span><span class="i"></span><span class="k"></span>';b.onpointerdown=e=>{e.preventDefault();if(clearMode){clearPad(bank*16+i);return;}if(recHeld){const ep=keys?selPad:bank*16+i;b._ep=ep;eraseStart(ep);return;}b._u=tapPad(i);dragDown(e,i);};
     b.onpointermove=e=>dragMove(e,i);
     b.onpointerup=e=>{if(b._ep!=null){eraseEnd(b._ep);b._ep=null;return;}dragUp(e,i);endLive(i);};
-    b.onpointercancel=()=>{if(b._ep!=null){eraseEnd(b._ep);b._ep=null;return;}dragCancel();endLive(i);};
+    b.onpointercancel=()=>{if(b._ep!=null){eraseEnd(b._ep);b._ep=null;return;}dragCancel();endLive(i);untap(b._u);b._u=null;};
     $('pads').append(b);padEls.push(b);}
   FXL.forEach(([k,l])=>{
     const b=document.createElement('button');b.textContent=l;
@@ -1679,11 +1679,17 @@ function tapPad(i){
   let pi,semi;
   if(keys){pi=selPad;const r=Math.floor(i/4),c=i%4;semi=(3-r)*4+c;lastSemi=semi;}
   else{pi=bank*16+i;semi=0;}
-  const pick=!keys&&selPad!==pi;
-  if(pads[pi])playHit(pi,keys&&chord!=='off'?chordSemis(semi):[semi],semi,i);
+  const pick=!keys&&selPad!==pi,prev=selPad;
+  const h=pads[pi]?playHit(pi,keys&&chord!=='off'?chordSemis(semi):[semi],semi,i):null;
   if(pick)selPad=pi;
   requestAnimationFrame(()=>{if(pick)renderPadPanel();renderPads();});
+  return {t:performance.now(),pick,prev,h};
 }
+/* the browser took this touch for a scroll: take the hit back */
+function untap(u){if(!u||performance.now()-u.t>600)return;
+  if(u.h){const n=ctx.currentTime;(u.h.vs||[]).forEach(v=>{release(v,n,0.004);voices.forEach(l=>{const k=l.indexOf(v);if(k>=0)l.splice(k,1);});});
+    if(u.h.rec){const r=u.h.rec,row=S.patterns[r.p][r.tr];row[r.idx]=r.was;save();if(r.p===editPat)renderSteps();renderPats();}}
+  if(u.pick){selPad=u.prev;renderPadPanel();renderPads();}}
 function playHit(pi,played,semi,li){
   const now0=ctx.currentTime,gate=S.padMode[pi]==='gate',lp=!!S.padLoop[pi]||S.padMode[pi]==='loop';
   if(lp&&!gate){let hit=false;voices.forEach(list=>{for(let k=list.length-1;k>=0;k--){const o=list[k];if(o.pad===pi&&o.vis&&o.vis.loop&&!o.released){release(o,now0,0.01);list.splice(k,1);hit=true;}}});
@@ -1691,15 +1697,16 @@ function playHit(pi,played,semi,li){
   const lvs=played.map(sm=>trigger(selTrack,pi,sm,now0,true)).filter(Boolean);
   if(li!=null&&lvs.length&&gate)liveV[li]=lvs;
   lastHit[selTrack]={pad:pi,semi};
-  recHit(pi,played);
+  return {vs:lvs,rec:recHit(pi,played)};
 }
 /* live record: with REC on and the beat playing, a hit lands on the nearest step */
 function recHit(pi,played){
   if(!(playing&&recArm&&sched.length))return;
   const now=ctx.currentTime;let best=sched[0];for(const e of sched)if(Math.abs(e.t-now)<Math.abs(best.t-now))best=e;
-  pushUndo('rec');const row=S.patterns[best.p][selTrack],bs=tIdx(best.p,selTrack,best.s),evs=cellEvs(row[bs]).map(e=>({...e}));
+  pushUndo('rec');const row=S.patterns[best.p][selTrack],bs=tIdx(best.p,selTrack,best.s),was=row[bs],evs=cellEvs(row[bs]).map(e=>({...e}));
   played.forEach(sm=>{if(!evs.some(x=>x.pad===pi&&x.semi===sm)&&evs.length<MAXSTACK)evs.push({pad:pi,semi:sm});});
   row[bs]=packCell(evs);save();if(best.p===editPat)renderSteps();renderPats();
+  return {p:best.p,tr:selTrack,idx:bs,was};
 }
 /* KEYS chord mode: one key plays a chord built on that note */
 const CHORDS=[['off','OFF'],['maj','MAJ'],['min','MIN'],['7','7'],['m7','m7'],['sus','SUS'],['auto','KEY']];
@@ -1949,6 +1956,8 @@ function moveBank(from,to){
 }
 /* hold a pad, then drag it onto another pad (or a cell in the bank strip) to SWAP or REPLACE */
 let pd=null,pdGhost=null,pdOver=null,pdBankT=null,pdBank=-1,pdMove=null;
+/* once a pad is held long enough to move, the page must not scroll under the finger */
+$('pads').addEventListener('touchmove',e=>{if(pd&&pd.armed)e.preventDefault();},{passive:false});
 function dragDown(e,i){
   dragCancel();if(keys||!pads[bank*16+i])return;
   pd={i,src:bank*16+i,x:e.clientX,y:e.clientY,armed:false,lifted:false};
@@ -2091,7 +2100,11 @@ async function trimCommit(){
   }catch(e){toast('Could not save pad '+padLabel(i)+'.',1600);}
   trimBusy=false;
 }
-let commitT=null;function commitSoon(){clearTimeout(commitT);commitT=setTimeout(()=>trimCommit(),550);}
+/* play the pad as the lines are now: save first if there is an unsaved change */
+async function playTrim(){if(!trim||!pads[trim.pad])return;initAudio();const i=trim.pad;
+  if(trimChanged()||commitT){clearTimeout(commitT);commitT=null;await trimCommit();}
+  if(pads[i])playHit(i,[0],0,null);}
+let commitT=null;function commitSoon(){clearTimeout(commitT);commitT=setTimeout(()=>{commitT=null;trimCommit();},550);}
 const fmtT=x=>{const m=Math.floor(Math.max(0,x)/60),s=Math.max(0,x)-m*60;return m+':'+(s<10?'0':'')+s.toFixed(4);};
 function barsTxt(len){const b=len/barDur();if(b<0.95)return (b*4).toFixed(b*4<10?2:1).replace(/\.?0+$/,'')+' beats';const r=Math.round(b);return (Math.abs(b-r)<0.04?r:b.toFixed(2))+' bar'+(Math.abs(b-1)<0.04?'':'s');}
 function pill(g,x,y,txt,col,align,dpr){g.font='700 '+(9*dpr)+'px ui-monospace,Menlo,monospace';const w=g.measureText(txt).width+8*dpr,h=13*dpr;let x0=align==='l'?x:align==='r'?x-w:x-w/2;
@@ -2201,6 +2214,7 @@ $('pickX').onclick=()=>$('pickWin').classList.add('hidden');$('pickWin').addEven
     if(y<OV)mode='ov';
     else if(x<24&&trim.s<trim.v0)mode='s';
     else if(x>r.width-24&&trim.e>trim.v1)mode='e';
+    else if(UI.tLock&&(Math.abs(x-px(trim.s))<24||Math.abs(x-px(trim.e))<24)){toast('LOCKED keeps the length. Tap LOCKED to move one end, or hold inside the loop to slide it.',2600);}
     else if(!UI.tLock&&Math.abs(x-px(trim.s))<24&&Math.abs(x-px(trim.s))<=Math.abs(x-px(trim.e)))mode='s';
     else if(!UI.tLock&&Math.abs(x-px(trim.e))<24)mode='e';
     if((mode==='s'||mode==='e')&&(x<24||x>r.width-24))try{navigator.vibrate&&navigator.vibrate(8);}catch(_){}
@@ -2224,12 +2238,12 @@ $('pickX').onclick=()=>$('pickWin').classList.add('hidden');$('pickWin').addEven
   const up=e=>{P.delete(e.pointerId);clearTimeout(holdT);c.classList.remove('held');
     if(pinch){if(P.size<2)pinch=null;dr=null;lastTap=0;return;}
     if(!dr||!trim)return;const d=dr;dr=null;
-    if(d.moved){if((d.mode==='s'||d.mode==='e'||d.held)&&trimChanged())trimCommit().then(()=>{if(trim&&pads[trim.pad])playHit(trim.pad,[0],0,null);});return;}
+    if(d.moved){if((d.mode==='s'||d.mode==='e'||d.held)&&trimChanged())trimCommit();return;}
     if(d.mode==='ov')return;
     if(d.held){openSplit();return;}
     const now=performance.now();if(now-lastTap<320){lastTap=0;const lo=vLo(),hi=vHi();
       if(trim.v1-trim.v0<hi-lo-1e-6){prevView=[trim.v0,trim.v1];setView(lo,hi);}else if(prevView){setView(prevView[0],prevView[1]);prevView=null;}return;}
-    lastTap=now;if(pads[trim.pad]){initAudio();playHit(trim.pad,[0],0,null);}};
+    lastTap=now;playTrim();};
   c.addEventListener('pointerup',up);
   c.addEventListener('pointercancel',e=>{P.delete(e.pointerId);pinch=null;clearTimeout(holdT);c.classList.remove('held');if(dr&&dr.moved&&dr.mode!=='pan'&&trim){trim.s=dr.s0;trim.e=dr.e0;drawTrim();}dr=null;});}
 try{new ResizeObserver(()=>drawTrim()).observe($('tdWaveW'));}catch(e){}window.addEventListener('resize',()=>drawTrim());
