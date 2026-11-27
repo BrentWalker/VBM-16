@@ -130,22 +130,16 @@ button.hold.flash{background:var(--fire)!important;color:var(--ink)}
 .psec.min .psh::after{content:"▸"}
 .psec.min .psb{display:none}
 .panel h3>span{margin-left:auto}
-/* a tiny duck strolls along the AUDIO FX title, between the grip and the fold arrow */
+/* now and then a duck and her ducklings paddle across the AUDIO FX title, seen from above, fading in and out at the ends */
 #secFx h3{position:relative}
-.dkWalk{position:absolute;top:50%;height:15px;margin-top:-8px;left:var(--dkL,150px);right:28px;pointer-events:none;opacity:.45}
-.dkWalk b{position:absolute;left:0;top:0;width:18px;height:15px;animation:dkGo 16s linear infinite}
-.dkWalk svg{display:block;animation:dkFace 16s steps(1,end) infinite}
-.dkWalk .dkW{transform-origin:9px 13px;animation:dkWad .5s ease-in-out infinite alternate}
-.dkWalk .lgA{animation:dkStep .5s steps(1,end) infinite}
-.dkWalk .lgB{animation:dkStep .5s steps(1,end) infinite reverse}
-@keyframes dkGo{0%{left:0}50%{left:calc(100% - 18px)}100%{left:0}}
-@keyframes dkFace{0%{transform:scaleX(1)}50%{transform:scaleX(-1)}}
-@keyframes dkWad{from{transform:rotate(-5deg)}to{transform:rotate(5deg)}}
-@keyframes dkStep{0%{opacity:1}50%{opacity:.25}}
-@media (prefers-reduced-motion:reduce){.dkWalk b,.dkWalk svg,.dkWalk .dkW,.dkWalk .lgA,.dkWalk .lgB{animation:none}}
+#metArm{transform-origin:12px 16.5px;transform-box:view-box}
+.dkPond{position:absolute;top:50%;height:16px;margin-top:-8px;left:var(--dkL,150px);right:28px;pointer-events:none;opacity:.3;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent);mask-image:linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent)}
+.dkPond svg{display:block;overflow:visible}
 /* the WAVEFORM panel */
 #tdWaveW{position:relative;height:110px}
 #secPads .est{margin:0 0 8px}
+#ptHead{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 #ptWave{position:absolute;inset:0;display:block;width:100%;height:100%;border-radius:10px;background:#313043;touch-action:none}
 .trimBar{display:flex;align-items:center;gap:8px;margin-top:5px;font-size:10px;opacity:.9}
 .trimBar span{flex:1;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -309,7 +303,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
     <button id="bPlay" aria-label="Play"></button>
     <button id="bRec" aria-label="Record"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="6.5" fill="currentColor" stroke="none"/></svg></button>
     <div class="bpm"><button id="bpmDn">-</button><span id="bpmV">92</span><button id="bpmUp">+</button></div>
-    <button id="bMet" aria-label="Metronome"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.2 3.5h5.6L19 20.5H5z"/><path d="M12 16.5l5.5-9.5"/><circle cx="17.5" cy="7" r="1.4" fill="currentColor"/><path d="M7.2 15.5h9.6"/></svg></button>
+    <button id="bMet" aria-label="Metronome"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9.2 3.5h5.6L19 20.5H5z"/><g id="metArm"><path d="M12 16.5V5.2"/><circle cx="12" cy="7.6" r="1.4" fill="currentColor"/></g><path d="M7.2 15.5h9.6"/></svg></button>
         <button id="bKeys" aria-label="Keys"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="5.5" width="20" height="13" rx="2"/><path d="M7 5.5v13M12 5.5v13M17 5.5v13"/><rect x="5.6" y="5.5" width="2.8" height="7" fill="currentColor" stroke="none"/><rect x="10.6" y="5.5" width="2.8" height="7" fill="currentColor" stroke="none"/><rect x="15.6" y="5.5" width="2.8" height="7" fill="currentColor" stroke="none"/></svg></button>
     <button id="bView" aria-label="View"></button>
     <button id="bKill" class="kill" aria-label="Stop all sounds"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/></svg></button>
@@ -344,7 +338,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
   </section>
 
 
-  <section class="panel tight" id="secFx"><h3>AUDIO FX<i class="dkWalk" aria-hidden="true"><b><svg viewBox="0 0 18 15" width="18" height="15"><g class="dkW"><path d="M2.2 8.6c-1.4-.6-2-1.9-1.6-3 .9.8 1.8 1.1 2.8 1.2z" fill="#ADCFDE"/><ellipse cx="8" cy="9.4" rx="6.2" ry="3.7" fill="#ADCFDE"/><path d="M5 9.6c1.6 1.4 4 1.4 5.4.2" fill="none" stroke="#7EB3D2" stroke-width="1.1" stroke-linecap="round"/><circle cx="12.6" cy="4.6" r="2.9" fill="#ADCFDE"/><path d="M15.1 4.2c1.3-.4 2.4-.1 2.8.6-.7.7-1.8.8-2.9.4z" fill="#DC7B78"/><circle cx="13.4" cy="3.9" r=".65" fill="#313043"/><path class="lgA" d="M6.6 12.6v1.8M6.6 14.4h1.3" stroke="#DC7B78" stroke-width="1" stroke-linecap="round" fill="none"/><path class="lgB" d="M9.4 12.6v1.8M9.4 14.4h1.3" stroke="#DC7B78" stroke-width="1" stroke-linecap="round" fill="none"/></g></svg></b></i></h3><div class="fx" id="fx"></div>
+  <section class="panel tight" id="secFx"><h3>AUDIO FX<i class="dkPond" aria-hidden="true"><svg id="dkPondS" width="100%" height="16"></svg></i></h3><div class="fx" id="fx"></div>
   <div class="tfx" id="tfx"></div></section>
   <section class="panel tight" id="secSeq"><h3>STEP SEQUENCER</h3>
   <div class="row" id="tracks" style="margin-top:0"></div>
@@ -362,7 +356,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
   <section class="panel" id="secPad">
     <h3>PAD EDIT <span id="padName"></span></h3>
     <div class="psec" id="psA"><div class="psh">TRIM &amp; PLAY</div><div class="psb">
-    <div id="tdWaveW"><canvas id="ptWave"></canvas></div>
+    <div id="tdWaveW"><canvas id="ptWave"></canvas><canvas id="ptHead"></canvas></div>
     <div class="trimBar"><span id="ptInfo"></span></div>
     <div class="ctl"><label>PITCH</label><input type="range" id="pPitch" min="-12" max="12" step="1" value="0"><output id="oPitch">0</output></div>
     <div class="ctl"><label>LEVEL</label><input type="range" id="pVol" min="0" max="150" step="1" value="100"><output id="oVol">100</output></div>
@@ -760,7 +754,7 @@ function start(at){
 }
 function stop(){
   if(ctx)voices.forEach(vs=>vs.forEach(v=>{if(v.vis&&v.vis.loop)release(v,ctx.currentTime);}));
-  playing=false;clearInterval(timer);uiQ=[];setPlayhead(-1);playPage=-1;
+  playing=false;clearInterval(timer);uiQ=[];setPlayhead(-1);playPage=-1;metRest();
   if(queued!==null){curPat=queued;queued=null;}
   editPat=curPat;renderTransport();renderPats();renderSteps();
 }
@@ -1275,6 +1269,22 @@ var duckMode=false,duckSel=[],duckPrev=null;
 function gripW(){const h=$('secSeq').querySelector('h3'),tn=[...h.childNodes].find(n=>n.nodeType===3&&n.textContent.trim());let w=130;
   if(tn){const rg=document.createRange();rg.selectNodeContents(tn);const b=rg.getBoundingClientRect();if(b.width)w=b.right-h.getBoundingClientRect().left;}return w+12;}
 function gripZone(h3,x){return x-h3.getBoundingClientRect().left<=gripW();}
+const DKM='<ellipse rx="3.3" ry="2.1" fill="#ADCFDE"/><circle cx="2.7" r="1.35" fill="#ADCFDE"/><path d="M3.9-.45 5.1 0 3.9.45z" fill="#DC7B78"/><path d="M-3.2-1.7-5-.9M-3.2 1.7-5 .9" stroke="#7EB3D2" stroke-width=".5" fill="none" stroke-linecap="round"/>',
+  DKB='<ellipse rx="1.7" ry="1.15" fill="#ADCFDE"/><circle cx="1.4" r=".8" fill="#ADCFDE"/><path d="M2.1-.25 2.7 0 2.1.25z" fill="#DC7B78"/>';
+let pond=null;
+function pondGo(){const sv=$('dkPondS');if(!sv||document.hidden||matchMedia('(prefers-reduced-motion: reduce)').matches){pondLater();return;}
+  const W=sv.getBoundingClientRect().width;if(W<60){pondLater();return;}
+  const n=2+Math.floor(Math.random()*3),dir=Math.random()<.5?1:-1,T=22000+Math.random()*14000,ph=Math.random()*6.28,amp=2.2+Math.random()*1.6,wav=0.018+Math.random()*0.012;
+  sv.innerHTML=Array.from({length:n+1},(_,k)=>'<g>'+(k?DKB:DKM)+'</g>').join('');const gs=[...sv.children],gap=9,lead=W+40+n*gap;
+  const yAt=x=>8+Math.sin(x*wav+ph)*amp+Math.sin(x*wav*2.7+ph*1.7)*amp*0.35;
+  const t0=performance.now();pond={stop:false};const me=pond;
+  (function step(now){if(me.stop)return;const f=(now-t0)/T;if(f>1){sv.innerHTML='';pondLater();return;}
+    const head=-20+f*lead;
+    gs.forEach((g,k)=>{const d=head-k*gap,x=dir>0?d:W-d,y=yAt(d),dy=yAt(d+1)-y,ang=Math.atan2(dy,1)*180/Math.PI;
+      g.setAttribute('transform','translate('+x.toFixed(1)+' '+y.toFixed(1)+') rotate('+(dir>0?ang:180-ang).toFixed(1)+')');});
+    requestAnimationFrame(step);})(t0);}
+function pondLater(){setTimeout(pondGo,9000+Math.random()*26000);}
+setTimeout(pondGo,4000+Math.random()*8000);
 function placeDuck(){try{const h=$('secFx').querySelector('h3');h.style.setProperty('--dkL',(gripW()+8)+'px');}catch(e){}}
 window.addEventListener('resize',placeDuck);setTimeout(placeDuck,0);
 /* the secret ducker lives just past the grip in the AUDIO FX title */
@@ -1384,8 +1394,11 @@ function meters(){
     meterLv[t]=Math.max(pk,meterLv[t]*0.86);const el=b.querySelector('.mt');if(el){el.style.setProperty('--mc',TCOL[t]);el.style.width=Math.min(100,Math.sqrt(meterLv[t])*110)+'%';}
     b.classList.toggle('live',meterLv[t]>0.02);}
 }
+/* metronome icon: the arm swings to the other side over each beat, and rests upright when stopped */
+function metSwing(b){const a=$('metArm');if(!a)return;a.style.transition='transform '+(60/S.bpm).toFixed(3)+'s ease-in-out';a.style.transform='rotate('+(b%2?24:-24)+'deg)';}
+function metRest(){const a=$('metArm');if(!a)return;a.style.transition='transform .25s ease-out';a.style.transform='rotate(0deg)';}
 function loop(){
-  requestAnimationFrame(loop);meters();duckAnim();
+  requestAnimationFrame(loop);meters();duckAnim();padHead();
   const now=ctx?ctx.currentTime:0;
   while(uiQ.length&&uiQ[0].t<=now){const u=uiQ.shift();
     let redraw=false;
@@ -1393,7 +1406,8 @@ function loop(){
     const ls=tIdx(u.p,selTrack,u.s),pg=Math.floor(ls/16);
     if(pg!==playPage){playPage=pg;if(follow&&playing&&viewPage!==pg){viewPage=pg;redraw=true;}renderPages();}
     if(redraw)renderSteps();
-    setPlayhead(pg===viewPage?ls%16:-1);}
+    setPlayhead(pg===viewPage?ls%16:-1);
+    if(u.s%4===0)metSwing(u.s/4);}
   const W=cv.width,H=cv.height;
   g2.globalAlpha=1;
   if(fx.ECHO){g2.fillStyle='rgba(49,48,67,0.16)';g2.fillRect(0,0,W,H);g2.globalAlpha=0.5;}
@@ -2024,6 +2038,17 @@ function drawTrim(){
   if(!t.src){const L=t.p.buf.duration;g.fillStyle='rgba(49,48,67,.7)';g.fillRect(0,0,Math.max(0,X(0)),H);g.fillRect(X(L),0,W-X(L),H);}
   [[x0,true],[x1,false]].forEach(([x,st])=>{g.fillStyle=COL.fire;g.fillRect(x-dpr,0,2*dpr,H);g.beginPath();const w=10*dpr;if(st){g.moveTo(x,0);g.lineTo(x+w,0);g.lineTo(x,w*1.3);}else{g.moveTo(x,H);g.lineTo(x-w,H);g.lineTo(x,H-w*1.3);}g.fill();});
 }
+/* playhead: a line runs across the pad's waveform while that pad sounds, at its pitch, backwards when reversed, round again when looping */
+let headOn=false;
+function padHead(){const c=$('ptHead');if(!c)return;
+  let v=null;if(trim&&ctx&&!$('tdWaveW').classList.contains('hidden')){const now=ctx.currentTime;
+    for(const list of voices)for(const o of list)if(o.pad===trim.pad&&o.vis&&o.start<=now&&(o.vis.end==null||now<o.vis.end)&&(!v||o.start>v.start))v=o;}
+  if(!v){if(headOn){c.getContext('2d').clearRect(0,0,c.width,c.height);headOn=false;}return;}
+  const p=pads[trim.pad];if(!p)return;const dpr=Math.min(2,window.devicePixelRatio||1),W=Math.round(c.clientWidth*dpr),H=Math.round(c.clientHeight*dpr);if(!W)return;
+  if(c.width!==W||c.height!==H){c.width=W;c.height=H;}const g=c.getContext('2d');g.clearRect(0,0,W,H);
+  let pos=(ctx.currentTime-v.vis.start)*v.vis.rate;if(v.vis.loop)pos%=p.len;else if(pos>p.len)return;if(v.vis.rev)pos=p.len-pos;
+  const t=(trim.src?(p.start||0):0)+pos,x=(t-trim.v0)/(trim.v1-trim.v0)*W;if(x<0||x>W)return;
+  g.fillStyle='rgba(255,255,255,.9)';g.fillRect(x-dpr*0.75,0,1.5*dpr,H);headOn=true;}
 function setSpan(sp,c,fx){const t=trim;if(!t)return;const lo=vLo(),hi=vHi(),D=hi-lo;fx=fx==null?0.5:fx;sp=Math.max(Math.min(D,0.02),Math.min(D,sp));t.v0=Math.max(lo,Math.min(hi-sp,c-fx*sp));t.v1=t.v0+sp;tview={pad:t.pad,v0:t.v0,v1:t.v1};drawTrim();}
 /* touch: the nearer red line follows your finger; let go and it saves. A tap plays the pad (and records with REC on). Two fingers zoom. */
 {const c=$('ptWave');let dr=null,pinch=null;const P=new Map();
