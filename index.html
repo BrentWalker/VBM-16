@@ -2431,7 +2431,7 @@ function clearPads(quiet){
 function clearEverything(){
   pushUndo();clearPatterns(true);clearPads(true);
   sources.forEach(sc=>{try{sc.video.pause();sc.video.remove();URL.revokeObjectURL(sc.url);}catch(e){}});
-  sources=[];curSrc=-1;trim=null;trimLoad(selPad);
+  sources=[];curSrc=-1;waitVids=[];trim=null;trimLoad(selPad);
   S.trackFx=[[],[],[],[]];S.trackFxOn=[true,true,true,true];S.trackFxAmt=[{},{},{},{}];for(let t=0;t<4;t++)applyTrackFx(t);renderTfx();
   FXL.forEach(([k])=>{latched[k]=false;if(fx[k])setFx(k,false);});renderFx();save();
   $('sessName').value='My session';
@@ -2455,12 +2455,32 @@ let autoT=null,restoring=false;
 function padsChanged(){layoutStage();try{if(!trimBusy)trimRefresh();}catch(e){}if(restoring)return;clearTimeout(autoT);autoT=setTimeout(autosave,2500);}
 /* loaded videos are kept in this browser too, so pads stay regions of their video after the app reopens */
 async function autosave(){
-  try{const recs=[],refs=[];for(let i=0;i<NP;i++){const p=pads[i];recs.push(p?await padRecord(p):null);refs.push(p&&p.srcId!=null?p.srcId:null);}
+  try{const recs=[],refs=[];for(let i=0;i<NP;i++){const p=pads[i];recs.push(p?await padRecord(p):null);refs.push(p?(p.srcId!=null?p.srcId:(p._pref!=null?p._pref:null)):null);}
     const live=sources.filter(x=>x.audio&&x.file);
-    for(const x of live)if(!x.stored){if(await idb.put('v:'+x.id,{file:x.file,wav:encodeWav(x.audio),vm:{name:x.name,type:x.type,slip:x.slip||0}}))x.stored=true;}
-    const old=(await idb.get('vids'))||[];for(const id of old)if(!live.some(x=>x.id===id))await idb.del('v:'+id);
-    await idb.put('vids',live.map(x=>x.id));
+    /* plain bytes, not File or Blob objects: some iPhones refuse to keep those in browser storage */
+    for(const x of live)if(!x.stored){
+      let ok=false;try{ok=await idb.put('v:'+x.id,{fab:await x.file.arrayBuffer(),ftype:x.file.type||'video/mp4',fname:x.file.name||'video.mp4',wab:await encodeWav(x.audio).arrayBuffer(),vm:{name:x.name,type:x.type,slip:x.slip||0}});}catch(e){ok=false;}
+      if(ok)x.stored=true;else if(!x.warned){x.warned=true;toast('This phone would not keep the full video for '+x.name+'. Save the session with INCLUDE VIDEOS on to keep it.',4200);}}
+    const keep=new Set([...live.filter(x=>x.stored).map(x=>x.id),...waitVids]);
+    const old=(await idb.get('vids'))||[];for(const id of old)if(!keep.has(id))await idb.del('v:'+id);
+    await idb.put('vids',[...keep]);
     await idb.put('pads',{recs,refs,name:$('sessName').value});}catch(e){}
+}
+/* videos kept in browser storage come back with the session; if the phone will not open one yet, it tries again on your first tap */
+let waitVids=[];
+async function loadSavedVids(first){
+  let n=0;const total=waitVids.length;
+  for(const id of waitVids.slice()){const v=await idb.get('v:'+id);if(!v){waitVids=waitVids.filter(x=>x!==id);continue;}
+    try{const file=v.fab?new File([v.fab],v.fname||'video.mp4',{type:v.ftype||'video/mp4'}):v.file,wab=v.wab||(v.wav&&await v.wav.arrayBuffer());if(!file||!wab){waitVids=waitVids.filter(x=>x!==id);continue;}
+      toast('Loading video '+(n+1)+' of '+total+'…',0);
+      /* come back under the same number, so pads and storage still match it; decode a copy, decoding empties the buffer */
+      const keepSeq=srcSeq;if(!sources.some(x=>x.id===id))srcSeq=id-1;let ns=null;try{ns=await restoreSource(file,wab.slice(0),v.vm||{});}finally{srcSeq=Math.max(keepSeq,srcSeq);}if(!ns)continue;
+      ns.stored=true;n++;waitVids=waitVids.filter(x=>x!==id);
+      if(ns.id!==id){await idb.put('v:'+ns.id,v.fab?v:{fab:await file.arrayBuffer(),ftype:file.type,fname:file.name,wab,vm:v.vm||{}});await idb.del('v:'+id);}
+      pads.forEach(p=>{if(p&&p.srcId==null&&p._pref===id){p.srcId=ns.id;delete p._pref;}});}catch(e){}}
+  if(n){if(curSrc<0)curSrc=sources.length-1;await idb.put('vids',[...sources.filter(x=>x.stored).map(x=>x.id),...waitVids]);trim=null;trimLoad(selPad);toast(first?'Your last session is back, videos too.':'Full videos are back.',1600);}
+  else if(total)estDone();
+  if(waitVids.length&&first){const retry=()=>{document.removeEventListener('pointerdown',retry,true);loadSavedVids(false);};document.addEventListener('pointerdown',retry,true);}
 }
 async function restoreAutosave(){
   try{
@@ -2470,11 +2490,9 @@ async function restoreAutosave(){
     for(let i=0;i<d.recs.length&&i<NP;i++)if(d.recs[i])np[i]=await padFromRecord(d.recs[i]);
     if(hasPads())return;
     pads=np;if(d.name)$('sessName').value=d.name;$('empty').classList.add('hidden');renderAll();toast('Your last session is back.');
-    const ids=(await idb.get('vids'))||[];let n=0;srcSeq=Math.max(srcSeq,...ids.map(Number).filter(isFinite),0);
-    for(const id of ids){const v=await idb.get('v:'+id);if(!v||!v.file||!v.wav)continue;toast('Loading video '+(++n)+' of '+ids.length+'…',0);
-      try{const ns=await restoreSource(v.file,await v.wav.arrayBuffer(),v.vm||{});if(!ns)continue;ns.stored=true;await idb.del('v:'+id);await idb.put('v:'+ns.id,v);
-        if(Array.isArray(d.refs))d.refs.forEach((r,i)=>{if(r===id&&pads[i])pads[i].srcId=ns.id;});}catch(e){}}
-    if(n){await idb.put('vids',sources.filter(x=>x.stored).map(x=>x.id));if(curSrc<0)curSrc=sources.length-1;trim=null;trimLoad(selPad);toast('Your last session is back, videos too.',1600);}
+    const ids=(await idb.get('vids'))||[];srcSeq=Math.max(srcSeq,...ids.map(Number).filter(isFinite),0);
+    if(Array.isArray(d.refs))d.refs.forEach((r,i)=>{if(r!=null&&pads[i])pads[i]._pref=r;});
+    waitVids=ids.slice();await loadSavedVids(true);
   }catch(e){}finally{restoring=false;}
 }
 $('bDisk').onclick=()=>$('saveWin').classList.remove('hidden');
