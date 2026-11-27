@@ -2023,19 +2023,13 @@ function tzFit(){const t=trim;if(!t||!t.src)return;const D=t.src.dur,z=Math.max(
     if(len>span*0.6){span=Math.min(D,len/0.6);UI.tz=D/span;}
     if(len>span*0.6||t.s<t.v0+span*0.1||t.e>t.v1-span*0.1){const c=(t.s+t.e)/2;t.v0=Math.max(0,Math.min(D-span,c-span/2));t.v1=t.v0+span;}}
   tview={id:t.src.id,v0:t.v0,v1:t.v1};}
+/* regions: every pad from this video is a stretch of the waveform; pads never overlap */
 function srcRegions(src,selI,liveS,liveE){const out=[];for(let k=0;k<NP;k++){const p=pads[k];if(!p||p.srcId!==src.id)continue;let a=p.start||0,b=a+p.len;if(k===selI&&liveS!=null){a=liveS;b=liveE;}out.push({k,a,b});}
-  out.sort((x,y)=>x.a-y.a||y.b-x.b);const ends=[];for(const r of out){let l=ends.findIndex(e=>e<=r.a+1e-4);if(l<0){l=ends.length;ends.push(0);}ends[l]=r.b;r.lane=l;}
-  return {regs:out,lanes:Math.max(1,ends.length)};}
+  out.sort((x,y)=>x.a-y.a);return out;}
 function regCol(k){const p=pads[k];return p&&CATS[p.cat]?CATS[p.cat].c:COL.purple;}
-function drawRegions(g,W,H,regs,lanes,X,selI,dpr,bandH){const lh=Math.min(14*dpr,bandH/lanes);
-  for(const r of regs){const x0=X(r.a),x1=X(r.b);if(x1<0||x0>W)continue;const y=r.lane*lh,c=regCol(r.k),on=r.k===selI;
-    g.globalAlpha=on?1:.75;g.fillStyle=c;g.fillRect(x0,y+dpr,Math.max(2*dpr,x1-x0-dpr),lh-2*dpr);
-    if(!on){g.globalAlpha=.35;g.fillRect(x0,0,dpr,H);}
-    g.globalAlpha=1;const lb=padLabel(r.k),fs=Math.min(10*dpr,lh-3*dpr);g.font='700 '+fs+'px ui-monospace,Menlo,monospace';
-    if(x1-x0>g.measureText(lb).width+4*dpr){g.fillStyle=lightCol(c)?COL.ink:'#fff';g.textAlign='left';g.fillText(lb,Math.max(x0,0)+2*dpr,y+lh-3.5*dpr);}
-    if(on){g.strokeStyle='#fff';g.lineWidth=dpr;g.strokeRect(x0+.5,y+dpr+.5,Math.max(2*dpr,x1-x0-dpr)-1,lh-2*dpr-1);}}
-  return lh;}
-function bandOf(H,dpr){if(!trim||!trim.src)return {band:0,R:null};const R=srcRegions(trim.src,trim.empty?-1:trim.pad,trim.empty?null:trim.s,trim.e);if(!R.regs.length)return {band:0,R:null};return {R,band:Math.min(H*0.34,R.lanes*14*dpr)};}
+/* the free stretch around time m, ignoring pad skip: from the end of the region before it to the start of the one after */
+function gapAt(src,m,skip){let lo=0,hi=src.dur;for(const r of srcRegions(src,-1)){if(r.k===skip)continue;if(r.b<=m+1e-4)lo=Math.max(lo,r.b);else if(r.a>=m-1e-4)hi=Math.min(hi,r.a);}return {lo,hi};}
+function regionAt(src,t,skip){let best=null;for(const r of srcRegions(src,-1)){if(r.k===skip)continue;if(t>=r.a&&t<=r.b&&(!best||r.b-r.a<best.b-best.a))best=r;}return best;}
 function slipNow(){if(!trim)return 0;if(trim.empty)return trim.slip||0;const p=pads[trim.pad];return p?(p.slipTarget!=null?p.slipTarget:p.slip||0):0;}
 function drawTrim(){
   const c=$('ptWave');if(!c)return;
@@ -2047,25 +2041,30 @@ function drawTrim(){
   const dpr=Math.min(2,window.devicePixelRatio||1),W=Math.round(c.clientWidth*dpr),H=Math.round(c.clientHeight*dpr);if(!W||!H)return;
   if(c.width!==W||c.height!==H){c.width=W;c.height=H;}const g=c.getContext('2d');g.clearRect(0,0,W,H);
   if(!trim){$('ptInfo').textContent='';return;}
-  const t=trim,span=t.v1-t.v0,X=x=>(x-t.v0)/span*W,has=isFinite(t.s);
-  const {band,R}=bandOf(H,dpr);
-  const buf=t.src?t.src.audio:t.p.buf,sr=buf.sampleRate,d=t.src?t.src.mono:buf.getChannelData(0),nrm=t.src?(t.src.norm||1):1,top=band,WH=H-band,mid=top+WH/2,P=t.src&&t.src.peaks;
-  const x0=has?Math.max(0,X(t.s)):-1,x1=has?Math.min(W,X(t.e)):-1,newC=t.empty;
-  if(has){g.fillStyle=newC?'rgba(220,123,120,.22)':'rgba(173,207,222,.12)';g.fillRect(x0,top,x1-x0,WH);}
+  const t=trim,span=t.v1-t.v0,X=x=>(x-t.v0)/span*W,has=isFinite(t.s),newC=t.empty;
+  const regs=t.src?srcRegions(t.src,t.empty?-1:t.pad,t.empty?null:t.s,t.e):[];
+  const buf=t.src?t.src.audio:t.p.buf,sr=buf.sampleRate,d=t.src?t.src.mono:buf.getChannelData(0),nrm=t.src?(t.src.norm||1):1,mid=H/2,P=t.src&&t.src.peaks;
+  const x0=has?X(t.s):-1,x1=has?X(t.e):-1;
+  /* region shading under the wave */
+  for(const r of regs){if(r.k===t.pad&&!newC)continue;const a=X(r.a),b=X(r.b);if(b<0||a>W)continue;g.fillStyle=regCol(r.k);g.globalAlpha=.18;g.fillRect(a,0,b-a,H);g.globalAlpha=.7;g.fillRect(a,0,Math.max(dpr,1),H);g.fillRect(b-Math.max(dpr,1),0,Math.max(dpr,1),H);g.globalAlpha=1;}
+  if(has){g.fillStyle=newC?'rgba(220,123,120,.25)':'rgba(173,207,222,.2)';g.fillRect(x0,0,x1-x0,H);}
+  const inReg=x=>{const tt=t.v0+(x+.5)/W*span;for(const r of regs)if(tt>=r.a&&tt<=r.b)return r;return null;};
   for(let x=0;x<W;x++){const a=Math.floor((t.v0+x/W*span)*sr),b=Math.floor((t.v0+(x+1)/W*span)*sr);let lo=0,hi=0;
     if(P&&(b-a)>=P.B){for(let k=Math.floor(a/P.B);k<Math.ceil(b/P.B)&&k<P.min.length;k++){if(P.min[k]<lo)lo=P.min[k];if(P.max[k]>hi)hi=P.max[k];}}
-    else for(let k=a;k<b&&k<d.length;k+=Math.max(1,Math.floor((b-a)/64))){const v=d[k];if(v<lo)lo=v;if(v>hi)hi=v;}
-    g.fillStyle=has&&x>=x0&&x<=x1?(newC?COL.fire:COL.air):(has?'rgba(173,207,222,.35)':'rgba(173,207,222,.7)');const y0=mid-Math.min(1,hi*nrm)*WH*0.46,y1=mid-Math.max(-1,lo*nrm)*WH*0.46;g.fillRect(x,y0,1,Math.max(1,y1-y0));}
-  if(!t.src){const L=t.p.buf.duration;g.fillStyle='rgba(49,48,67,.7)';g.fillRect(0,top,Math.max(0,X(0)),WH);g.fillRect(X(L),top,W-X(L),WH);}
-  if(has&&!newC){g.fillStyle='rgba(49,48,67,.45)';g.fillRect(0,top,x0,WH);g.fillRect(x1,top,W-x1,WH);}
-  if(t.nA!=null){const a=X(t.nA),b=X(t.nB);g.fillStyle='rgba(220,123,120,.35)';g.fillRect(a,top,b-a,WH);g.fillStyle=COL.fire;g.fillRect(a-dpr,top,2*dpr,WH);g.fillRect(b-dpr,top,2*dpr,WH);}
-  if(R){g.fillStyle='rgba(66,76,96,.9)';g.fillRect(0,0,W,band);drawRegions(g,W,H,R.regs,R.lanes,X,t.pad,dpr,band);
-}
+    else for(let k=Math.max(0,a);k<b&&k<d.length;k+=Math.max(1,Math.floor((b-a)/64))){const v=d[k];if(v<lo)lo=v;if(v>hi)hi=v;}
+    if(has&&x>=x0&&x<=x1)g.fillStyle=newC?COL.fire:COL.air;else{const r=inReg(x);g.fillStyle=r?'rgba(173,207,222,.7)':'rgba(173,207,222,.35)';}
+    const y0=mid-Math.min(1,hi*nrm)*H*0.44,y1=mid-Math.max(-1,lo*nrm)*H*0.44;g.fillRect(x,y0,1,Math.max(1,y1-y0));}
+  if(!t.src){const L=t.p.buf.duration;g.fillStyle='rgba(49,48,67,.7)';g.fillRect(0,0,Math.max(0,X(0)),H);g.fillRect(X(L),0,W-X(L),H);}
+  if(t.nA!=null){const a=X(t.nA),b=X(t.nB);g.fillStyle='rgba(220,123,120,.35)';g.fillRect(a,0,b-a,H);g.fillStyle=COL.fire;g.fillRect(a-dpr,0,2*dpr,H);g.fillRect(b-dpr,0,2*dpr,H);}
+  /* pad labels inside their stretch */
+  g.font='700 '+(9*dpr)+'px ui-monospace,Menlo,monospace';g.textAlign='left';
+  for(const r of regs){const a=Math.max(0,X(r.a)),b=Math.min(W,X(r.b)),lb=padLabel(r.k),tw=g.measureText(lb).width+6*dpr;if(b-a<tw+2*dpr)continue;
+    const c=r.k===t.pad&&!newC?COL.air:regCol(r.k);g.fillStyle=c;g.fillRect(a+2*dpr,3*dpr,tw,12*dpr);g.fillStyle=lightCol(c)?COL.ink:'#fff';g.fillText(lb,a+5*dpr,12*dpr);}
   {const D=tD();if(span<D-1e-6){g.fillStyle='rgba(255,255,255,.08)';g.fillRect(0,H-3*dpr,W,3*dpr);g.fillStyle='rgba(173,207,222,.6)';g.fillRect((t.v0-vLo())/D*W,H-3*dpr,Math.max(2,span/D*W),3*dpr);}}
-  if(has)[[x0,true],[x1,false]].forEach(([x,st])=>{g.fillStyle=COL.fire;g.fillRect(x-dpr,top,2*dpr,WH);g.beginPath();const w=9*dpr;if(st){g.moveTo(x,top);g.lineTo(x+w,top);g.lineTo(x,top+w*1.3);}else{g.moveTo(x,H);g.lineTo(x-w,H);g.lineTo(x,H-w*1.3);}g.fill();});
-  if(pending()){g.font='700 '+(10*dpr)+'px ui-monospace,Menlo,monospace';g.textAlign='left';g.fillStyle='#fff';g.fillText('NEW · HOLD AND DRAG TO A PAD',Math.max(2*dpr,Math.min(x0+4*dpr,W-150*dpr)),top+13*dpr);}
+  if(has)[[x0,true],[x1,false]].forEach(([x,st])=>{g.fillStyle=COL.fire;g.fillRect(x-dpr,0,2*dpr,H);g.beginPath();const w=9*dpr;if(st){g.moveTo(x,0);g.lineTo(x+w,0);g.lineTo(x,w*1.3);}else{g.moveTo(x,H);g.lineTo(x-w,H);g.lineTo(x,H-w*1.3);}g.fill();});
+  if(pending()){g.font='700 '+(9*dpr)+'px ui-monospace,Menlo,monospace';const lb='NEW',tw=g.measureText(lb).width+6*dpr;if(x1-x0>tw+4*dpr){g.fillStyle=COL.fire;g.fillRect(x0+2*dpr,3*dpr,tw,12*dpr);g.fillStyle='#fff';g.fillText(lb,x0+5*dpr,12*dpr);}}
   const steps=has&&t.src&&UI.tsnap?' · '+(+((t.e-t.s)/stepDur()).toFixed(2))+' steps':'';
-  $('ptInfo').textContent=!t.src?'Video not loaded, this pad can only be trimmed shorter':pending()?'Hold the slice and drag it to a pad or bank. Drag across the sound to start over.'+steps:t.empty?'Drag across the sound to make a slice.':'Drag the red lines to trim. Hold and drag to copy it to a pad or bank. Double tap or pinch to zoom.'+steps;
+  $('ptInfo').textContent=!t.src?'Video not loaded, this pad can only be trimmed shorter':pending()?'Hold the slice and drag it to a pad or bank.'+steps:t.empty?'Drag across an open stretch to make a slice.':'Drag the red lines to trim. Hold to move it to another pad or bank.'+steps;
 }
 function trimAudition(){if(!trim||!isFinite(trim.s))return;initAudio();try{audNode&&audNode.stop();}catch(e){}const t=trim,buf=t.src?t.src.audio:t.p.buf,s=ctx.createBufferSource(),g=ctx.createGain();s.buffer=buf;g.gain.value=t.pad>=0?S.padVol[t.pad]:1;
   s.connect(g);g.connect(trackG[selTrack]||ctx.destination);
@@ -2108,13 +2107,13 @@ function setSpan(sp,c,fx){const t=trim;if(!t)return;const lo=vLo(),D=tD();fx=fx=
     if(pd!==over){if(over)over.classList.remove('dropT');over=pd||null;if(over)over.classList.add('dropT');}
     if(bk!==overB){if(overB)overB.classList.remove('dropT');overB=bk||null;clearTimeout(bankT);if(overB){overB.classList.add('dropT');const bi=[...$('banks').querySelectorAll('.bank')].indexOf(overB);bankT=setTimeout(()=>{if(bi>=0&&bi!==bank)setBank(bi);},700);}}}
   function liftEnd(drop,it){const tg=over,tb=overB;clearOver();if(ghost){ghost.remove();ghost=null;}if(!drop)return;
-    if(tg){const li=[...$('pads').querySelectorAll('.pad')].indexOf(tg);if(li>=0)dropRegion(bank*16+li,it.src,it.a,it.b,it.slip);return;}
+    const put=k=>{if(it.k!=null){if(k===it.k)return;trimCommit().then(()=>{movePad(it.k,k,'swap');trim=null;trimLoad(selPad);drawTrim();});}else dropRegion(k,it.src,it.a,it.b,it.slip);};
+    if(tg){const li=[...$('pads').querySelectorAll('.pad')].indexOf(tg);if(li>=0)put(bank*16+li);return;}
     if(tb){const bi=[...$('banks').querySelectorAll('.bank')].indexOf(tb);if(bi<0)return;let k=-1;for(let q=0;q<16;q++)if(!pads[bi*16+q]){k=bi*16+q;break;}
-      if(k<0){toast('Bank '+(bi+1)+' is full. Drop it on a pad to replace one.',2200);return;}if(bi!==bank)setBank(bi);dropRegion(k,it.src,it.a,it.b,it.slip);}}
+      if(k<0){toast('Bank '+(bi+1)+' is full. Drop it on a pad instead.',2200);return;}if(bi!==bank)setBank(bi);put(k);}}
   function itemAt(d){const src=trim&&trim.src;if(!src)return null;
-    if(d.zone==='band'&&d.pick!=null){const p=pads[d.pick];return p?{src,a:p.start||0,b:(p.start||0)+p.len,slip:p.slip||0,label:'PAD '+padLabel(d.pick)}:null;}
-    if(d.inSel)return {src,a:trim.s,b:trim.e,slip:trim.empty?trim.slip||0:slipNow(),label:trim.empty?'NEW SLICE':'PAD '+padLabel(trim.pad)};
-    if(d.pick!=null){const p=pads[d.pick];return p?{src,a:p.start||0,b:(p.start||0)+p.len,slip:p.slip||0,label:'PAD '+padLabel(d.pick)}:null;}return null;}
+    if(d.inSel)return trim.empty?{src,a:trim.s,b:trim.e,slip:trim.slip||0,label:'NEW SLICE'}:{k:trim.pad,src,label:'PAD '+padLabel(trim.pad)};
+    if(d.pick!=null&&pads[d.pick])return {k:d.pick,src,label:'PAD '+padLabel(d.pick)};return null;}
   function dbl(e,r){if(!trim)return;const D=tD(),sp=trim.v1-trim.v0,t=tAt(e.clientX,r);
     if(sp<D-1e-6){setSpan(D,vLo()+D/2);return;}
     const fx=(e.clientX-r.left)/r.width;if(isFinite(trim.s)&&t>=trim.s&&t<=trim.e){setSpan(Math.min(D/2,Math.max((trim.e-trim.s)*2.5,0.05)),(trim.s+trim.e)/2);return;}setSpan(D/4,t,fx);}
@@ -2123,12 +2122,13 @@ function setSpan(sp,c,fx){const t=trim;if(!t)return;const lo=vLo(),D=tD();fx=fx=
     if(P.size===2){clearTimeout(holdT);if(dr&&dr.mode==='lift')liftEnd(false,dr.item);if(dr&&dr.mode==='new'){trim.nA=trim.nB=null;}dr=null;
       const [a,b]=[...P.values()],r=c.getBoundingClientRect();pinch={d:Math.max(20,Math.hypot(a.x-b.x,a.y-b.y)),sp:trim.v1-trim.v0,c:tAt((a.x+b.x)/2,r),r};drawTrim();return;}
     if(P.size>2)return;
-    const r=c.getBoundingClientRect(),{band,R}=bandOf(r.height,1),px=t=>r.left+(t-trim.v0)/(trim.v1-trim.v0)*r.width,y=e.clientY-r.top,t=tAt(e.clientX,r),has=isFinite(trim.s);
-    let which=null,pick=null,zone='wave';
-    if(R&&y<band){zone='band';const lane=Math.floor(y/(band/R.lanes)),hit=R.regs.filter(q=>q.lane===lane&&t>=q.a&&t<=q.b);if(hit.length)pick=hit[0].k;}
-    else if(has&&Math.min(Math.abs(e.clientX-px(trim.s)),Math.abs(e.clientX-px(trim.e)))<26)which=Math.abs(e.clientX-px(trim.s))<Math.abs(e.clientX-px(trim.e))?'s':'e';
-    else if(R&&!(has&&t>=trim.s&&t<=trim.e)){const hit=R.regs.filter(q=>q.k!==trim.pad&&t>=q.a&&t<=q.b).sort((a,b)=>(a.b-a.a)-(b.b-b.a));if(hit.length)pick=hit[0].k;}
-    dr={which,pick,zone,x:e.clientX,y:e.clientY,t0:t,v0:trim.v0,inSel:has&&t>=trim.s&&t<=trim.e,mode:null,r};
+    const r=c.getBoundingClientRect(),px=t=>r.left+(t-trim.v0)/(trim.v1-trim.v0)*r.width,t=tAt(e.clientX,r),has=isFinite(trim.s);
+    let which=null,pick=null;const inSel=has&&t>=trim.s&&t<=trim.e;
+    if(has&&Math.min(Math.abs(e.clientX-px(trim.s)),Math.abs(e.clientX-px(trim.e)))<26)which=Math.abs(e.clientX-px(trim.s))<Math.abs(e.clientX-px(trim.e))?'s':'e';
+    else if(trim.src&&!inSel){const q=regionAt(trim.src,t,trim.empty?-1:trim.pad);if(q)pick=q.k;}
+    /* how far each red line may go: up to the neighbouring pads, never over them */
+    let lim=null;if(which&&trim.src){const g=gapAt(trim.src,(trim.s+trim.e)/2,trim.empty?-1:trim.pad);lim=g;}
+    dr={which,pick,lim,x:e.clientX,y:e.clientY,t0:t,v0:trim.v0,inSel,mode:null,r};
     clearTimeout(holdT);const d0=dr;holdT=setTimeout(()=>{if(dr!==d0||dr.mode)return;const it=itemAt(d0);if(it)lift(it);},380);});
   c.addEventListener('pointermove',e=>{if(P.has(e.pointerId))P.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(pinch&&P.size>=2&&trim){const [a,b]=[...P.values()];const d=Math.max(20,Math.hypot(a.x-b.x,a.y-b.y));const fx=(((a.x+b.x)/2)-pinch.r.left)/pinch.r.width;setSpan(pinch.sp*pinch.d/d,pinch.c,fx);return;}
@@ -2136,13 +2136,13 @@ function setSpan(sp,c,fx){const t=trim;if(!t)return;const lo=vLo(),D=tD();fx=fx=
     if(dr.mode==='lift'){liftMove(e);return;}
     const dx=e.clientX-dr.x,dy=e.clientY-dr.y;
     if(!dr.mode){if(Math.hypot(dx,dy)<7)return;clearTimeout(holdT);const src=trim.src;
-      dr.mode=dr.which?'edge':dr.zone==='band'?'pan':src?'new':'pan';
-      if(dr.mode==='new'&&!trim.empty){trimCommit();}}
+      const free=src&&!dr.inSel&&dr.pick==null;dr.mode=dr.which?'edge':free?'new':'pan';
+      if(dr.mode==='new'){dr.gap=gapAt(src,dr.t0,-1);if(!trim.empty)trimCommit();}}
     const src=trim.src,D=dEnd(),lo=vLo(),hi=vHi(),t=Math.max(0,Math.min(D,tAt(e.clientX,dr.r)));
     const follow=()=>{const sp=trim.v1-trim.v0,edge=sp*0.04;if(t<trim.v0+edge&&trim.v0>lo){trim.v0=Math.max(lo,trim.v0-sp*0.02);trim.v1=trim.v0+sp;}else if(t>trim.v1-edge&&trim.v1<hi){trim.v1=Math.min(hi,trim.v1+sp*0.02);trim.v0=trim.v1-sp;}if(src)tview={id:src.id,v0:trim.v0,v1:trim.v1};};
-    if(dr.mode==='edge'){if(dr.which==='s')trim.s=Math.min(snapLen(trim.e,t,-1),trim.e-0.02);else trim.e=Math.max(snapLen(trim.s,t,1),trim.s+0.02);trim.s=Math.max(0,trim.s);trim.e=Math.min(D,trim.e);follow();drawTrim();}
+    if(dr.mode==='edge'){const L=dr.lim||{lo:0,hi:D};if(dr.which==='s')trim.s=Math.max(L.lo,Math.min(snapLen(trim.e,t,-1),trim.e-0.02));else trim.e=Math.min(L.hi,Math.max(snapLen(trim.s,t,1),trim.s+0.02));trim.s=Math.max(0,trim.s);trim.e=Math.min(D,trim.e);follow();drawTrim();}
     else if(dr.mode==='pan'){if(trim.v1-trim.v0<hi-lo-1e-6){const sp=trim.v1-trim.v0,dt=(e.clientX-dr.x)/dr.r.width*sp;trim.v0=Math.max(lo,Math.min(hi-sp,dr.v0-dt));trim.v1=trim.v0+sp;if(src)tview={id:src.id,v0:trim.v0,v1:trim.v1};drawTrim();}}
-    else if(dr.mode==='new'){let a=Math.min(dr.t0,t),b=Math.max(dr.t0,t);if(UI.tsnap){if(t>=dr.t0)b=snapLen(dr.t0,t,1);else a=snapLen(dr.t0,t,-1);a=Math.max(0,a);b=Math.min(src.dur,b);}trim.nA=a;trim.nB=b;follow();drawTrim();}});
+    else if(dr.mode==='new'){let a=Math.min(dr.t0,t),b=Math.max(dr.t0,t);if(UI.tsnap){if(t>=dr.t0)b=snapLen(dr.t0,t,1);else a=snapLen(dr.t0,t,-1);}a=Math.max(dr.gap.lo,a);b=Math.min(dr.gap.hi,b);trim.nA=a;trim.nB=b;follow();drawTrim();}});
   const up=e=>{P.delete(e.pointerId);clearTimeout(holdT);
     if(pinch){if(P.size<2)pinch=null;dr=null;lastTap=0;return;}
     if(!dr)return;const d=dr;dr=null;if(!trim)return;
