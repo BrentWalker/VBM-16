@@ -1180,7 +1180,7 @@ function applyFormat(){
 /* one playback video per source, kept in step with the newest long pad that is sounding from it */
 function liveFrame(v,p,el,now){
   const src=p.srcId!=null?sources.find(x=>x.id===p.srcId&&x.url):null;if(!src)return null;
-  let pv=src.pv;if(!pv){pv=src.pv=document.createElement('video');pv.src=src.url;pv.muted=true;pv.playsInline=true;pv.setAttribute('playsinline','');pv.preload='auto';pv.load();}
+  let pv=src.pv;if(!pv){pv=src.pv=document.createElement('video');pv.src=src.url;pv.muted=true;pv.playsInline=true;pv.setAttribute('playsinline','');pv.preload='auto';$('vHold').appendChild(pv);pv.load();}/* iPhones only paint videos that are in the page */
   if(pv.owner&&pv.owner!==v&&pv.owner.start>v.start&&now-pv.used<0.1)return null;
   pv.owner=v;pv.used=now;
   const pos=v.loop?((el%p.len)+p.len)%p.len:Math.min(el,p.len),tgt=(p.start||0)+(p.slip||0)+pos,rate=Math.max(0.25,Math.min(4,v.rate||1));
@@ -2156,7 +2156,7 @@ function renderLoopCtl(){const L=!!UI.tLock;
   $('lnA').style.color=L?'':SCOL;$('lnB').style.color=L?'':SCOL;$('lnC').style.color=L?'':LCOL;$('lnD').style.color=L?'':LCOL;
   $('lnStep').textContent=STEPS[UI.tStep||0][1];$('lpLock').classList.toggle('on',L);$('lpLock').textContent=L?'LOCKED':'LOCK';}
 const CHEV=d=>'<svg width="10" height="12" viewBox="0 0 10 12"><path d="'+(d<0?'M7.5 1.5 3 6l4.5 4.5':'M2.5 1.5 7 6l-4.5 4.5')+'" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-function nudge(btn){if(!trim)return;const st=STEPS[UI.tStep||0][0],L=!!UI.tLock;
+function loopNudge(btn){if(!trim)return;const st=STEPS[UI.tStep||0][0],L=!!UI.tLock;
   if(L){const len=trim.e-trim.s;
     if(btn==='A'){const nl=len/2;if(nl>=0.02){UI.tLock=false;setLoop(trim.s,trim.s+nl);UI.tLock=true;}}
     else if(btn==='D'){const nl=Math.min(dEnd()-trim.s,len*2);UI.tLock=false;setLoop(trim.s,trim.s+nl);UI.tLock=true;}
@@ -2165,7 +2165,7 @@ function nudge(btn){if(!trim)return;const st=STEPS[UI.tStep||0][0],L=!!UI.tLock;
   keepInView();commitSoon();}
 function keepInView(){const t=trim,sp=t.v1-t.v0;if(t.s<t.v0||t.e>t.v1){if(t.e-t.s<sp*0.9){const c=(t.s+t.e)/2;setView(c-sp/2,c+sp/2);}}}
 ['A','B','C','D'].forEach(k=>{const b=$('ln'+k);let tm=null,n=0;const stop=()=>{clearTimeout(tm);tm=null;};
-  b.addEventListener('pointerdown',e=>{e.preventDefault();n=0;const go=()=>{nudge(k);n++;tm=setTimeout(go,Math.max(35,320*Math.pow(0.82,n)));};go();});
+  b.addEventListener('pointerdown',e=>{e.preventDefault();n=0;const go=()=>{loopNudge(k);n++;tm=setTimeout(go,Math.max(35,320*Math.pow(0.82,n)));};go();});
   ['pointerup','pointercancel','pointerleave'].forEach(ev=>b.addEventListener(ev,stop));});
 $('lnStep').onclick=()=>{UI.tStep=((UI.tStep||0)+1)%STEPS.length;saveUI();renderLoopCtl();};
 $('lpLock').onclick=()=>{UI.tLock=!UI.tLock;saveUI();renderLoopCtl();drawTrim();};
