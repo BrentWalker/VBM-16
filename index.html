@@ -32,7 +32,7 @@ body.wide #colL,body.wide #colR{position:sticky;top:0;max-height:100vh;max-heigh
 body.wide #colL::-webkit-scrollbar,body.wide #colR::-webkit-scrollbar{display:none}
 body.wide #vidBlock.lifted{opacity:.6;outline:2px dashed var(--air);outline-offset:4px;border-radius:14px}
 body.wide #panelsL:empty{min-height:40px}
-body.wide #panelsL,body.wide #colR>:last-child{margin-bottom:calc(40px + var(--dockH))}
+body.wide #panelsL,body.wide #colR>:last-child{margin-bottom:40px}
 #stage{touch-action:pan-y;position:relative;height:36vh;min-height:200px;background:#000;border-radius:14px;overflow:hidden;display:flex;align-items:center;justify-content:center}
 #ovc{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 #cv{display:block;width:100%;height:100%}
@@ -137,28 +137,18 @@ button.hold.flash{background:var(--fire)!important;color:var(--ink)}
 @keyframes dkWad{from{transform:rotate(-5deg)}to{transform:rotate(5deg)}}
 @keyframes dkStep{0%{opacity:1}50%{opacity:.25}}
 @media (prefers-reduced-motion:reduce){.dkWalk b,.dkWalk svg,.dkWalk .dkW,.dkWalk .lgA,.dkWalk .lgB{animation:none}}
-/* the one waveform: a drawer at the bottom, drag its handle to size it */
-:root{--dockH:0px}
-#trimDock{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:min(100vw,900px);z-index:12;background:var(--ink);border-radius:16px 16px 0 0;box-shadow:0 -6px 22px rgba(0,0,0,.45),0 0 0 1px rgba(173,207,222,.25);padding:0 10px env(safe-area-inset-bottom);display:flex;flex-direction:column;overflow:hidden;height:300px}
-#trimDock{touch-action:none;overscroll-behavior:contain}
-#trimDock.anim{transition:height .22s ease}
-#tdGrip{flex:0 0 30px;display:flex;align-items:center;gap:8px;touch-action:none;cursor:ns-resize;user-select:none;-webkit-user-select:none;position:relative}
-#tdGrip::before{content:"";position:absolute;left:50%;top:7px;width:44px;height:5px;margin-left:-22px;border-radius:3px;background:rgba(173,207,222,.55)}
-#tdName{font-size:10px;letter-spacing:.06em;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:10px;max-width:100%}
-.trimBar{margin-bottom:8px}
-#trimDock .est{margin:0 0 6px;flex:0 0 auto}
-#tdWaveW{flex:1 1 auto;min-height:40px;position:relative}
+/* the WAVEFORM panel */
+#tdWaveW{position:relative;height:150px}
+#secWave .est{margin:0 0 6px}
 #ptWave{position:absolute;inset:0;display:block;width:100%;height:100%;border-radius:10px;background:#313043;touch-action:none}
-.trimBar{display:flex;align-items:center;gap:8px;margin-top:5px;font-size:10px;opacity:.9;flex:0 0 auto}
+.trimBar{display:flex;align-items:center;gap:8px;margin-top:5px;font-size:10px;opacity:.9}
 .trimBar span{flex:1;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tdCtl{flex:0 0 auto;display:flex;gap:4px;align-items:center;margin:0 0 6px}
+.tdCtl{display:flex;gap:4px;align-items:center;margin:0 0 6px}
 .tdCtl button{height:34px;padding:0 8px;font-size:10px;display:flex;align-items:center;justify-content:center;flex:0 0 auto}
 .tdCtl .sl{flex:1;display:flex;gap:3px;min-width:0}
 .tdCtl .sl i{flex:1;font-style:normal;font-size:9px;display:flex;align-items:center;justify-content:center;background:rgba(66,76,96,.6);border-radius:8px;white-space:nowrap;padding:0 4px;letter-spacing:.04em}
 .tdCtl button.on{background:var(--water);color:var(--ink)}
 .regGhost{position:fixed;z-index:30;pointer-events:none;padding:8px 12px;border-radius:10px;background:var(--fire);color:#fff;font-size:11px;font-weight:800;box-shadow:0 8px 20px rgba(0,0,0,.5);transform:translate(-50%,-130%)}
-body{padding-bottom:calc(10px + var(--dockH))}
-#toast{bottom:calc(18px + var(--dockH))!important}
 /* every closed panel is the same height with the same gap */
 .panel.min{padding:0 12px!important;height:44px;display:flex;align-items:center}
 .panel.min h3{margin:0;padding:0!important;width:100%;height:44px;line-height:1;-webkit-user-select:none;user-select:none}
@@ -368,6 +358,12 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
   <div class="pads" id="pads" style="margin-top:0"></div>
   <div class="row"><button id="bHoldClr" class="danger" style="padding:12px 0">HOLD HERE + TAP A BANK OR PAD TO CLEAR</button></div>
   </section>
+  <section class="panel tight" id="secWave"><h3>WAVEFORM <span id="tdName"></span></h3>
+<div class="tdCtl"><div class="sl"><button id="tdSlM" aria-label="Slip video earlier"><svg width="10" height="12" viewBox="0 0 10 12"><path d="M7.5 1.5 3 6l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><i id="tdSlV">SLIP 0 f</i><button id="tdSlP" aria-label="Slip video later"><svg width="10" height="12" viewBox="0 0 10 12"><path d="M2.5 1.5 7 6l-4.5 4.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div><button id="tzSnap">SNAP</button><button id="tzOut" aria-label="Zoom out">−</button><button id="tzIn" aria-label="Zoom in">+</button><button id="tdLoop">LOOP</button><button id="ptReset">RESET</button></div>
+<div id="est" class="est hidden"><span id="estTxt"></span><div class="bar" id="estBarW"><div id="estBar"></div></div><button id="estBtn" class="hidden">OK</button></div>
+<div id="tdWaveW"><canvas id="ptWave"></canvas></div>
+<div class="trimBar"><span id="ptInfo"></span></div>
+  </section>
   <section class="panel" id="secPad">
     <h3>PAD EDIT <span id="padName"></span></h3>
     <div class="ctl"><label>PITCH</label><input type="range" id="pPitch" min="-12" max="12" step="1" value="0"><output id="oPitch">0</output></div>
@@ -434,12 +430,6 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
 <path d="M-20 2c10 12 28 12 38 2" fill="none" stroke="#7EB3D2" stroke-width="5" stroke-linecap="round"/>
 <g id="dkHead"><circle cx="16" cy="-30" r="20" fill="#ADCFDE"/><path d="M33-31c8-3 16-1 20 4-5 5-13 6-20 3z" fill="#DC7B78"/><circle cx="22" cy="-36" r="3.8" fill="#313043"/><circle cx="23.2" cy="-37.3" r="1.3" fill="#fff"/></g>
 </g></g><path d="M0 74q7.5-6 15 0t15 0 15 0 15 0 15 0 15 0 15 0 15 0V110H0z" fill="#7EB3D2"/></svg></div><div class="dtxt"><b>DUCKER</b><span class="dmsg"></span></div><button id="duckOk" class="hl">OK</button><button id="duckX" aria-label="Close ducker">CLOSE</button>
-</div>
-<div id="trimDock"><div id="tdGrip"><span id="tdName"></span></div>
-<div class="tdCtl"><div class="sl"><button id="tdSlM" aria-label="Slip video earlier"><svg width="10" height="12" viewBox="0 0 10 12"><path d="M7.5 1.5 3 6l4.5 4.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><i id="tdSlV">SLIP 0 f</i><button id="tdSlP" aria-label="Slip video later"><svg width="10" height="12" viewBox="0 0 10 12"><path d="M2.5 1.5 7 6l-4.5 4.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div><button id="tzSnap">SNAP</button><button id="tzOut" aria-label="Zoom out">−</button><button id="tzIn" aria-label="Zoom in">+</button><button id="tdLoop">LOOP</button><button id="ptReset">RESET</button></div>
-<div id="est" class="est hidden"><span id="estTxt"></span><div class="bar" id="estBarW"><div id="estBar"></div></div><button id="estBtn" class="hidden">OK</button></div>
-<div id="tdWaveW"><canvas id="ptWave"></canvas></div>
-<div class="trimBar"><span id="ptInfo"></span></div>
 </div>
 <div id="padMoveWin" class="modal hidden">
   <div class="mbox sw">
@@ -663,7 +653,7 @@ function wakeAudio(){
   try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(e){}
   if(ctx&&ctx.state!=='running'){try{ctx.resume().catch(()=>{});}catch(e){}}
 }
-/* stop every sound right now: the sequence, held pads, loops, drawer preview and FX tails (echo and reverb) */
+/* stop every sound right now: the sequence, held pads, loops, waveform preview and FX tails (echo and reverb) */
 function stopAll(){
   if(exporting)return;
   if(playing)stop();
@@ -927,7 +917,7 @@ async function addVideo(file){
 function nextEmptyBank(){for(let k=0;k<NB;k++){const c=(bank+k)%NB;if(!pads.slice(c*16,c*16+16).some(Boolean))return c;}return -1;}
 function renderTpMode(){const a=UI.autoChop!==false;$('tpAuto').classList.toggle('on',a);$('tpUp').classList.toggle('on',!a);
   const nb=nextEmptyBank();
-  $('tpModeNote').textContent=a?(nb<0?'All banks are full. Auto chop will not overwrite anything.':'Fills the next empty bank ('+(nb+1)+') with 16 chops.'):'Puts it in the waveform drawer so you chop it yourself.';}
+  $('tpModeNote').textContent=a?(nb<0?'All banks are full. Auto chop will not overwrite anything.':'Fills the next empty bank ('+(nb+1)+') with 16 chops.'):'Puts it in the WAVEFORM panel so you chop it yourself.';}
 function buildTypePick(){
   $('tpAuto').onclick=()=>{UI.autoChop=true;saveUI();renderTpMode();};
   $('tpUp').onclick=()=>{UI.autoChop=false;saveUI();renderTpMode();};
@@ -1078,7 +1068,7 @@ function listenAudio(url,secs,onProg){
   });
   return {promise,cancel:()=>cancel()};
 }
-/* ---------- drawer status line ---------- */
+/* ---------- waveform status line ---------- */
 let flashT=null;
 function est(txt,p){clearTimeout(flashT);$('est').classList.remove('hidden');$('estTxt').textContent=txt;$('estBarW').classList.toggle('hidden',p==null);$('estBar').style.width=((p||0)*100)+'%';$('estBtn').classList.add('hidden');}
 function estDone(){$('est').classList.add('hidden');}
@@ -2049,14 +2039,14 @@ function bandOf(H,dpr){if(!trim||!trim.src)return {band:0,R:null};const R=srcReg
 function slipNow(){if(!trim)return 0;if(trim.empty)return trim.slip||0;const p=pads[trim.pad];return p?(p.slipTarget!=null?p.slipTarget:p.slip||0):0;}
 function drawTrim(){
   const c=$('ptWave');if(!c)return;
-  const nm=!trim?(sources.some(x=>x.audio)?'Tap a pad':'Add a video with the camera button up top'):(trim.src?trim.src.name+' · ':'')+(pending()?'NEW SLICE · '+Math.round((trim.e-trim.s)*1000)+' ms':trim.empty?'no pad picked':'PAD '+padLabel(trim.pad)+' · '+Math.round((trim.e-trim.s)*1000)+' ms'+(trimChanged()?' · edited':''));
+  const nm=!trim?'':(trim.src?trim.src.name+' · ':'')+(pending()?'NEW SLICE · '+Math.round((trim.e-trim.s)*1000)+' ms':trim.empty?'no pad picked':'PAD '+padLabel(trim.pad)+' · '+Math.round((trim.e-trim.s)*1000)+' ms'+(trimChanged()?' · edited':''));
   $('tdName').textContent=nm;
   const sf=Math.round(slipNow()/FR);$('tdSlV').textContent='SLIP '+(sf>0?'+':'')+sf+' f';
   const canSlip=!!(trim&&trim.src&&(pending()||!trim.empty));['tdSlM','tdSlP'].forEach(id=>$(id).disabled=!canSlip);
   $('tzSnap').classList.toggle('on',!!UI.tsnap);$('tdLoop').classList.toggle('on',loopOn);
   const dpr=Math.min(2,window.devicePixelRatio||1),W=Math.round(c.clientWidth*dpr),H=Math.round(c.clientHeight*dpr);if(!W||!H)return;
   if(c.width!==W||c.height!==H){c.width=W;c.height=H;}const g=c.getContext('2d');g.clearRect(0,0,W,H);
-  if(!trim){g.fillStyle='rgba(255,255,255,.5)';g.font=(11*dpr)+'px ui-monospace,Menlo,monospace';g.textAlign='center';g.fillText(nm,W/2,H/2+4*dpr);$('ptInfo').textContent='';return;}
+  if(!trim){$('ptInfo').textContent='';return;}
   const t=trim,span=t.v1-t.v0,X=x=>(x-t.v0)/span*W,has=isFinite(t.s);
   const {band,R}=bandOf(H,dpr);
   const buf=t.src?t.src.audio:t.p.buf,sr=buf.sampleRate,d=t.src?t.src.mono:buf.getChannelData(0),nrm=t.src?(t.src.norm||1):1,top=band,WH=H-band,mid=top+WH/2,P=t.src&&t.src.peaks;
@@ -2080,8 +2070,8 @@ function drawTrim(){
 function trimAudition(){if(!trim||!isFinite(trim.s))return;initAudio();try{audNode&&audNode.stop();}catch(e){}const t=trim,buf=t.src?t.src.audio:t.p.buf,s=ctx.createBufferSource(),g=ctx.createGain();s.buffer=buf;g.gain.value=t.pad>=0?S.padVol[t.pad]:1;
   s.connect(g);g.connect(trackG[selTrack]||ctx.destination);
   if(loopOn){s.loop=true;s.loopStart=t.s;s.loopEnd=t.e;s.start(ctx.currentTime+0.01,t.s);}else s.start(ctx.currentTime+0.01,t.s,t.e-t.s);audNode=s;}
-function drawerHit(k){if(!pads[k])return;initAudio();if(loopOn||(trim&&trim.pad===k&&trimChanged())){trimAudition();recHit(k,[0]);return;}playHit(k,[0],0,null);}
-async function trimPick(k){drawerHit(k);if(k===trim?.pad)return;await trimCommit();selPad=k;const b=Math.floor(k/16);if(b!==bank&&!keys)setBank(b);trim=null;trimLoad(k);requestAnimationFrame(()=>{renderPads();renderPadPanel();drawTrim();});}
+function waveHit(k){if(!pads[k])return;initAudio();if(loopOn||(trim&&trim.pad===k&&trimChanged())){trimAudition();recHit(k,[0]);return;}playHit(k,[0],0,null);}
+async function trimPick(k){waveHit(k);if(k===trim?.pad)return;await trimCommit();selPad=k;const b=Math.floor(k/16);if(b!==bank&&!keys)setBank(b);trim=null;trimLoad(k);requestAnimationFrame(()=>{renderPads();renderPadPanel();drawTrim();});}
 const snapLen=(fixed,t,dir)=>{if(!UI.tsnap)return t;const sd=stepDur(),n=Math.max(1,Math.round(Math.abs(t-fixed)/sd));return fixed+dir*n*sd;};
 /* put a region on pad k: empty pads get it, full pads are replaced (Undo brings it back) */
 async function dropRegion(k,src,a,b,slip){
@@ -2089,24 +2079,8 @@ async function dropRegion(k,src,a,b,slip){
   try{const old=pads[k],np=await makePad(src,a,b-a,null,slip||0);if(old&&old.name)np.name=old.name;pads[k]=np;if(!old)typeDefaults(k,src);
     selPad=k;trimBusy=false;save();padsChanged();trim=null;trimLoad(k);renderPads();renderSteps();renderPadPanel();drawTrim();trimAudition();toast('Pad '+padLabel(k)+(old?' replaced.':' filled.'),1100);}
   catch(e){trimBusy=false;toast('Could not put that on a pad.',1600);}}
-/* drawer height: drag the handle, tap it to fold or open */
-function dockSize(){const d=$('trimDock');document.documentElement.style.setProperty('--dockH',d.offsetHeight+'px');}
-function setDockH(h,anim,keep){const d=$('trimDock'),mx=dockMax(),mn=foldH();h=Math.max(mn,Math.min(mx,h));
-  d.classList.toggle('anim',!!anim);d.style.height=h+'px';if(!keep){UI.dockH=h;if(h>mn+20)UI.dockLast=h;saveUI();}
-  setTimeout(()=>{dockSize();drawTrim();},anim?240:0);}
-function sab(){let p=document.getElementById('sabProbe');if(!p){p=document.createElement('div');p.id='sabProbe';p.style.cssText='position:fixed;left:0;bottom:0;width:1px;height:env(safe-area-inset-bottom);visibility:hidden;pointer-events:none';document.body.appendChild(p);}return p.offsetHeight||0;}
-/* folded, the handle stays above the iPhone home bar so a swipe on it never turns into swiping the app away */
-function foldH(){return $('tdGrip').offsetHeight+Math.max(sab(),8)+18;}
-function dockMax(){const vb=$('vidBlock').getBoundingClientRect();return Math.max(200,Math.round(window.innerHeight-Math.max(0,vb.bottom)-8));}
-function dockFolded(){return $('trimDock').offsetHeight<=foldH()+4;}
-function dockOpen(){if(dockFolded()||$('trimDock').offsetHeight<190)setDockH(Math.max(240,UI.dockLast||300),true);}
-{const gp=$('tdGrip');let st=null;
-  gp.addEventListener('pointerdown',e=>{e.preventDefault();try{gp.setPointerCapture(e.pointerId);}catch(_){}st={y:e.clientY,h:$('trimDock').offsetHeight,moved:false};});
-  gp.addEventListener('pointermove',e=>{if(!st)return;const dy=st.y-e.clientY;if(!st.moved&&Math.abs(dy)<5)return;st.moved=true;setDockH(st.h+dy,false,true);});
-  gp.addEventListener('pointerup',()=>{if(!st)return;const s0=st;st=null;const d=$('trimDock'),mn=foldH();
-    if(!s0.moved){if(dockFolded())setDockH(UI.dockLast||300,true);else{trimCommit();setDockH(mn,true);}return;}
-    const h=d.offsetHeight;if(h<120){trimCommit();setDockH(mn,true);}else if(h<190)setDockH(190,true);else setDockH(h);});
-  gp.addEventListener('pointercancel',()=>st=null);}
+/* show the WAVEFORM panel: open it if folded and bring it into view */
+function dockOpen(){const sec=$('secWave');if(sec.classList.contains('min'))sec.querySelector('h3').click();setTimeout(()=>{try{sec.scrollIntoView({block:'nearest',behavior:'smooth'});}catch(e){}drawTrim();},60);}
 /* controls */
 function dSlip(d){if(!trim||!trim.src)return;if(pending()){trim.slip=d===0?0:clampSlip((trim.slip||0)+d);trim.src.slip=trim.slip;drawTrim();return;}if(!trim.empty&&selPad===trim.pad){padSlip(d);drawTrim();}}
 $('tdSlM').onclick=()=>dSlip(-FR);$('tdSlP').onclick=()=>dSlip(FR);$('tdSlV').onclick=()=>dSlip(0);
@@ -2123,17 +2097,17 @@ function tD(){return vHi()-vLo();}
 function dEnd(){return trim?(trim.src?trim.src.dur:trim.p.buf.duration):0;}
 /* fx: where on screen (0 left, 1 right) time c should sit, so zoom stays under your fingers */
 function setSpan(sp,c,fx){const t=trim;if(!t)return;const lo=vLo(),D=tD();fx=fx==null?0.5:fx;sp=Math.max(Math.min(D,0.02),Math.min(D,sp));if(t.src){UI.tz=D/sp;saveUI();}t.v0=Math.max(lo,Math.min(lo+D-sp,c-fx*sp));t.v1=t.v0+sp;if(t.src)tview={id:t.src.id,v0:t.v0,v1:t.v1};drawTrim();}
-{const c=$('ptWave');let dr=null,ghost=null,over=null,overB=null,bankT=null,liftH=0,holdT=null,lastTap=0,lastX=0;const P=new Map();let pinch=null;
+{const c=$('ptWave');let dr=null,ghost=null,over=null,overB=null,bankT=null,holdT=null,lastTap=0,lastX=0;const P=new Map();let pinch=null;
   const tAt=(x,r)=>trim.v0+(x-r.left)/r.width*(trim.v1-trim.v0);
   const clearOver=()=>{if(over){over.classList.remove('dropT');over=null;}if(overB){overB.classList.remove('dropT');overB=null;}clearTimeout(bankT);};
-  function lift(item){dr.mode='lift';dr.item=item;liftH=$('trimDock').offsetHeight;setDockH(foldH(),true,true);try{navigator.vibrate&&navigator.vibrate(15);}catch(_){}
+  function lift(item){dr.mode='lift';dr.item=item;try{navigator.vibrate&&navigator.vibrate(15);}catch(_){}
     ghost=document.createElement('div');ghost.className='regGhost';ghost.textContent=item.label;ghost.style.left=dr.x+'px';ghost.style.top=dr.y+'px';document.body.appendChild(ghost);
     try{const sp=$('secPads');if(sp.classList.contains('min'))sp.querySelector('h3').click();sp.scrollIntoView({block:'center',behavior:'smooth'});}catch(e){}}
   function liftMove(e){ghost.style.left=e.clientX+'px';ghost.style.top=e.clientY+'px';const el=document.elementFromPoint(e.clientX,e.clientY);
     const pd=el&&el.closest('#pads .pad'),bk=el&&el.closest('#banks .bank');
     if(pd!==over){if(over)over.classList.remove('dropT');over=pd||null;if(over)over.classList.add('dropT');}
     if(bk!==overB){if(overB)overB.classList.remove('dropT');overB=bk||null;clearTimeout(bankT);if(overB){overB.classList.add('dropT');const bi=[...$('banks').querySelectorAll('.bank')].indexOf(overB);bankT=setTimeout(()=>{if(bi>=0&&bi!==bank)setBank(bi);},700);}}}
-  function liftEnd(drop,it){const tg=over,tb=overB;clearOver();if(ghost){ghost.remove();ghost=null;}setDockH(liftH,true,true);if(!drop)return;
+  function liftEnd(drop,it){const tg=over,tb=overB;clearOver();if(ghost){ghost.remove();ghost=null;}if(!drop)return;
     if(tg){const li=[...$('pads').querySelectorAll('.pad')].indexOf(tg);if(li>=0)dropRegion(bank*16+li,it.src,it.a,it.b,it.slip);return;}
     if(tb){const bi=[...$('banks').querySelectorAll('.bank')].indexOf(tb);if(bi<0)return;let k=-1;for(let q=0;q<16;q++)if(!pads[bi*16+q]){k=bi*16+q;break;}
       if(k<0){toast('Bank '+(bi+1)+' is full. Drop it on a pad to replace one.',2200);return;}if(bi!==bank)setBank(bi);dropRegion(k,it.src,it.a,it.b,it.slip);}}
@@ -2177,27 +2151,24 @@ function setSpan(sp,c,fx){const t=trim;if(!t)return;const lo=vLo(),D=tD();fx=fx=
     if(d.mode==='edge'&&!trim.empty&&trimChanged()){trimCommit();return;}/* a pad edit saves the moment you let go of a red line */
     if(d.mode)return;
     const now=performance.now();if(now-lastTap<320&&Math.abs(e.clientX-lastX)<30){lastTap=0;dbl(e,d.r);return;}lastTap=now;lastX=e.clientX;
-    if(d.pick!=null)trimPick(d.pick);else if(d.inSel){if(trim.empty)trimAudition();else drawerHit(trim.pad);}else if(pending())showSrc(trim.src);};
+    if(d.pick!=null)trimPick(d.pick);else if(d.inSel){if(trim.empty)trimAudition();else waveHit(trim.pad);}else if(pending())showSrc(trim.src);};
   c.addEventListener('pointerup',up);
   c.addEventListener('pointercancel',e=>{P.delete(e.pointerId);pinch=null;clearTimeout(holdT);if(dr&&dr.mode==='lift')liftEnd(false,dr.item);dr=null;if(trim){trim.nA=trim.nB=null;drawTrim();}});}
-{const d=$('trimDock');d.style.height=(UI.dockH||300)+'px';
-  try{new ResizeObserver(()=>{dockSize();drawTrim();}).observe(d);}catch(e){}dockSize();window.addEventListener('resize',()=>{setDockH(d.offsetHeight,false,true);});}
+try{new ResizeObserver(()=>drawTrim()).observe($('tdWaveW'));}catch(e){}window.addEventListener('resize',()=>drawTrim());
 document.addEventListener('visibilitychange',()=>{if(document.hidden)trimCommit();});
-try{new ResizeObserver(()=>{const h=$('vidBlock').offsetHeight;document.documentElement.style.setProperty('--vbH',h+'px');const d=$('trimDock');if(d.offsetHeight>dockMax())setDockH(dockMax(),false,true);}).observe($('vidBlock'));}catch(e){}
-['gesturestart','gesturechange'].forEach(n=>$('trimDock').addEventListener(n,e=>e.preventDefault()));
-/* touches in the drawer never scroll the page behind it */
-/* a touch that starts on the locked top (title bar, transport, video), in the drawer, or in a popup never scrolls the page behind it.
+try{new ResizeObserver(()=>{document.documentElement.style.setProperty('--vbH',$('vidBlock').offsetHeight+'px');}).observe($('vidBlock'));}catch(e){}
+['gesturestart','gesturechange'].forEach(n=>$('ptWave').addEventListener(n,e=>e.preventDefault()));
+/* a touch that starts on the locked top (title bar, transport, video), on the waveform, or in a popup never scrolls the page behind it.
    Popups that are taller than the screen still scroll inside themselves. */
 let tmScroll=null;
 document.addEventListener('touchstart',e=>{const t=e.target;tmScroll=null;
   const m=t.closest&&t.closest('.modal:not(.hidden),#duckPop:not(.hidden)');
   if(m){const box=t.closest('.mbox,#duckPop');tmScroll=box&&box.scrollHeight>box.clientHeight+1?{box,y:e.touches[0].clientY}:'block';return;}
-  if(t.closest&&t.closest('#vidBlock,#trimDock'))tmScroll='block';},{passive:true,capture:true});
+  if(t.closest&&t.closest('#vidBlock,#ptWave'))tmScroll='block';},{passive:true,capture:true});
 document.addEventListener('touchmove',e=>{if(!tmScroll)return;
   if(tmScroll==='block'){e.preventDefault();return;}
   const {box}=tmScroll,y=e.touches[0].clientY,dy=y-tmScroll.y;tmScroll.y=y;
   if((dy>0&&box.scrollTop<=0)||(dy<0&&box.scrollTop+box.clientHeight>=box.scrollHeight-1))e.preventDefault();},{passive:false,capture:true});
-$('trimDock').addEventListener('wheel',e=>e.preventDefault(),{passive:false});
 
 function renderPadPanel(){
   const p=pads[selPad];trimLoad(selPad);
@@ -2677,6 +2648,8 @@ $('mSave').onclick=async()=>{
 
 /* panels: tap a title to open or fold it; hold the left part of the title and drag to reorder (VIDEO stays on top) */
 const panelsEl=$('panels');
+if(Array.isArray(UI.order)&&!UI.order.includes('secWave')){const k=UI.order.indexOf('secPads');UI.order.splice(k<0?UI.order.length:k+1,0,'secWave');}
+if(Array.isArray(UI.wideR)&&!UI.wideR.includes('secWave')&&!(UI.wideL||[]).includes('secWave')){const k=UI.wideR.indexOf('secPads');UI.wideR.splice(k<0?UI.wideR.length:k+1,0,'secWave');}
 if(Array.isArray(UI.order))UI.order.forEach(id=>{const el=$(id);if(el&&el.parentNode===panelsEl)panelsEl.appendChild(el);});
 let pDrag=null;
 document.addEventListener('touchmove',e=>{if((pDrag&&pDrag.lifted)||(pd&&pd.armed))e.preventDefault();},{passive:false});
@@ -2735,7 +2708,7 @@ function layoutCols(){
     R.forEach(id=>{const el=$(id);if(el&&!L.includes(id))panelsEl.appendChild(el);});
     all.forEach(el=>{if(el.parentNode!==panelsL&&el.parentNode!==panelsEl)panelsEl.appendChild(el);});
   }else{
-    const O=Array.isArray(UI.order)?UI.order:['secVfx','secFx','secSeq','secPads','secPad','secPat','secGroove'];
+    const O=Array.isArray(UI.order)?UI.order:['secVfx','secFx','secSeq','secPads','secWave','secPad','secPat','secGroove'];
     O.forEach(id=>{const el=$(id);if(el)panelsEl.appendChild(el);});
     [...panelsL.children].forEach(el=>panelsEl.appendChild(el));
   }
