@@ -133,9 +133,9 @@ button.hold.flash{background:var(--fire)!important;color:var(--ink)}
 /* now and then a duck and her ducklings paddle across the AUDIO FX title, seen from above, fading in and out at the ends */
 #secFx h3{position:relative}
 #metArm{transform-origin:12px 16.5px;transform-box:view-box}
-.dkPond{position:absolute;top:50%;height:16px;margin-top:-8px;left:var(--dkL,150px);right:28px;pointer-events:none;opacity:.3;
+.dkPond{position:absolute;top:50%;height:22px;margin-top:-11px;left:var(--dkL,150px);right:28px;pointer-events:none;opacity:.3;
   -webkit-mask-image:linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent);mask-image:linear-gradient(90deg,transparent,#000 22%,#000 78%,transparent)}
-.dkPond svg{display:block;overflow:visible}
+.dkPond canvas{display:block;width:100%;height:100%}
 /* the WAVEFORM panel */
 #tdWaveW{position:relative;height:110px}
 #secPads .est{margin:0 0 8px}
@@ -338,7 +338,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
   </section>
 
 
-  <section class="panel tight" id="secFx"><h3>AUDIO FX<i class="dkPond" aria-hidden="true"><svg id="dkPondS" width="100%" height="16"></svg></i></h3><div class="fx" id="fx"></div>
+  <section class="panel tight" id="secFx"><h3>AUDIO FX<i class="dkPond" aria-hidden="true"><canvas id="dkPondC"></canvas></i></h3><div class="fx" id="fx"></div>
   <div class="tfx" id="tfx"></div></section>
   <section class="panel tight" id="secSeq"><h3>STEP SEQUENCER</h3>
   <div class="row" id="tracks" style="margin-top:0"></div>
@@ -1269,22 +1269,48 @@ var duckMode=false,duckSel=[],duckPrev=null;
 function gripW(){const h=$('secSeq').querySelector('h3'),tn=[...h.childNodes].find(n=>n.nodeType===3&&n.textContent.trim());let w=130;
   if(tn){const rg=document.createRange();rg.selectNodeContents(tn);const b=rg.getBoundingClientRect();if(b.width)w=b.right-h.getBoundingClientRect().left;}return w+12;}
 function gripZone(h3,x){return x-h3.getBoundingClientRect().left<=gripW();}
-const DKM='<ellipse rx="3.3" ry="2.1" fill="#ADCFDE"/><circle cx="2.7" r="1.35" fill="#ADCFDE"/><path d="M3.9-.45 5.1 0 3.9.45z" fill="#DC7B78"/><path d="M-3.2-1.7-5-.9M-3.2 1.7-5 .9" stroke="#7EB3D2" stroke-width=".5" fill="none" stroke-linecap="round"/>',
-  DKB='<ellipse rx="1.7" ry="1.15" fill="#ADCFDE"/><circle cx="1.4" r=".8" fill="#ADCFDE"/><path d="M2.1-.25 2.7 0 2.1.25z" fill="#DC7B78"/>';
+/* the duck family: a mother paddles in little surges and glides, wandering a bit; ducklings follow her trail,
+   lagging and catching up; every duck leaves a fading V wake and the odd ripple ring */
 let pond=null;
-function pondGo(){const sv=$('dkPondS');if(!sv||document.hidden||matchMedia('(prefers-reduced-motion: reduce)').matches){pondLater();return;}
-  const W=sv.getBoundingClientRect().width;if(W<60){pondLater();return;}
-  const n=2+Math.floor(Math.random()*3),dir=Math.random()<.5?1:-1,T=22000+Math.random()*14000,ph=Math.random()*6.28,amp=2.2+Math.random()*1.6,wav=0.018+Math.random()*0.012;
-  sv.innerHTML=Array.from({length:n+1},(_,k)=>'<g>'+(k?DKB:DKM)+'</g>').join('');const gs=[...sv.children],gap=9,lead=W+40+n*gap;
-  const yAt=x=>8+Math.sin(x*wav+ph)*amp+Math.sin(x*wav*2.7+ph*1.7)*amp*0.35;
-  const t0=performance.now();pond={stop:false};const me=pond;
-  (function step(now){if(me.stop)return;const f=(now-t0)/T;if(f>1){sv.innerHTML='';pondLater();return;}
-    const head=-20+f*lead;
-    gs.forEach((g,k)=>{const d=head-k*gap,x=dir>0?d:W-d,y=yAt(d),dy=yAt(d+1)-y,ang=Math.atan2(dy,1)*180/Math.PI;
-      g.setAttribute('transform','translate('+x.toFixed(1)+' '+y.toFixed(1)+') rotate('+(dir>0?ang:180-ang).toFixed(1)+')');});
-    requestAnimationFrame(step);})(t0);}
+function pondGo(){if(pond&&!pond.stop&&pond.live)return;const c=$('dkPondC');if(!c||document.hidden||matchMedia('(prefers-reduced-motion: reduce)').matches){pondLater();return;}
+  const W=c.clientWidth,H=c.clientHeight;if(W<60){pondLater();return;}
+  const dpr=Math.min(2,window.devicePixelRatio||1);c.width=Math.round(W*dpr);c.height=Math.round(H*dpr);const g=c.getContext('2d');
+  const R=Math.random,dir=R()<.5?1:-1,cy=H/2,n=1+Math.floor(R()*4);
+  const mk=(big,x)=>({big,x,y:cy+(R()-.5)*3,th:dir>0?0:Math.PI,v:0,ph:R()*6.3,rate:big?6.2:8.5+R()*2,trail:[],rings:[],wob:R()*6.3});
+  const ducks=[mk(true,dir>0?-14:W+14)];for(let k=1;k<=n;k++)ducks.push(mk(false,ducks[0].x-dir*k*8));
+  const mom=ducks[0];let glide=0,turn=0,turnT=0,last=performance.now(),born=last;pond={stop:false,live:true};const me=pond;
+  const trailAt=(d)=>{/* point on mom's path d px behind her */let acc=0,tr=mom.trail;for(let i=tr.length-1;i>0;i--){const a=tr[i],b=tr[i-1],L=Math.hypot(a.x-b.x,a.y-b.y);if(acc+L>=d){const f=(d-acc)/(L||1);return {x:a.x+(b.x-a.x)*f,y:a.y+(b.y-a.y)*f};}acc+=L;}const e=tr[0]||mom;return {x:e.x-dir*(d-acc),y:e.y};};
+  function step(now){if(me.stop)return;const dt=Math.min(.05,(now-last)/1000);last=now;const tt=(now-born)/1000;
+    /* mother: wander, steer back to the middle of the lane, paddle in pulses, now and then glide */
+    if((turnT-=dt)<=0){turn=(R()-.5)*0.9;turnT=1.2+R()*2.5;}
+    if(glide>0)glide-=dt;else if(R()<dt*0.12)glide=0.8+R()*1.4;
+    const want=(dir>0?0:Math.PI)+turn*0.35+(cy-mom.y)*0.06*dir;mom.th+=(want-mom.th)*Math.min(1,dt*1.6);
+    mom.ph+=dt*mom.rate;const push=glide>0?0:Math.max(0,Math.sin(mom.ph))*38;mom.v+=(push-mom.v*1.5)*dt;
+    mom.x+=Math.cos(mom.th)*mom.v*dt;mom.y+=Math.sin(mom.th)*mom.v*dt;
+    mom.trail.push({x:mom.x,y:mom.y,t:tt});
+    /* ducklings: chase a point on her path, each with its own little paddle rhythm */
+    ducks.slice(1).forEach((d,k)=>{d.ph+=dt*d.rate;const tg=trailAt((k+1)*8+Math.sin(tt*0.9+d.wob)*2.2),dx=tg.x-d.x,dy=tg.y+Math.sin(tt*1.3+d.wob)*0.9-d.y,dist=Math.hypot(dx,dy);
+      const sp=Math.min(32,dist*2.2)*(0.55+0.45*Math.max(0,Math.sin(d.ph)));if(dist>0.05){d.x+=dx/dist*sp*dt;d.y+=dy/dist*sp*dt;const h=Math.atan2(dy,dx);let dh=h-d.th;dh=Math.atan2(Math.sin(dh),Math.cos(dh));d.th+=dh*Math.min(1,dt*5);d.v=sp;}
+      d.trail.push({x:d.x,y:d.y,t:tt});});
+    ducks.forEach(d=>{while(d.trail.length&&tt-d.trail[0].t>1.3)d.trail.shift();if(d.v>4&&R()<dt*(d.big?0.9:0.5))d.rings.push({x:d.x,y:d.y,t:tt});d.rings=d.rings.filter(r=>tt-r.t<1.4);});
+    /* draw */
+    g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,W,H);g.lineCap='round';
+    ducks.forEach(d=>{const tr=d.trail,sz=d.big?1:0.55;
+      for(const r of d.rings){const a=(tt-r.t)/1.4;g.strokeStyle='rgba(173,207,222,'+(0.22*(1-a))+')';g.lineWidth=0.4;g.beginPath();g.ellipse(r.x,r.y,0.8+a*4*sz,0.5+a*2*sz,0,0,6.283);g.stroke();}
+      for(let i=tr.length-1;i>0;i-=2){const a=tr[i],b=tr[Math.max(0,i-2)],age=tt-a.t,f=age/1.3;if(f>=1)break;const hx=a.x-b.x,hy=a.y-b.y,L=Math.hypot(hx,hy)||1,px=-hy/L,py=hx/L,spr=(0.9+age*2.4)*sz;
+        g.strokeStyle='rgba(173,207,222,'+(0.32*(1-f)*(1-f))+')';g.lineWidth=0.45;
+        const ba=tt-b.t,sb=(0.9+ba*2.4)*sz;[1,-1].forEach(sd=>{g.beginPath();g.moveTo(a.x+px*spr*sd,a.y+py*spr*sd);g.lineTo(b.x+px*sb*sd,b.y+py*sb*sd);g.stroke();});}});
+    ducks.forEach(d=>{const bob=Math.sin(tt*2+d.wob)*0.08;g.save();g.translate(d.x,d.y);g.rotate(d.th+bob);
+      if(d.big){g.fillStyle='#ADCFDE';g.beginPath();g.ellipse(0,0,3.4,2.1,0,0,6.283);g.fill();g.fillStyle='#7EB3D2';g.beginPath();g.ellipse(-0.6,0,1.9,1.4,0,0,6.283);g.fill();
+        g.fillStyle='#ADCFDE';g.beginPath();g.arc(2.8,0,1.35,0,6.283);g.fill();g.fillStyle='#DC7B78';g.beginPath();g.moveTo(4,-.45);g.lineTo(5.2,0);g.lineTo(4,.45);g.fill();}
+      else{g.fillStyle='#ADCFDE';g.beginPath();g.ellipse(0,0,1.8,1.25,0,0,6.283);g.fill();g.beginPath();g.arc(1.5,0,.85,0,6.283);g.fill();g.fillStyle='#DC7B78';g.beginPath();g.moveTo(2.25,-.25);g.lineTo(2.85,0);g.lineTo(2.25,.25);g.fill();}
+      g.restore();});
+    const tail=ducks[ducks.length-1];if((dir>0&&tail.x>W+20)||(dir<0&&tail.x<-20)||tt>90){g.clearRect(0,0,W,H);me.live=false;pondLater();return;}
+    requestAnimationFrame(step);}
+  requestAnimationFrame(step);}
 function pondLater(){setTimeout(pondGo,9000+Math.random()*26000);}
 setTimeout(pondGo,4000+Math.random()*8000);
+
 function placeDuck(){try{const h=$('secFx').querySelector('h3');h.style.setProperty('--dkL',(gripW()+8)+'px');}catch(e){}}
 window.addEventListener('resize',placeDuck);setTimeout(placeDuck,0);
 /* the secret ducker lives just past the grip in the AUDIO FX title */
