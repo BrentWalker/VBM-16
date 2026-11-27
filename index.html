@@ -53,7 +53,9 @@ body.wide #panelsL,body.wide #colR>:last-child{margin-bottom:40px}
 #bRec.on{background:var(--fire)!important;color:var(--ink)}
 .bpm{display:flex;flex:1.6;background:var(--slate);border-radius:10px;align-items:center}
 .bpm button{background:transparent;flex:1;padding:8px 0}
-.bpm span{min-width:30px;text-align:center;font-size:13px;font-weight:700}
+.bpm span{min-width:30px;text-align:center;font-size:13px;font-weight:700;cursor:pointer;-webkit-user-select:none;user-select:none}
+.bpm span.tap,.tapB.tap{background:var(--fire);color:#fff;border-radius:6px}
+#gCount.on{background:var(--water);color:var(--ink)}
 .transport>button{padding:0;height:44px;position:relative}
 .transport .bpm{height:44px;flex:1.7}
 #bRec{color:var(--fire)}
@@ -409,6 +411,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
     <h3>GROOVE</h3>
     <div class="ctl"><label>BPM</label><input type="range" id="gBpm" min="60" max="180" step="1" value="92"><output id="oBpm">92</output></div>
     <div class="ctl"><label>SWING</label><input type="range" id="gSw" min="0" max="60" step="1" value="0"><output id="oSw">0%</output></div>
+    <div class="row"><button id="gTap" class="tapB">TAP TEMPO</button><button id="gCount">COUNT IN</button></div>
   </section>
 
 
@@ -769,6 +772,10 @@ function start(at){
   else if(queued!==null){curPat=queued;queued=null;}
   step=nextLive(curPat,0);if(step>=plen(curPat))step=0;
   nextTime=at||ctx.currentTime+0.06;
+  /* one bar of count in before recording */
+  if(!at&&recArm&&UI.countIn!==false&&!exporting){const bt=60/S.bpm,t0=nextTime;
+    for(let k=0;k<4;k++){click(t0+k*bt,k===0);setTimeout(()=>{if(playing){metSwing(k);toast('COUNT IN · '+(4-k),Math.min(900,bt*1000));}},Math.max(0,(t0+k*bt-ctx.currentTime)*1000));}
+    nextTime=t0+4*bt;}
   clearInterval(timer);timer=setInterval(tick,25);tick();renderTransport();
 }
 function stop(){
@@ -2288,6 +2295,16 @@ $('bView').onclick=()=>{view=view==='mix'?'focus':view==='focus'?1:view===1?4:'m
 const setBpm=v=>{S.bpm=Math.max(60,Math.min(180,v));save();for(let t=0;t<4;t++)applyTrackFx(t);renderTransport();drawTrim();if(ctx&&fx.ECHO)dly.delayTime.setValueAtTime(Math.min(1.9,stepDur()*3),ctx.currentTime);};
 $('bpmDn').onclick=()=>setBpm(S.bpm-1);$('bpmUp').onclick=()=>setBpm(S.bpm+1);
 $('gBpm').oninput=e=>setBpm(+e.target.value);
+/* TAP TEMPO: tap the BPM number (or TAP TEMPO in GROOVE) on the beat; it averages your last taps */
+let taps=[];
+function tapTempo(el){const n=performance.now();if(taps.length&&n-taps[taps.length-1]>2000)taps=[];taps.push(n);if(taps.length>6)taps.shift();
+  el.classList.add('tap');setTimeout(()=>el.classList.remove('tap'),90);
+  if(taps.length>=2){const iv=(taps[taps.length-1]-taps[0])/(taps.length-1),b=Math.round(60000/iv);if(b>=40&&b<=260){setBpm(b);toast('TAP '+S.bpm+' BPM',700);}}}
+$('bpmV').addEventListener('pointerdown',e=>{e.preventDefault();tapTempo($('bpmV'));});
+$('gTap').addEventListener('pointerdown',e=>{e.preventDefault();tapTempo($('gTap'));});
+/* COUNT IN: with REC on, PLAY gives one bar of clicks first */
+function renderCount(){$('gCount').classList.toggle('on',UI.countIn!==false);}
+$('gCount').onclick=()=>{UI.countIn=UI.countIn===false;saveUI();renderCount();toast(UI.countIn!==false?'Count in on: with REC on, PLAY clicks one bar first.':'Count in off.',1800);};renderCount();
 $('gSw').oninput=e=>{S.swing=e.target.value/100;save();renderTransport();};
 /* hold a bank block while moving PITCH or LEVEL: every pad in that bank gets the same value */
 const heldBank=()=>bDrag&&bDrag.strip.id==='banks'?(bDrag.used=true,bDrag.from):-1;
