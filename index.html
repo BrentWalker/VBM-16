@@ -123,6 +123,12 @@ button.hold.flash{background:var(--fire)!important;color:var(--ink)}
 .panel{margin-top:8px;background:rgba(66,76,96,.45);border-radius:14px;padding:8px 10px}
 .panel h3{margin:0 0 6px;font-size:11px;letter-spacing:.14em;opacity:.85;font-weight:600;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:8px}
 .panel h3::after{content:"▾";font-size:12px;opacity:.8}
+/* PAD EDIT holds two parts that fold on their own */
+.psh{display:flex;justify-content:space-between;align-items:center;font-size:10px;letter-spacing:.14em;opacity:.75;padding:8px 2px 6px;cursor:pointer;-webkit-user-select:none;user-select:none}
+.psh::after{content:"▾";font-size:11px}
+#psB .psh{border-top:1px solid rgba(173,207,222,.18);margin-top:6px}
+.psec.min .psh::after{content:"▸"}
+.psec.min .psb{display:none}
 .panel h3>span{margin-left:auto}
 /* a tiny duck strolls along the AUDIO FX title, between the grip and the fold arrow */
 #secFx h3{position:relative}
@@ -355,6 +361,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
   </section>
   <section class="panel" id="secPad">
     <h3>PAD EDIT <span id="padName"></span></h3>
+    <div class="psec" id="psA"><div class="psh">TRIM &amp; PLAY</div><div class="psb">
     <div id="tdWaveW"><canvas id="ptWave"></canvas></div>
     <div class="trimBar"><span id="ptInfo"></span></div>
     <div class="ctl"><label>PITCH</label><input type="range" id="pPitch" min="-12" max="12" step="1" value="0"><output id="oPitch">0</output></div>
@@ -362,6 +369,8 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
     <div class="row"><button id="pRev">REVERSE OFF</button><button id="pAud">AUDITION</button></div>
     <div class="ctl seg" id="pChoke"><label>MUTE GRP</label><button data-g="0">OFF</button><button data-g="1">1</button><button data-g="2">2</button><button data-g="3">3</button><button data-g="4">4</button></div>
     <div class="row seg" id="pMode"><button data-m="one">ONE SHOT</button><button data-m="gate">GATE</button><button data-m="loop">LOOP</button></div>
+    </div></div>
+    <div class="psec" id="psB"><div class="psh">SHAPE</div><div class="psb">
     <div class="ctl"><label>FADE IN</label><input type="range" id="pFi" min="0" max="200" step="1" value="0"><output id="oFi">0</output></div>
     <div class="ctl"><label>FADE OUT</label><input type="range" id="pFo" min="0" max="200" step="1" value="0"><output id="oFo">0</output></div>
     <div class="ctl"><label>DECAY</label><input type="range" id="pDec" min="5" max="100" step="1" value="100"><output id="oDec">100%</output></div>
@@ -369,6 +378,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
     <div class="row slip"><button id="pSlM5">◀◀</button><button id="pSlM1">◀</button><button class="val" id="pSlV">VIDEO SLIP 0 f</button><button id="pSlP1">▶</button><button id="pSlP5">▶▶</button></div>
     <div class="sub" id="pSlNote"></div>
     <div class="row"><button id="pClr">CLEAR PAD</button></div>
+    </div></div>
   </section>
 
   <section class="panel" id="secPat">
@@ -2128,6 +2138,8 @@ const revTog=()=>{const v=!S.padRev[selPad];setPadParam('padRev',v,'reverse '+(v
 $('pRev').onclick=revTog;bankBtn($('pRev'),revTog);
 $('pAud').onclick=()=>{initAudio();trigger(selTrack,selPad,0,ctx.currentTime);};
 
+/* the two parts of PAD EDIT fold on their own and stay that way */
+['psA','psB'].forEach(id=>{const el=$(id);UI.psMin=UI.psMin||{};el.classList.toggle('min',!!UI.psMin[id]);el.querySelector('.psh').onclick=()=>{const m=!el.classList.contains('min');el.classList.toggle('min',m);UI.psMin[id]=m;saveUI();if(!m)drawTrim();};});
 $('pClr').onclick=()=>{pushUndo();padsChanged();pads[selPad]=null;renderAll();};
 $('bChain').onclick=()=>{chainOn=!chainOn;renderChain();};
 $('bChainClr').onclick=()=>{pushUndo();S.chain=[];save();renderChain();};
