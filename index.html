@@ -550,7 +550,7 @@ const NP=128,NB=8;
 /* track FX: label, and what the amount slider does */
 const TFX=[['GAIN','GAIN','LEVEL'],['DRV','DRV','DRIVE'],['LCUT','LCUT','LOW CUT'],['HCUT','HCUT','HIGH CUT'],['LBST','LBST','LOW BOOST'],['HBST','HBST','HIGH BOOST'],['VERB','VERB','REVERB'],['DLY','DLY','DELAY']];
 const TFX_OLD={LOW:'HCUT',HIGH:'LCUT',ECHO:'DLY',DRIVE:'DRV',VERB:'VERB'};
-const PAD_DEF={padChoke:0,padSemi:0,padVol:1,padRev:false,padFi:0,padFo:0,padDecay:100,padMode:'one',padFreeze:-1};
+const PAD_DEF={padChoke:0,padSemi:0,padVol:1,padRev:false,padFi:0,padFo:0,padDecay:100,padMode:'one',padLoop:false,padFreeze:-1};
 function padDefaults(){const o={};for(const k in PAD_DEF)o[k]=Array(NP).fill(PAD_DEF[k]);return o;}
 const mkTrack=()=>Array(MAXST).fill(null);
 const mkPat=()=>Array.from({length:4},mkTrack);
@@ -560,8 +560,10 @@ try{const j=JSON.parse(localStorage.getItem(KEY)||'null');if(j&&j.patterns)Objec
 S.patterns.forEach(P=>P.forEach(t=>{while(t.length<MAXST)t.push(null);}));
 if(!Array.isArray(S.patLen)||S.patLen.length!==16)S.patLen=Array(16).fill(1);
 if(!Array.isArray(S.skip)||S.skip.length!==16)S.skip=Array.from({length:16},()=>[]);
+/* old sessions had LOOP as a third play mode: it becomes ONE SHOT with LOOP on */
+function loopMigrate(){for(let i=0;i<NP;i++)if(S.padMode[i]==='loop'){S.padMode[i]='one';S.padLoop[i]=true;}}
 function fixPadArrays(){for(const k in PAD_DEF){if(!Array.isArray(S[k]))S[k]=[];while(S[k].length<NP)S[k].push(PAD_DEF[k]);}}
-fixPadArrays();
+fixPadArrays();loopMigrate();
 if(!Array.isArray(S.trackFx)||S.trackFx.length!==4)S.trackFx=[[],[],[],[]];
 if(!Array.isArray(S.trackFxOn)||S.trackFxOn.length!==4)S.trackFxOn=[true,true,true,true];
 function fixTrackFx(){
@@ -706,8 +708,11 @@ function trigger(tr,pi,semi,t,live){
   const vol=S.padVol[pi],fi=(S.padFi[pi]||0)/1000,fo=(S.padFo[pi]||0)/1000,dec=(S.padDecay[pi]||100)/100;
   const g=ctx.createGain();
   let end=null;
-  if(mode==='loop'){src.loop=true;
+  const lp=!!S.padLoop[pi]||mode==='loop';
+  if(lp){src.loop=true;
     if(fi>0){g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(vol,t+fi);}else g.gain.setValueAtTime(vol,t);
+    /* GATE + LOOP from the sequencer: loops for one step */
+    if(mode==='gate'&&!live){end=t+playStep();const f=Math.min(Math.max(fo,0.004),(end-t)*0.5);g.gain.setValueAtTime(vol,Math.max(t,end-f));g.gain.linearRampToValueAtTime(0,end);}
   }else{
     let D=(p.len/rate)*dec;if(mode==='gate'&&!live)D=Math.min(D,playStep());
     end=t+D;
@@ -722,7 +727,7 @@ function trigger(tr,pi,semi,t,live){
   voices.forEach(list=>{for(let k=list.length-1;k>=0;k--){const o=list[k];
     if(o.start<=t&&Math.abs(o.start-t)>0.002&&((grp&&o.grp===grp)||(o.pad===pi&&o.vis&&o.vis.loop))){release(o,t,0.006);list.splice(k,1);}}});
   const vs=voices[tr];
-  const vis={pad:pi,tr,start:t,rate,rev,loop:mode==='loop',end};
+  const vis={pad:pi,tr,start:t,rate,rev,loop:lp,end};
   const v={src,g,start:t,vis,fo,pad:pi,grp};vs.push(v);src.onended=()=>{const i=vs.indexOf(v);if(i>=0)vs.splice(i,1);};
   src.start(t);if(end!=null){try{src.stop(end+0.02);}catch(e){}}
   const q=vq[tr];let i=q.length;while(i>0&&q[i-1].start>t)i--;q.splice(i,0,vis);
@@ -1074,7 +1079,7 @@ function estDone(){$('est').classList.add('hidden');}
 function estFlash(txt,ms){est(txt);flashT=setTimeout(estDone,ms||1500);}
 function estErr(txt){edBusy=false;est(txt);const b=$('estBtn');b.textContent='OK';b.classList.remove('hidden');b.onclick=estDone;}
 
-function typeDefaults(i,src){const P=PROF[src.type]||PROF.DRUMS;S.padFi[i]=P.fi||0;S.padFo[i]=P.fo||0;S.padDecay[i]=100;S.padMode[i]='one';S.padFreeze[i]=-1;S.padRev[i]=false;S.padChoke[i]=0;}
+function typeDefaults(i,src){const P=PROF[src.type]||PROF.DRUMS;S.padFi[i]=P.fi||0;S.padFo[i]=P.fo||0;S.padDecay[i]=100;S.padMode[i]='one';S.padLoop[i]=false;S.padFreeze[i]=-1;S.padRev[i]=false;S.padChoke[i]=0;}
 /* chop: 16 slices from the newest video into the current bank (DRUMS, TRANSIENTS or EVEN 16) */
 async function fillAll(mode){
   const src=cur();if(!src||!src.audio){estFlash('Add a video first.',1500);return;}
@@ -1166,6 +1171,19 @@ function applyFormat(){
   sizeCanvas(S.format==='auto'?(sources[0]?sources[0].aspect:1):map[S.format]||1);
   layoutStage();
 }
+/* one playback video per source, kept in step with the newest long pad that is sounding from it */
+function liveFrame(v,p,el,now){
+  const src=p.srcId!=null?sources.find(x=>x.id===p.srcId&&x.url):null;if(!src)return null;
+  let pv=src.pv;if(!pv){pv=src.pv=document.createElement('video');pv.src=src.url;pv.muted=true;pv.playsInline=true;pv.setAttribute('playsinline','');pv.preload='auto';pv.load();}
+  if(pv.owner&&pv.owner!==v&&pv.owner.start>v.start&&now-pv.used<0.1)return null;
+  pv.owner=v;pv.used=now;
+  const pos=v.loop?((el%p.len)+p.len)%p.len:Math.min(el,p.len),tgt=(p.start||0)+(p.slip||0)+pos,rate=Math.max(0.25,Math.min(4,v.rate||1));
+  if(Math.abs(pv.playbackRate-rate)>0.01)pv.playbackRate=rate;
+  if(!pv.seeking&&Math.abs(pv.currentTime-tgt)>0.2)pv.currentTime=tgt;
+  if(pv.paused&&el<p.len*(v.loop?1e9:1))pv.play().catch(()=>{});
+  return pv.readyState>=2&&!pv.seeking&&Math.abs(pv.currentTime-tgt)<0.3?pv:null;}
+/* pause playback videos nobody is using */
+function idleVids(){if(!ctx)return;const n=ctx.currentTime;for(const s of sources)if(s.pv&&!s.pv.paused&&n-(s.pv.used||0)>0.15)s.pv.pause();}
 function drawVoice(v,x,y,w,h,now,clip){
   const p=pads[v.pad];if(!p)return;
   const el=(now-v.start)*v.rate,n=p.frames.length;
@@ -1173,13 +1191,16 @@ function drawVoice(v,x,y,w,h,now,clip){
   if(v.loop&&v.end==null)fi=((fi%n)+n)%n;else if(v.loop)fi=(((Math.floor((Math.min(now,v.end)-v.start)*v.rate*p.fps))%n)+n)%n;else fi=Math.min(n-1,Math.max(0,fi));
   if(v.rev)fi=n-1-fi;
   const fz=S.padFreeze[v.pad];if(fz!=null&&fz>=0)fi=Math.round(fz/100*(n-1));
-  const f=p.frames[fi],T=tvOf(v),tfx=k=>T.fx.includes(k);
-  const cover=Math.max(w/f.width,h/f.height),contain=Math.min(w/f.width,h/f.height);
+  let f=p.frames[fi];const T=tvOf(v),tfx=k=>T.fx.includes(k);
+  /* long pads: the stored frames are too sparse, so play the real video in step with the sound */
+  if(p.fps<10&&!v.rev&&!(fz!=null&&fz>=0)){const lv=liveFrame(v,p,el,now);if(lv)f=lv;}
+  const fW=f.videoWidth||f.width,fH=f.videoHeight||f.height;
+  const cover=Math.max(w/fW,h/fH),contain=Math.min(w/fW,h/fH);
   let sc=(T.fit==='fill'?cover:contain)*T.z;
   const dt=now-v.start,life=Math.max(0.05,p.len/(v.rate||1));
   if((VO.fx.zoom||tfx('punch'))&&dt>=0&&dt<0.2){const q=1-dt/0.2;sc*=1+0.2*q*q;}
   if(tfx('drift'))sc*=1+0.14*Math.min(1,Math.max(0,dt)/Math.max(life,1.5));
-  const dw=f.width*sc,dh=f.height*sc,mx=Math.abs(dw-w)/2,my=Math.abs(dh-h)/2;
+  const dw=fW*sc,dh=fH*sc,mx=Math.abs(dw-w)/2,my=Math.abs(dh-h)/2;
   let ox=Math.max(-mx,Math.min(mx,T.x*w)),oy=Math.max(-my,Math.min(my,T.y*h));
   if(tfx('drift')){const k=Math.min(1,Math.max(0,dt)/Math.max(life,1.5));ox+=Math.max(-mx,Math.min(mx,w*0.03*k))*((v.pad%2)?1:-1);}
   if(tfx('shake')&&dt>=0&&dt<0.24){const m=Math.min(w,h)*0.05*(1-dt/0.24);ox+=(Math.random()-0.5)*2*m;oy+=(Math.random()-0.5)*2*m;}
@@ -1187,7 +1208,7 @@ function drawVoice(v,x,y,w,h,now,clip){
   g2.save();g2.beginPath();if(clip)clip(g2);else g2.rect(x,y,w,h);g2.clip();
   if(T.fit==='blur'){/* blurred, darker copy of the same frame fills the space behind */
     const bw=24,bh=Math.max(2,Math.round(24*h/w));if(tmp.width!==bw||tmp.height!==bh){tmp.width=bw;tmp.height=bh;}
-    const bs=Math.max(bw/f.width,bh/f.height);tg.imageSmoothingEnabled=true;tg.drawImage(f,(bw-f.width*bs)/2,(bh-f.height*bs)/2,f.width*bs,f.height*bs);
+    const bs=Math.max(bw/fW,bh/fH);tg.imageSmoothingEnabled=true;tg.drawImage(f,(bw-fW*bs)/2,(bh-fH*bs)/2,fW*bs,fH*bs);
     g2.imageSmoothingEnabled=true;g2.drawImage(tmp,0,0,bw,bh,x-w*0.08,y-h*0.08,w*1.16,h*1.16);
     g2.fillStyle='rgba(49,48,67,.35)';g2.fillRect(x,y,w,h);
   }else if(T.fit==='fit'){g2.fillStyle=COL.ink;g2.fillRect(x,y,w,h);}
@@ -1438,7 +1459,7 @@ function meters(){
 function metSwing(b){const a=$('metArm');if(!a)return;a.style.transition='transform '+(60/S.bpm).toFixed(3)+'s ease-in-out';a.style.transform='rotate('+(b%2?24:-24)+'deg)';}
 function metRest(){const a=$('metArm');if(!a)return;a.style.transition='transform .25s ease-out';a.style.transform='rotate(0deg)';}
 function loop(){
-  requestAnimationFrame(loop);meters();duckAnim();padHead();
+  requestAnimationFrame(loop);meters();duckAnim();padHead();idleVids();
   const now=ctx?ctx.currentTime:0;
   while(uiQ.length&&uiQ[0].t<=now){const u=uiQ.shift();
     let redraw=false;
@@ -1658,9 +1679,11 @@ function tapPad(i){
   requestAnimationFrame(()=>{if(pick)renderPadPanel();renderPads();});
 }
 function playHit(pi,played,semi,li){
-  const now0=ctx.currentTime;
+  const now0=ctx.currentTime,gate=S.padMode[pi]==='gate',lp=!!S.padLoop[pi]||S.padMode[pi]==='loop';
+  if(lp&&!gate){let hit=false;voices.forEach(list=>{for(let k=list.length-1;k>=0;k--){const o=list[k];if(o.pad===pi&&o.vis&&o.vis.loop&&!o.released){release(o,now0,0.01);list.splice(k,1);hit=true;}}});
+    if(hit){lastHit[selTrack]={pad:pi,semi};return;}}
   const lvs=played.map(sm=>trigger(selTrack,pi,sm,now0,true)).filter(Boolean);
-  if(li!=null&&lvs.length&&S.padMode[pi]!=='one')liveV[li]=lvs;
+  if(li!=null&&lvs.length&&gate)liveV[li]=lvs;
   lastHit[selTrack]={pad:pi,semi};
   recHit(pi,played);
 }
@@ -2229,7 +2252,7 @@ function renderPadPanel(){
   $('pPitch').value=S.padSemi[selPad];$('oPitch').textContent=S.padSemi[selPad];
   $('pVol').value=Math.round(S.padVol[selPad]*100);$('oVol').textContent=Math.round(S.padVol[selPad]*100);
   $('pRev').textContent='REVERSE '+(S.padRev[selPad]?'ON':'OFF');$('pRev').style.background=S.padRev[selPad]?COL.fire:'';
-  document.querySelectorAll('#pMode button').forEach(b=>b.classList.toggle('on',(S.padMode[selPad]||'one')===b.dataset.m));
+  document.querySelectorAll('#pMode button').forEach(b=>b.classList.toggle('on',b.dataset.m==='loop'?!!S.padLoop[selPad]:((S.padMode[selPad]==='gate'?'gate':'one')===b.dataset.m)));
   document.querySelectorAll('#pChoke button').forEach(b=>b.classList.toggle('on',(S.padChoke[selPad]||0)===+b.dataset.g));
   $('pFi').value=S.padFi[selPad]||0;$('oFi').textContent=(S.padFi[selPad]||0)+'ms';
   $('pFo').value=S.padFo[selPad]||0;$('oFo').textContent=(S.padFo[selPad]||0)+'ms';
@@ -2332,7 +2355,7 @@ $('bKill').onclick=stopAll;
 /* ---------- undo ---------- */
 const undoS=[],redoS=[];let lastPush={k:null,t:0};
 function snap(){return {tv:JSON.stringify(S.tv),duck:JSON.stringify(S.duckBy),duckCfg:JSON.stringify(S.duckCfg),pat:JSON.stringify(S.patterns),len:[...S.patLen],tlen:JSON.stringify(S.trkLen),skip:JSON.stringify(S.skip),chain:[...S.chain],
-  pp:JSON.stringify({trackFx:S.trackFx,trackFxOn:S.trackFxOn,trackFxAmt:S.trackFxAmt,padChoke:S.padChoke,padSemi:S.padSemi,padVol:S.padVol,padRev:S.padRev,padFi:S.padFi,padFo:S.padFo,padDecay:S.padDecay,padMode:S.padMode,padFreeze:S.padFreeze}),
+  pp:JSON.stringify({trackFx:S.trackFx,trackFxOn:S.trackFxOn,trackFxAmt:S.trackFxAmt,padChoke:S.padChoke,padSemi:S.padSemi,padVol:S.padVol,padRev:S.padRev,padFi:S.padFi,padFo:S.padFo,padDecay:S.padDecay,padMode:S.padMode,padLoop:S.padLoop,padFreeze:S.padFreeze}),
   pads:[...pads],srcs:sources.map(x=>({id:x.id,slip:x.slip||0}))};}
 function pushUndo(k){
   const n=performance.now();
@@ -2388,7 +2411,7 @@ document.querySelectorAll('#pChoke button').forEach(b=>{
   });
   b.onclick=()=>{if(chokeSwallow){chokeSwallow=false;return;}pushUndo();S.padChoke[selPad]=+b.dataset.g;save();renderPadPanel();};
 });
-document.querySelectorAll('#pMode button').forEach(b=>{const f=()=>setPadParam('padMode',b.dataset.m,b.textContent.trim().toLowerCase());b.onclick=f;bankBtn(b,f);});
+document.querySelectorAll('#pMode button').forEach(b=>{const f=b.dataset.m==='loop'?()=>setPadParam('padLoop',!S.padLoop[selPad],S.padLoop[selPad]?'loop off':'looping'):()=>setPadParam('padMode',b.dataset.m,b.textContent.trim().toLowerCase());b.onclick=f;bankBtn(b,f);});
 $('pFi').oninput=e=>setPadParam('padFi',+e.target.value,'fade in '+e.target.value+' ms','fi');
 $('pFo').oninput=e=>setPadParam('padFo',+e.target.value,'fade out '+e.target.value+' ms','fo');
 $('pDec').oninput=e=>setPadParam('padDecay',+e.target.value,'decay '+e.target.value+'%','dec');
@@ -2433,10 +2456,11 @@ async function padFromRecord(rec){
   const p={buf,rbuf:reverseOf(buf),cat:m.cat||'TONE',name:m.name||undefined,len,start:m.start||0,slip:m.slip||0,srcId:null,srcName:m.srcName,srcKey:m.srcKey||null,frames,fps:frames.length/len,thumb:frames[0].toDataURL('image/jpeg',0.6)};
   recCache.set(p,rec);return p;
 }
-function stateJSON(){return {bpm:S.bpm,swing:S.swing,format:S.format,trackFx:S.trackFx,trackFxOn:S.trackFxOn,trackFxAmt:S.trackFxAmt,tv:S.tv,duckBy:S.duckBy,duckCfg:S.duckCfg,patterns:S.patterns,patLen:S.patLen,trkLen:S.trkLen,skip:S.skip,chain:S.chain,padChoke:S.padChoke,padSemi:S.padSemi,padVol:S.padVol,padRev:S.padRev,padFi:S.padFi,padFo:S.padFo,padDecay:S.padDecay,padMode:S.padMode,padFreeze:S.padFreeze};}
+function stateJSON(){return {bpm:S.bpm,swing:S.swing,format:S.format,trackFx:S.trackFx,trackFxOn:S.trackFxOn,trackFxAmt:S.trackFxAmt,tv:S.tv,duckBy:S.duckBy,duckCfg:S.duckCfg,patterns:S.patterns,patLen:S.patLen,trkLen:S.trkLen,skip:S.skip,chain:S.chain,padChoke:S.padChoke,padSemi:S.padSemi,padVol:S.padVol,padRev:S.padRev,padFi:S.padFi,padFo:S.padFo,padDecay:S.padDecay,padMode:S.padMode,padLoop:S.padLoop,padFreeze:S.padFreeze};}
 function applyState(st){
-  const keys=['bpm','swing','format','trackFx','trackFxOn','trackFxAmt','tv','duckBy','duckCfg','patterns','patLen','trkLen','skip','chain','padChoke','padSemi','padVol','padRev','padFi','padFo','padDecay','padMode','padFreeze'];
+  const keys=['bpm','swing','format','trackFx','trackFxOn','trackFxAmt','tv','duckBy','duckCfg','patterns','patLen','trkLen','skip','chain','padChoke','padSemi','padVol','padRev','padFi','padFo','padDecay','padMode','padLoop','padFreeze'];
   keys.forEach(k=>{if(st[k]!=null)S[k]=st[k];});
+  fixPadArrays();loopMigrate();
   S.patterns.forEach(P=>P.forEach(t=>{while(t.length<MAXST)t.push(null);}));
   if(!Array.isArray(S.patLen)||S.patLen.length!==16)S.patLen=Array(16).fill(1);
   if(!Array.isArray(S.skip)||S.skip.length!==16)S.skip=Array.from({length:16},()=>[]);
