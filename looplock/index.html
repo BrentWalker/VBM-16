@@ -2964,9 +2964,10 @@ function rulers(g,W,top,a,b,X,dpr){ let H_;
 }
 function marker(g,x,col,lab,top,wh,left,dpr){
   g.fillStyle=col; g.fillRect(Math.round(x)-dpr,top,2*dpr,wh);
-  const w=16*dpr,h=16*dpr, fx=left?x-w:x, fy=top+wh/2-h/2; g.beginPath();
+  // start flag sits at the top (under the readouts), end flag at the bottom, so the wave stays clear
+  const w=16*dpr,h=26*dpr, fx=left?x-w:x, fy=left?top+wh-h-2*dpr:top+20*dpr; g.beginPath();
   if(g.roundRect) g.roundRect(fx,fy,w,h,left?[5*dpr,0,0,5*dpr]:[0,5*dpr,5*dpr,0]); else g.rect(fx,fy,w,h); g.fill();
-  g.fillStyle='#313043'; g.font=`700 ${9*dpr}px Inter,system-ui`; g.textAlign='center'; g.fillText(lab,fx+w/2,fy+11.5*dpr);
+  g.fillStyle='#313043'; g.font=`700 ${10*dpr}px Inter,system-ui`; g.textAlign='center'; g.fillText(lab,fx+w/2,fy+h/2+3.5*dpr);
 }
 function drawSeam(g,W,top,wh,mid,amp,dpr){
   const w=S.seamW, half=W/2;
