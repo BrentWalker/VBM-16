@@ -77,14 +77,13 @@ body.wide #panelsL,body.wide #colR>:last-child{margin-bottom:40px}
 #tracks .tsel.hit{filter:brightness(1.5)}
 .pageRow{display:flex;gap:6px;margin-top:8px;align-items:center}
 .pageRow>button{flex:0 0 auto;font-size:10px;padding:7px 9px}
-#bLen,#bFollow{background:var(--purple);font-weight:700}
+#bLen,#bSeqClr{background:var(--purple);font-weight:700}
 button.hold{position:relative;overflow:hidden;touch-action:none}
 button.hold .hbar{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--fire);opacity:.55;pointer-events:none}
 button.hold.flash{background:var(--fire)!important;color:var(--ink)}
 .tlen{font-size:9px;margin-left:2px;opacity:.85}
 #bInclV{font-weight:700}
 #bInclV.on{background:var(--air);color:var(--ink)}
-#bFollow.on{background:var(--air);color:var(--ink)}
 .pages{display:flex;gap:4px;flex:1}
 .pages button{flex:1;padding:7px 0;font-size:11px;background:#313043;position:relative}
 .pages button.view{background:var(--air);color:var(--ink);font-weight:700}
@@ -353,7 +352,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
   <div class="tfx" id="tfx"></div></section>
   <section class="panel tight" id="secSeq"><h3>STEP SEQUENCER</h3>
   <div class="row" id="tracks" style="margin-top:0"></div>
-  <div class="pageRow"><button id="bLen">LNGTH 1</button><div class="pages" id="pages"></div><button id="bFollow" class="on">FOLLOW</button></div>
+  <div class="pageRow"><button id="bLen">LNGTH 1</button><div class="pages" id="pages"></div><button id="bSeqClr">CLEAR</button></div>
   <div class="steps" id="steps"></div>
   <div class="row slip"><button id="snM4">◀◀</button><button id="snM1">◀</button><button class="val" id="snV">HOLD A STEP TO NUDGE</button><button id="snP1">▶</button><button id="snP4">▶▶</button><button id="snAll" style="flex:0 0 46px;font-size:10px">ALL</button></div>
   </section>
@@ -454,7 +453,7 @@ a.guide i{flex:none;font-style:normal;width:24px;height:24px;border-radius:50%;b
 <div id="initWin" class="modal hidden">
   <div class="mbox sw">
     <div class="swT"><span>INIT</span></div>
-    <div class="help"><p>What do you want to clear? Undo (↶) brings back pads and patterns.</p></div>
+    <div class="help"><p>Hold the one you want to clear until the bar fills. Undo brings back pads and patterns.</p></div>
     <div class="row"><button id="initPat">CLEAR PATTERNS</button></div>
     <div class="row"><button id="initPads">CLEAR PADS</button></div>
     <div class="row"><button id="initAll" class="danger">CLEAR EVERYTHING</button></div>
@@ -599,7 +598,7 @@ function nextLive(p,s){while(s<plen(p)&&isSkip(p,s))s++;return s;}
 const MAXSTACK=4;
 const cellEvs=c=>!c?[]:Array.isArray(c)?c:[c];
 const packCell=a=>!a.length?null:a.length===1?a[0]:a;
-let viewPage=0,follow=true,playPage=-1;
+let viewPage=0,playPage=-1;
 let saveT=null;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}},400);}
 
 let UI={};try{UI=Object.assign(UI,JSON.parse(localStorage.getItem(KEY+'-ui')||'{}'));}catch(e){}
@@ -1472,7 +1471,7 @@ function loop(){
     let redraw=false;
     if(playing&&u.p!==editPat){editPat=u.p;viewPage=0;renderPats();redraw=true;}
     const ls=tIdx(u.p,selTrack,u.s),pg=Math.floor(ls/16);
-    if(pg!==playPage){playPage=pg;if(follow&&playing&&viewPage!==pg){viewPage=pg;redraw=true;}renderPages();}
+    if(pg!==playPage){playPage=pg;if(playing&&viewPage!==pg){viewPage=pg;redraw=true;}renderPages();}
     if(redraw)renderSteps();
     setPlayhead(pg===viewPage?ls%16:-1);
     if(u.s%4===0)metSwing(u.s/4);}
@@ -2044,7 +2043,6 @@ function renderPages(){
     const sk=S.skip[editPat].filter(x=>Math.floor(x/16)===i).length;
     b.textContent=skipEdit===i?(16-sk)+' STEPS':sk?(i+1)+' · '+(16-sk):String(i+1);
     b.classList.toggle('skipEd',skipEdit===i);b.classList.toggle('view',i===viewPage);b.classList.toggle('play',playing&&i===playPage&&curPat===editPat);});
-  $('bFollow').classList.toggle('on',follow);
 }
 function renderChain(){
   $('bChain').classList.toggle('on',chainOn);
@@ -2329,7 +2327,6 @@ $('pAud').onclick=()=>{initAudio();trigger(selTrack,selPad,0,ctx.currentTime);};
 
 /* the two parts of PAD EDIT fold on their own and stay that way */
 ['psA','psB'].forEach(id=>{const el=$(id);UI.psMin=UI.psMin||{};el.classList.toggle('min',!!UI.psMin[id]);el.querySelector('.psh').onclick=()=>{const m=!el.classList.contains('min');el.classList.toggle('min',m);UI.psMin[id]=m;saveUI();if(!m)drawTrim();};});
-$('pClr').onclick=()=>{pushUndo();padsChanged();pads[selPad]=null;renderAll();};
 $('bChain').onclick=()=>{chainOn=!chainOn;renderChain();};
 $('bChainClr').onclick=()=>{pushUndo();S.chain=[];save();renderChain();};
 $('bCopy').onclick=()=>{pushUndo();const n=(editPat+1)%16;S.patterns[n]=JSON.parse(JSON.stringify(S.patterns[editPat]));S.patLen[n]=S.patLen[editPat];S.trkLen[n]=[...S.trkLen[editPat]];S.skip[n]=[...S.skip[editPat]];save();if(!playing){curPat=editPat=n;}renderPats();renderSteps();};
@@ -2345,6 +2342,12 @@ function holdToClear(b,ms,fn,tip){
   b.addEventListener('pointerup',()=>{const short=!done&&performance.now()-t0<250;stop();if(short)toast(tip,1300);});
   b.addEventListener('pointercancel',stop);b.addEventListener('contextmenu',e=>e.preventDefault());
 }
+holdToClear($('bSeqClr'),1000,()=>{pushUndo();S.patterns[editPat][selTrack]=mkTrack();save();renderSteps();renderPats();toast('Track '+TL[selTrack]+' cleared. Undo brings it back.',1400);},'Hold to clear this track.');
+/* every clear is a hold: CLEAR PAD, CLEAR PATTERNS, CLEAR EVERYTHING too */
+holdToClear($('pClr'),1000,()=>{if(!pads[selPad])return;pushUndo();pads[selPad]=null;padsChanged();renderAll();toast('Pad '+padLabel(selPad)+' cleared. Undo brings it back.',1400);},'Hold to clear this pad.');
+holdToClear($('initPat'),1200,()=>{closeInit();clearPatterns();},'Hold to clear all patterns.');
+holdToClear($('initPads'),1200,()=>{closeInit();clearPads();},'Hold to clear all pads.');
+holdToClear($('initAll'),1600,()=>{closeInit();clearEverything();},'Hold to clear everything.');
 holdToClear($('bClrTrk'),1000,()=>{pushUndo();S.patterns[editPat][selTrack]=mkTrack();save();renderSteps();renderPats();toast('Track '+TL[selTrack]+' cleared. Undo brings it back.',1400);},'Hold to clear this track.');
 holdToClear($('bClrPat'),1000,()=>{pushUndo();S.patterns[editPat]=mkPat();S.skip[editPat]=[];save();renderSteps();renderPats();toast('Pattern '+(editPat+1)+' cleared. Undo brings it back.',1400);},'Hold to clear this pattern.');
 /* LNGTH: tap sets the selected track's bars, hold sets all 4 tracks */
@@ -2362,7 +2365,6 @@ function setTrackLen(p,tracks,nx){
   b.onclick=()=>{if(lHeld){lHeld=false;return;}pushUndo('len'+selTrack);const p=editPat,old=tbars(p,selTrack),nx=LENS[(LENS.indexOf(old)+1)%LENS.length];
     setTrackLen(p,[selTrack],nx);toast('Track '+TL[selTrack]+': '+nx+(nx>1?' bars':' bar')+'. Pattern runs '+S.patLen[p]+(S.patLen[p]>1?' bars':' bar')+'.',1400);};
   b.addEventListener('contextmenu',e=>e.preventDefault());}
-$('bFollow').onclick=()=>{follow=!follow;renderPages();};
 $('eFmt').onchange=e=>{S.format=e.target.value;save();applyFormat();renderExp();renderVO();};
 document.querySelectorAll('.fIn').forEach(inp=>inp.addEventListener('change',e=>{const f=e.target.files[0];e.target.value='';addVideo(f);}));
 $('bDemo').onclick=demoKit;
@@ -2620,7 +2622,7 @@ function clearPads(quiet){
 }
 function clearEverything(){
   pushUndo();clearPatterns(true);clearPads(true);
-  sources.forEach(sc=>{try{sc.video.pause();sc.video.remove();URL.revokeObjectURL(sc.url);}catch(e){}});
+  sources.forEach(sc=>{try{if(sc.pv)sc.pv.pause();sc.video.pause();sc.video.remove();URL.revokeObjectURL(sc.url);}catch(e){}});
   sources=[];curSrc=-1;waitVids=[];trim=null;trimLoad(selPad);
   S.trackFx=[[],[],[],[]];S.trackFxOn=[true,true,true,true];S.trackFxAmt=[{},{},{},{}];for(let t=0;t<4;t++)applyTrackFx(t);renderTfx();
   FXL.forEach(([k])=>{latched[k]=false;if(fx[k])setFx(k,false);});renderFx();save();
@@ -2629,9 +2631,9 @@ function clearEverything(){
 }
 function openInit(){$('saveWin').classList.add('hidden');$('initWin').classList.remove('hidden');}
 const closeInit=()=>$('initWin').classList.add('hidden');
-$('initPat').onclick=()=>{closeInit();clearPatterns();};
-$('initPads').onclick=()=>{closeInit();clearPads();};
-$('initAll').onclick=()=>{closeInit();clearEverything();};
+
+
+
 $('initCancel').onclick=closeInit;
 $('initWin').addEventListener('click',e=>{if(e.target.id==='initWin')closeInit();});
 /* autosave pads to this browser */
